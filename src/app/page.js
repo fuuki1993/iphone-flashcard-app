@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getSetById } from '@/utils/indexedDB';
 import HomeScreen from '@/components/HomeScreen';
 import CreateEditSetSelectionScreen from '@/components/CreateEditSetSelectionScreen';
@@ -18,8 +18,10 @@ import QAQuiz from '@/components/QAQuiz';
 import MultipleChoiceQuiz from '@/components/MultipleChoiceQuiz';
 import ClassificationQuiz from '@/components/ClassificationQuiz';
 import StatisticsScreen from '../components/StatisticsScreen';
+import { useHashRouter } from '@/utils/hashRouter';
 
 export default function Home() {
+  const { hashPath, push } = useHashRouter();
   const [currentScreen, setCurrentScreen] = useState('home');
   const [currentSetType, setCurrentSetType] = useState(null);
   const [editingSetId, setEditingSetId] = useState(null);
@@ -32,8 +34,24 @@ export default function Home() {
   const [dailyGoal, setDailyGoal] = useState(0);
   const [todayStudyTime, setTodayStudyTime] = useState(0);
 
+  useEffect(() => {
+    // Handle routing based on hashPath
+    switch (hashPath) {
+      case '':
+      case 'home':
+        setCurrentScreen('home');
+        break;
+      case 'createEditSet':
+        setCurrentScreen('createEditSet');
+        break;
+      // ... (add other cases for different screens)
+      default:
+        setCurrentScreen('home');
+    }
+  }, [hashPath]);
+
   const navigateTo = (screen) => {
-    setCurrentScreen(screen);
+    push(screen);
   };
 
   const handleCreateSet = () => {

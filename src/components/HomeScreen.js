@@ -9,7 +9,7 @@ import { PlusCircle, BookOpen, BarChart2, Settings, Calendar, Clock, Trophy, Boo
 import { getStudyHistory, getAllSets } from '@/utils/indexedDB';
 import AddEventModal from './AddEventModal';
 
-const HomeScreen = ({ onCreateSet, onStartLearning, onShowStatistics }) => {
+const HomeScreen = ({ navigateTo, onShowStatistics }) => {
   const [overallProgress, setOverallProgress] = useState(0);
   const [streak, setStreak] = useState(7);
   const [studyHistory, setStudyHistory] = useState([]);
@@ -190,7 +190,7 @@ const HomeScreen = ({ onCreateSet, onStartLearning, onShowStatistics }) => {
             <Button 
               variant="outline" 
               size="xs" 
-              onClick={onShowStatistics} 
+              onClick={() => navigateTo('statistics')} 
               className="text-xs px-2 py-1 text-gray-800 bg-gray-200 hover:bg-gray-300"
             >
               <BarChart2 className="mr-1 h-3 w-3" />
@@ -204,11 +204,11 @@ const HomeScreen = ({ onCreateSet, onStartLearning, onShowStatistics }) => {
       </Card>
 
       <div className="grid grid-cols-2 gap-2 mb-3">
-        <Button className="h-10 bg-gray-700 hover:bg-gray-600 text-white text-xs" onClick={onCreateSet}>
+        <Button className="h-10 bg-gray-700 hover:bg-gray-600 text-white text-xs" onClick={() => navigateTo('createEditSet')}>
           <PlusCircle className="mr-1 h-3 w-3" />
           作成/編集
         </Button>
-        <Button className="h-10 bg-gray-700 hover:bg-gray-600 text-white text-xs" onClick={onStartLearning}>
+        <Button className="h-10 bg-gray-700 hover:bg-gray-600 text-white text-xs" onClick={() => navigateTo('quizTypeSelection')}>
           <BookOpen className="mr-1 h-3 w-3" />
           学習開始
         </Button>
