@@ -35,6 +35,12 @@ export default function Home() {
   const [todayStudyTime, setTodayStudyTime] = useState(0);
 
   useEffect(() => {
+    if (!hashPath) {
+      push('home');
+    }
+  }, [hashPath, push]);
+
+  useEffect(() => {
     // Handle routing based on hashPath
     switch (hashPath) {
       case '':
@@ -149,7 +155,7 @@ export default function Home() {
             onBack={() => navigateTo('createEditSet')}
             onSave={handleSave}
             setList={[]} // この部分は適切なデータで置き換える必要があります
-            initialData={null} // この部分は適切なデータで置き換える必要があ��ます
+            initialData={null} // この部分は適切なデータで置き換える必要があます
           />
         );
       case 'qaCreation':
