@@ -24,7 +24,7 @@ jobs:
         run: npm run build
 
       - name: Create .nojekyll file
-        run: echo '' > ./out/.nojekyll
+        run: touch ./out/.nojekyll
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
@@ -32,5 +32,9 @@ jobs:
           github_token: ${{ secrets.GH_PAGES_TOKEN }}
           publish_dir: ./out
 
-# ビルド出力を除外しない
-!out
+      # ビルド出力を除外しない場合の設定
+      - name: Upload build output as artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: build-output
+          path: ./out
