@@ -8,4 +8,8 @@ const nextConfig = {
   },
 }
 
+<<<<<<< HEAD
 module.exports = nextConfig
+=======
+module.exports = nextConfig
+>>>>>>> c52ebde7408e40d05c59ef1d638a788174c80754
