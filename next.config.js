@@ -1,8 +1,11 @@
-module.exports = {
-  basePath: process.env.NODE_ENV === 'production' ? '/your-repo-name' : '',
-  assetPrefix: process.env.NODE_ENV === 'production' ? '/your-repo-name/' : '',
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  output: 'export',
+  basePath: process.env.NODE_ENV === 'production' ? '/iphone-flashcard-app' : '',
+  assetPrefix: process.env.NODE_ENV === 'production' ? '/iphone-flashcard-app/' : '',
   images: {
-    loader: 'akamai',
-    path: '',
+    unoptimized: true,
   },
 }
+
+module.exports = nextConfig
