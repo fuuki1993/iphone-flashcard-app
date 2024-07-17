@@ -9,62 +9,71 @@ import { PlusCircle, BookOpen, BarChart2, Settings, Calendar, Clock, Trophy, Boo
 import { getStudyHistory, getAllSets } from '@/utils/indexedDB';
 import AddEventModal from './AddEventModal';
 
-const HomeScreen = ({ navigateTo, onShowStatistics }) => {
-  const [overallProgress, setOverallProgress] = useState(0);
-  const [streak, setStreak] = useState(7);
-  const [studyHistory, setStudyHistory] = useState([]);
-  const [dailyGoal, setDailyGoal] = useState(60); // 1時間 = 60分
-  const [todayStudyTime, setTodayStudyTime] = useState(0);
-  const [isGoalAchieved, setIsGoalAchieved] = useState(false);
-  const [scheduledEvents, setScheduledEvents] = useState([]);
-  const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false);
-  const [editingEvent, setEditingEvent] = useState(null);
-
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const history = await getStudyHistory();
-        const allSets = await getAllSets();
-
-        // Calculate overall progress
-        let totalQuestions = 0;
-        let totalCorrectAnswers = 0;
-
-        allSets.forEach(set => {
-          if (set.type === 'flashcard' || set.type === 'qa') {
-            totalQuestions += set.cards ? set.cards.length : 0;
-          } else if (set.type === 'multiple-choice' || set.type === 'classification') {
-            totalQuestions += set.questions ? set.questions.length : 0;
-          }
-        });
-
-        history.forEach(entry => {
-          const correctAnswers = Math.round((entry.score / 100) * (entry.totalQuestions || 1));
-          totalCorrectAnswers += correctAnswers;
-        });
-
-        const overallProgressPercentage = totalQuestions > 0 ? (totalCorrectAnswers / totalQuestions) * 100 : 0;
-        setOverallProgress(Math.round(overallProgressPercentage));
-
-        // Calculate today's study time and goal achievement
-        const today = new Date().toISOString().split('T')[0];
-        const todayHistory = history.filter(item => item.date.startsWith(today));
-        const todayTotalTime = todayHistory.reduce((total, item) => total + (item.duration || 0), 0);
-        setTodayStudyTime(todayTotalTime);
-        setIsGoalAchieved(todayTotalTime >= dailyGoal);
-
-        // Get the latest 3 unique set entries
-        const uniqueSetEntries = Array.from(new Set(history.map(entry => entry.setId)))
-          .slice(0, 3)
-          .map(setId => history.find(entry => entry.setId === setId));
-        setStudyHistory(uniqueSetEntries);
-
-      } catch (error) {
-        console.error("Error loading study data:", error);
-      }
-    };
-    loadData();
-  }, [dailyGoal]);
+const HomeScreen = ({ 
+    onCreateSet, 
+    onStartLearning, 
+    onShowStatistics, 
+    overallProgress, 
+    setOverallProgress,
+    streak, 
+    setStreak,
+    studyHistory, 
+    setStudyHistory,
+    dailyGoal, 
+    setDailyGoal,
+    todayStudyTime, 
+    setTodayStudyTime
+  }) => {
+    const [isGoalAchieved, setIsGoalAchieved] = useState(false);
+    const [scheduledEvents, setScheduledEvents] = useState([]);
+    const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false);
+    const [editingEvent, setEditingEvent] = useState(null);
+  
+    useEffect(() => {
+      const loadData = async () => {
+        try {
+          const history = await getStudyHistory();
+          const allSets = await getAllSets();
+  
+          // Calculate overall progress
+          let totalQuestions = 0;
+          let totalCorrectAnswers = 0;
+  
+          allSets.forEach(set => {
+            if (set.type === 'flashcard' || set.type === 'qa') {
+              totalQuestions += set.cards ? set.cards.length : 0;
+            } else if (set.type === 'multiple-choice' || set.type === 'classification') {
+              totalQuestions += set.questions ? set.questions.length : 0;
+            }
+          });
+  
+          history.forEach(entry => {
+            const correctAnswers = Math.round((entry.score / 100) * (entry.totalQuestions || 1));
+            totalCorrectAnswers += correctAnswers;
+          });
+  
+          const overallProgressPercentage = totalQuestions > 0 ? (totalCorrectAnswers / totalQuestions) * 100 : 0;
+          setOverallProgress(Math.round(overallProgressPercentage));
+  
+          // Calculate today's study time and goal achievement
+          const today = new Date().toISOString().split('T')[0];
+          const todayHistory = history.filter(item => item.date.startsWith(today));
+          const todayTotalTime = todayHistory.reduce((total, item) => total + (item.duration || 0), 0);
+          setTodayStudyTime(todayTotalTime);
+          setIsGoalAchieved(todayTotalTime >= dailyGoal);
+  
+          // Get the latest 3 unique set entries
+          const uniqueSetEntries = Array.from(new Set(history.map(entry => entry.setId)))
+            .slice(0, 3)
+            .map(setId => history.find(entry => entry.setId === setId));
+          setStudyHistory(uniqueSetEntries);
+  
+        } catch (error) {
+          console.error("Error loading study data:", error);
+        }
+      };
+      loadData();
+    }, [dailyGoal, setOverallProgress, setTodayStudyTime, setStudyHistory]);
 
   const updateStreak = useCallback(() => {
     if (isGoalAchieved) {
@@ -190,7 +199,7 @@ const HomeScreen = ({ navigateTo, onShowStatistics }) => {
             <Button 
               variant="outline" 
               size="xs" 
-              onClick={() => navigateTo('statistics')} 
+              onClick={onShowStatistics}
               className="text-xs px-2 py-1 text-gray-800 bg-gray-200 hover:bg-gray-300"
             >
               <BarChart2 className="mr-1 h-3 w-3" />
@@ -204,11 +213,11 @@ const HomeScreen = ({ navigateTo, onShowStatistics }) => {
       </Card>
 
       <div className="grid grid-cols-2 gap-2 mb-3">
-        <Button className="h-10 bg-gray-700 hover:bg-gray-600 text-white text-xs" onClick={() => navigateTo('createEditSet')}>
+        <Button className="h-10 bg-gray-700 hover:bg-gray-600 text-white text-xs" onClick={onCreateSet}>
           <PlusCircle className="mr-1 h-3 w-3" />
           作成/編集
         </Button>
-        <Button className="h-10 bg-gray-700 hover:bg-gray-600 text-white text-xs" onClick={() => navigateTo('quizTypeSelection')}>
+        <Button className="h-10 bg-gray-700 hover:bg-gray-600 text-white text-xs" onClick={onStartLearning}>
           <BookOpen className="mr-1 h-3 w-3" />
           学習開始
         </Button>

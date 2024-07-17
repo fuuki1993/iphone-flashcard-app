@@ -21,7 +21,7 @@ import StatisticsScreen from '../components/StatisticsScreen';
 import { useHashRouter } from '@/utils/hashRouter';
 
 export default function Home() {
-  const { hashPath, push } = useHashRouter();
+  const { hashPath, push, isReady } = useHashRouter();
   const [currentScreen, setCurrentScreen] = useState('home');
   const [currentSetType, setCurrentSetType] = useState(null);
   const [editingSetId, setEditingSetId] = useState(null);
@@ -31,18 +31,20 @@ export default function Home() {
   const [overallProgress, setOverallProgress] = useState(0);
   const [streak, setStreak] = useState(0);
   const [studyHistory, setStudyHistory] = useState([]);
-  const [dailyGoal, setDailyGoal] = useState(0);
+  const [dailyGoal, setDailyGoal] = useState(60);
   const [todayStudyTime, setTodayStudyTime] = useState(0);
 
   useEffect(() => {
-    if (!hashPath) {
+    if (isReady && !hashPath) {
       push('home');
     }
-  }, [hashPath, push]);
+  }, [isReady, hashPath, push]);
 
   useEffect(() => {
+    console.log('Current hash path:', hashPath); // デバッグ用ログ
     // Handle routing based on hashPath
-    switch (hashPath) {
+    const [mainPath, subPath] = hashPath.split('/');
+    switch (mainPath) {
       case '':
       case 'home':
         setCurrentScreen('home');
@@ -50,14 +52,30 @@ export default function Home() {
       case 'createEditSet':
         setCurrentScreen('createEditSet');
         break;
-      // ... (add other cases for different screens)
+      case 'quizTypeSelection':
+        setCurrentScreen('quizTypeSelection');
+        break;
+      case 'flashcard':
+      case 'qa':
+      case 'multiple-choice':
+      case 'classification':
+        setCurrentSetType(mainPath);
+        setCurrentScreen(subPath === 'edit' ? `${mainPath}Edit` : `${mainPath}Creation`);
+        break;
+      case 'quiz':
+        setCurrentScreen('quiz');
+        break;
+      case 'statistics':
+        setCurrentScreen('statistics');
+        break;
       default:
         setCurrentScreen('home');
     }
   }, [hashPath]);
 
-  const navigateTo = (screen) => {
-    push(screen);
+  const navigateTo = (screen, subPath = '') => {
+    console.log('Navigating to:', screen, subPath); // デバッグ用ログ
+    push(subPath ? `${screen}/${subPath}` : screen);
   };
 
   const handleCreateSet = () => {
@@ -65,6 +83,7 @@ export default function Home() {
   };
   
   const handleStartLearning = () => {
+    console.log('handleStartLearning called');
     navigateTo('quizTypeSelection');
   };
 
@@ -74,12 +93,12 @@ export default function Home() {
 
   const handleSelectType = (type) => {
     setCurrentSetType(type);
-    navigateTo(`${type}Creation`);
+    navigateTo(type, 'creation');
   };
-
+  
   const handleEditType = (type) => {
     setCurrentSetType(type);
-    navigateTo(`${type}Edit`);
+    navigateTo(type, 'edit');
   };
 
   const handleStartQuiz = async (type, setId) => {
@@ -113,6 +132,7 @@ export default function Home() {
   };
 
   const renderScreen = () => {
+    console.log('Rendering screen:', currentScreen); // デバッグ用ログ
     switch (currentScreen) {
       case 'home':
         return (
@@ -121,10 +141,15 @@ export default function Home() {
             onStartLearning={handleStartLearning}
             onShowStatistics={handleShowStatistics}
             overallProgress={overallProgress}
+            setOverallProgress={setOverallProgress}
             streak={streak}
+            setStreak={setStreak}
             studyHistory={studyHistory}
+            setStudyHistory={setStudyHistory}
             dailyGoal={dailyGoal}
+            setDailyGoal={setDailyGoal}
             todayStudyTime={todayStudyTime}
+            setTodayStudyTime={setTodayStudyTime}
           />
         );
       case 'createEditSet':
@@ -154,8 +179,6 @@ export default function Home() {
           <FlashcardEditScreen
             onBack={() => navigateTo('createEditSet')}
             onSave={handleSave}
-            setList={[]} // この部分は適切なデータで置き換える必要があります
-            initialData={null} // この部分は適切なデータで置き換える必要があます
           />
         );
       case 'qaCreation':
@@ -170,8 +193,6 @@ export default function Home() {
           <QAEditScreen
             onBack={() => navigateTo('createEditSet')}
             onSave={handleSave}
-            setList={[]} // この部分は適切なデータで置き換える必要があります
-            initialData={null} // この部分は適切なデータで置き換える必要があります
           />
         );
       case 'multiple-choiceCreation':
@@ -186,8 +207,6 @@ export default function Home() {
           <MultipleChoiceEditScreen
             onBack={() => navigateTo('createEditSet')}
             onSave={handleSave}
-            setList={[]} // この部分は適切なデータで置き換える必要があります
-            initialData={null} // この部分は適切なデータで置き換える必要があります
           />
         );
       case 'classificationCreation':
@@ -202,8 +221,6 @@ export default function Home() {
           <ClassificationEditScreen
             onBack={() => navigateTo('createEditSet')}
             onSave={handleSave}
-            setList={[]} // この部分は適切なデータで置き換える必要があります
-            initialData={null} // この部分は適切なデータで置き換える必要があります
           />
         );
       case 'quiz':
@@ -231,9 +248,13 @@ export default function Home() {
           />
         );
       default:
-        return <div>Unknown screen</div>;
+        return <div>Unknown screen: {currentScreen}</div>;
     }
   };
+
+  if (!isReady) {
+    return null; // または適切なローディング表示
+  }
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-4">

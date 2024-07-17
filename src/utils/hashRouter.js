@@ -1,18 +1,21 @@
+// useHashRouter.js
+
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
 
 export function useHashRouter() {
-  const router = useRouter();
   const [hashPath, setHashPath] = useState('');
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     const handleHashChange = () => {
-      const hash = window.location.hash.slice(1);
-      setHashPath(hash);
+      const newHash = window.location.hash.slice(1);
+      console.log('Hash changed to:', newHash); // デバッグ用ログ
+      setHashPath(newHash);
     };
 
-    handleHashChange();
+    handleHashChange(); // 初期化時にも呼び出す
     window.addEventListener('hashchange', handleHashChange);
+    setIsReady(true);
 
     return () => {
       window.removeEventListener('hashchange', handleHashChange);
@@ -20,8 +23,11 @@ export function useHashRouter() {
   }, []);
 
   const push = (path) => {
-    window.location.hash = path;
+    console.log('Pushing path:', path); // デバッグ用ログ
+    if (typeof window !== 'undefined') {
+      window.location.hash = path;
+    }
   };
 
-  return { hashPath, push };
+  return { hashPath, push, isReady };
 }
