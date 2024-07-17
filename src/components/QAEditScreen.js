@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Plus, Save, Trash2, Image, Eye, EyeOff } from 'lucide-react';
-import { getSets, getSetById, updateSet } from '@/utils/indexedDB';
+import { getSets, getSetById, updateSet, deleteSet } from '@/utils/indexedDB';
 
 const QAEditScreen = ({ onBack, onSave }) => {
   const [sets, setSets] = useState([]);
@@ -97,6 +97,18 @@ const QAEditScreen = ({ onBack, onSave }) => {
     }
   };
 
+  const handleDelete = async () => {
+    if (window.confirm('このセットを削除してもよろしいですか？この操作は取り消せません。')) {
+      try {
+        await deleteSet(parseInt(selectedSetId));
+        onBack(); // 削除後に前の画面に戻る
+      } catch (error) {
+        console.error("Error deleting set:", error);
+        // エラーハンドリングのUIを表示する
+      }
+    }
+  };
+
   return (
     <div className="mobile-friendly-form max-w-full overflow-x-hidden">
       <div className="scrollable-content px-4">
@@ -126,6 +138,11 @@ const QAEditScreen = ({ onBack, onSave }) => {
             style={{ fontSize: '16px' }}
           />
           {errors.title && <Alert variant="destructive"><AlertDescription>{errors.title}</AlertDescription></Alert>}
+          {selectedSetId && (
+            <Button onClick={handleDelete} variant="destructive" className="mt-2">
+              <Trash2 className="mr-2 h-4 w-4" /> セットを削除
+            </Button>
+          )}
         </div>
 
         {qaItems.map((item, index) => (
