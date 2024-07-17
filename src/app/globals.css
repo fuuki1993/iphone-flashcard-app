@@ -68,7 +68,7 @@
   }
 }
 
-.writing-vertical {
+.writing-vertical .writing-vertical-rl {
   writing-mode: vertical-rl;
   text-orientation: upright;
   white-space: nowrap;

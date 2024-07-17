@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo, memo, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getSetById, saveStudyHistory } from '@/utils/indexedDB';
 import { ArrowLeft, Shuffle } from 'lucide-react';
 import { DndContext, DragOverlay, useSensors, useSensor, PointerSensor, useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useWindowSize } from '@/hooks/useWindowSize';
 
 const SortableItem = memo(({ id, children, isDragging, isClassified }) => {
   const {
@@ -28,7 +29,7 @@ const SortableItem = memo(({ id, children, isDragging, isClassified }) => {
       style={style}
       {...attributes}
       {...listeners}
-      className={`p-2 mb-2 rounded border ${
+      className={`inline-block p-2 m-1 rounded border ${
         isClassified ? 'bg-gray-100' : 'bg-white'
       } ${isDragging ? 'shadow-lg' : 'shadow'}`}
     >
@@ -39,25 +40,25 @@ const SortableItem = memo(({ id, children, isDragging, isClassified }) => {
 
 SortableItem.displayName = 'SortableItem';
 
-const DroppableCategory = memo(({ category, isActive, feedbackColor, isLeftSide }) => {
+const DroppableCategory = memo(({ category, isActive, feedbackColor }) => {
   const { setNodeRef } = useDroppable({
-    id: category,
-    data: { category },
+    id: category.name,
+    data: { category: category.name },
   });
 
   const className = useMemo(() => `
-    flex items-center justify-center h-32 px-1 rounded transition-all duration-300
+    flex flex-col items-center justify-center rounded transition-all duration-300
     ${feedbackColor ? feedbackColor : 'bg-gray-100'}
     ${isActive ? 'border-2 border-blue-500' : ''}
-    ${isLeftSide
-      ? `w-12 ${isActive ? 'w-16 ml-auto' : ''}`
-      : `w-12 ${isActive ? 'w-16 mr-0 ml-auto' : ''}`
-    }
-  `, [feedbackColor, isActive, isLeftSide]);
+    w-full h-full
+  `, [feedbackColor, isActive]);
 
   return (
     <div ref={setNodeRef} className={className}>
-      <h3 className="text-center" style={{ writingMode: 'vertical-rl', textOrientation: 'upright' }}>{category}</h3>
+      {category.image && (
+        <img src={category.image} alt={category.name} className="w-full h-24 object-cover mb-2" />
+      )}
+      <h3 className="text-center" style={{ writingMode: 'vertical-rl', textOrientation: 'upright' }}>{category.name}</h3>
     </div>
   );
 });
@@ -82,8 +83,16 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
     const [tempFeedback, setTempFeedback] = useState({});
     const [shuffledItems, setShuffledItems] = useState([]);
     const [classifiedItems, setClassifiedItems] = useState({});
+    const [remainingItems, setRemainingItems] = useState([]);
     const [shuffledCategories, setShuffledCategories] = useState([]);
     const startTimeRef = useRef(new Date());
+    const { width, height } = useWindowSize();
+
+    useEffect(() => {
+      if (shuffledItems.length > 0) {
+        setRemainingItems(shuffledItems);
+      }
+    }, [shuffledItems]);
 
     const sensors = useSensors(
       useSensor(PointerSensor, {
@@ -120,10 +129,9 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
               acc[cat.name] = cat.items;
               return acc;
             }, {});
-            const categories = set.categories.map(c => c.name);
             setQuizData({
-              question: `以下の項目を正しく分類してください。`,
-              categories: categories,
+              question: null,
+              categories: set.categories,
               items: newItems,
               correctClassification: newCorrectClassification,
               isFinished: false,
@@ -131,7 +139,7 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
               score: 0,
             });
             setShuffledItems(shuffled);
-            setShuffledCategories(shuffleArray(categories));
+            setShuffledCategories(shuffleArray(set.categories));
           } else {
             throw new Error('Invalid data structure');
           }
@@ -200,6 +208,12 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
             [over.id]: isCorrect ? 'bg-green-200' : 'bg-red-200'
           }));
 
+          // 次のアイテムに進む（正誤に関わらず）
+          setRemainingItems(prevItems => {
+            const nextItems = prevItems.filter(item => item.id !== active.id);
+            return nextItems;
+          });
+
           return {
             ...prev,
             items: updatedItems,
@@ -208,9 +222,6 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
             showResults: isFinished,
           };
         });
-
-        // Remove the item from shuffledItems
-        setShuffledItems(prev => prev.filter(item => item.id !== active.id));
       }
 
       setActiveId(null);
@@ -227,145 +238,135 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
       }
     }, [tempFeedback]);
 
-    const categories = useMemo(() => {
-      const middleIndex = Math.ceil(shuffledCategories.length / 2);
-      return {
-        left: shuffledCategories.slice(0, middleIndex),
-        right: shuffledCategories.slice(middleIndex)
-      };
-    }, [shuffledCategories]);
-  
-    const renderCategory = useCallback((category, isLeftSide) => (
-      <DroppableCategory 
-        key={category} 
-        category={category} 
-        isActive={hoveredCategory === category}
-        feedbackColor={tempFeedback[category] || categoryFeedback[category]}
-        isLeftSide={isLeftSide}
-      >
-        <div className={isLeftSide ? "ml-2 mt-1" : "mr-2 mt-1 text-right"}>
-          {classifiedItems[category]?.map(itemId => (
-            <div key={itemId} className="text-xs mb-1">
-              {quizData.items.find(item => item.id === itemId)?.content}
-            </div>
-          ))}
+    const ScoreDisplay = () => (
+      <div className="flex flex-col items-center justify-center h-32">
+        <div className="writing-vertical-rl text-lg font-bold mb-2 whitespace-nowrap">スコア</div>
+        <div className="flex items-center">
+          <span className="text-lg font-bold mr-1">:</span>
+          <span className="text-lg font-bold">{quizData.score}%</span>
         </div>
-      </DroppableCategory>
-    ), [hoveredCategory, categoryFeedback, tempFeedback, classifiedItems, quizData.items]);
-  
+      </div>
+    );
+
     const handleRestart = useCallback(() => {
       setQuizData(prevData => ({
         ...prevData,
-        items: prevData.items.map(item => ({ ...item, category: null, isClassified: false })),
         isFinished: false,
         showResults: false,
         score: 0,
       }));
-      setCategoryFeedback({});
-    }, []);
+      setRemainingItems(shuffledItems);
+      setClassifiedItems({});
+      setTempFeedback({});
+    }, [shuffledItems]);
 
-    const calculateScore = () => {
-      const totalItems = quizData.items.length;
-      const correctItems = quizData.items.filter(item => 
-        quizData.correctClassification[item.category]?.includes(item.content)
-      ).length;
-      return Math.round((correctItems / totalItems) * 100);
-    };
+    const handleFinish = useCallback(() => {
+      onFinish(quizData.score);
+    }, [onFinish, quizData.score]);
 
-    const handleFinish = async () => {
-      const score = calculateScore();
-      const endTime = new Date();
-      const studyDuration = Math.round((endTime - startTimeRef.current) / 1000); // 秒単位で計算
-      await saveStudyHistory(setId, title, 'classification', score, endTime, studyDuration);
-      onFinish(score);
-    };
+    const getGridSizeStyle = useCallback(() => {
+      const maxWidth = width - 180; // 左側のメニューの幅を考慮
+      const maxHeight = height - 150; // 上下のマージンを考慮
+
+      const columns = 4;
+      const rows = 2;
+
+      const cellWidth = Math.floor(maxWidth / columns);
+      const cellHeight = Math.floor(maxHeight / rows);
+
+      return {
+        gridTemplateColumns: `repeat(${columns}, ${cellWidth}px)`,
+        gridTemplateRows: `repeat(${rows}, ${cellHeight}px)`,
+        gap: '1rem',
+      };
+    }, [width, height]);
+
+    const gridStyle = useMemo(() => getGridSizeStyle(), [getGridSizeStyle]);
 
     if (isLoading) return <div>読み込み中...</div>;
     if (error) return <div>{error}</div>;
-    if (!quizData.question) return <div>質問がありません。</div>;
   
     return (
-      <div className="max-w-md mx-auto relative">
-        <div className="flex justify-between items-center mb-4">
-          <Button variant="ghost" size="icon" onClick={onBack}>
-            <ArrowLeft />
-          </Button>
-          <h2 className="text-xl font-bold">分類クイズ</h2>
-          <div className="flex items-center">
-            <Button variant="ghost" size="icon" onClick={handleShuffle} className="mr-2">
-              <Shuffle />
-            </Button>
-            <div className="text-lg font-bold">スコア: {quizData.score}%</div>
+      <div className="flex" style={{ width: `${width}px`, height: `${height}px`, maxWidth: '100vw', maxHeight: '100vh' }}>
+        <div className="flex flex-col justify-between p-4 w-20">
+          <div className="flex flex-col items-center justify-between h-full">
+            <div className="flex flex-col items-center justify-center h-32">
+              <Button variant="ghost" size="icon" onClick={onBack}>
+                <ArrowLeft />
+              </Button>
+            </div>
+            <div className="flex flex-col items-center justify-center h-32 text-center">
+              <span className="text-xl font-bold whitespace-nowrap">分類</span>
+              <span className="text-xl font-bold whitespace-nowrap">クイズ</span>
+            </div>
+            <div className="flex flex-col items-center justify-center h-32">
+              <Button variant="ghost" size="icon" onClick={handleShuffle}>
+                <Shuffle />
+              </Button>
+            </div>
+            <ScoreDisplay />
+            {quizData.showResults
+            }
           </div>
         </div>
-  
-        <Card className="mb-4">
-          <CardHeader>
-            <CardTitle>{quizData.showResults ? "結果" : quizData.question}</CardTitle>
-          </CardHeader>
-          <CardContent className="min-h-[300px] relative p-0">
-            {!quizData.showResults ? (
-              <DndContext
-                sensors={sensors}
-                onDragStart={handleDragStart}
-                onDragOver={handleDragOver}
-                onDragEnd={handleDragEnd}
-              >
-                <div className="flex justify-between w-full relative">
-                  <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between">
-                    {categories.left.map((category, index) => (
-                      <div key={category} className={index !== 0 ? "mt-4" : ""}>
-                        {renderCategory(category, true)}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="w-full px-16">
-                    <SortableContext items={shuffledItems} strategy={verticalListSortingStrategy}>
-                      <div className="grid grid-cols-2 gap-2">
-                        {shuffledItems.map((item) => (
+
+        <div className="flex-grow p-4">
+          <Card className="h-full">
+            <CardContent className="h-full relative p-4">
+              {!quizData.showResults ? (
+                <DndContext
+                  sensors={sensors}
+                  onDragStart={handleDragStart}
+                  onDragOver={handleDragOver}
+                  onDragEnd={handleDragEnd}
+                >
+                  <div className="flex flex-col h-full">
+                    <div className="grid mb-4" style={gridStyle}>
+                      {shuffledCategories.map((category) => (
+                        <DroppableCategory
+                          key={category.name}
+                          category={category}
+                          isActive={hoveredCategory === category.name}
+                          feedbackColor={tempFeedback[category.name] || categoryFeedback[category.name]}
+                        />
+                      ))}
+                    </div>
+                    <div className="flex-grow" />
+                    <div className="flex justify-center">
+                      {remainingItems.length > 0 && (
+                        <SortableContext items={[remainingItems[0]]} strategy={verticalListSortingStrategy}>
                           <SortableItem 
-                            key={item.id} 
-                            id={item.id} 
-                            isDragging={item.id === activeId}
+                            key={remainingItems[0].id} 
+                            id={remainingItems[0].id} 
+                            isDragging={remainingItems[0].id === activeId}
                             isClassified={false}
                           >
-                            {item.content}
+                            {remainingItems[0].content}
                           </SortableItem>
-                        ))}
-                      </div>
-                    </SortableContext>
-                  </div>
-                  <div className="absolute right-0 top-0 bottom-0 flex flex-col justify-between items-end">
-                    {categories.right.map((category, index) => (
-                      <div key={category} className={index !== 0 ? "mt-4" : ""}>
-                        {renderCategory(category, false)}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <DragOverlay>
-                  {activeId ? (
-                    <div className="bg-white p-2 rounded border shadow-lg">
-                      {quizData.items.find(item => item.id === activeId)?.content}
+                        </SortableContext>
+                      )}
                     </div>
-                  ) : null}
-                </DragOverlay>
-              </DndContext>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full p-6">
-                <h2 className="text-2xl font-bold mb-4">最終スコア: {quizData.score}%</h2>
-                <div className="flex gap-4">
-                  <Button onClick={handleRestart}>
-                    もう一度挑戦する
-                  </Button>
-                  <Button onClick={handleFinish}>
-                    終了する
-                  </Button>
+                  </div>
+                  <DragOverlay>
+                    {activeId ? (
+                      <div className="bg-white p-2 rounded border shadow-lg">
+                        {quizData.items.find(item => item.id === activeId)?.content}
+                      </div>
+                    ) : null}
+                  </DragOverlay>
+                </DndContext>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full">
+                  <h2 className="text-2xl font-bold mb-4">最終スコア: {quizData.score}%</h2>
+                  <div className="flex gap-4">
+                    <Button onClick={handleRestart}>もう一度挑戦</Button>
+                    <Button onClick={handleFinish}>終了</Button>
+                  </div>
                 </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   };

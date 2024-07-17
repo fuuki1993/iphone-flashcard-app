@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowLeft, Plus, Save, Trash2, Image, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Plus, Save, Trash2, Image, Eye, EyeOff, Upload } from 'lucide-react';
 import { saveSet } from '@/utils/indexedDB';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
 
@@ -15,6 +15,7 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
   const [categories, setCategories] = useState([{ name: '', items: [''] }]);
   const [errors, setErrors] = useState({});
   const [previewMode, setPreviewMode] = useState(false);
+  const [categoryImages, setCategoryImages] = useState(Array(6).fill(null));
   const inputRef = useAutoScroll();
 
   const addCategory = () => {
@@ -61,14 +62,27 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
     setCategories(updatedCategories);
   };
 
+  const handleImageUpload = (categoryIndex, event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const newImages = [...categoryImages];
+        newImages[categoryIndex] = e.target.result;
+        setCategoryImages(newImages);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const validateForm = () => {
     const newErrors = {};
     if (!setTitle.trim()) {
       newErrors.title = 'セットタイトルを入力してください。';
     }
     categories.forEach((category, index) => {
-      if (!category.name.trim()) {
-        newErrors[`category${index}`] = 'カテゴリー名を入力してください。';
+      if (!category.name.trim() && !categoryImages[index]) {
+        newErrors[`category${index}`] = 'カテゴリー名または画像を入力してください。';
       }
       if (category.items.filter(item => item.trim()).length === 0) {
         newErrors[`category${index}items`] = '少なくとも1つの項目を入力してください。';
@@ -83,8 +97,11 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
       try {
         const newSet = { 
           title: setTitle, 
-          categories,  // categoriesを使用
-          type: 'classification' // タイプ情報を追加
+          categories: categories.map((category, index) => ({
+            ...category,
+            image: categoryImages[index]
+          })),
+          type: 'classification'
         };
         const id = await saveSet(newSet);
         onSave({ ...newSet, id });
@@ -141,11 +158,26 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
             <Card key={categoryIndex} className="mb-4">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-lg font-medium">カテゴリー {categoryIndex + 1}</CardTitle>
-                <Button variant="ghost" size="icon" onClick={() => removeCategory(categoryIndex)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center">
+                  <label htmlFor={`image-upload-${categoryIndex}`} className="cursor-pointer mr-2">
+                    <Upload className="h-4 w-4" />
+                    <input
+                      id={`image-upload-${categoryIndex}`}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => handleImageUpload(categoryIndex, e)}
+                    />
+                  </label>
+                  <Button variant="ghost" size="icon" onClick={() => removeCategory(categoryIndex)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
+                {categoryImages[categoryIndex] && (
+                  <img src={categoryImages[categoryIndex]} alt="Category" className="w-full h-32 object-cover mb-2" />
+                )}
                 <Input
                   ref={inputRef}
                   placeholder="カテゴリー名"

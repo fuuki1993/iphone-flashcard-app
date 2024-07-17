@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Plus, Save, Trash2, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Plus, Save, Trash2, Eye, EyeOff, Upload } from 'lucide-react';
 import { getSets, getSetById, updateSet, deleteSet } from '@/utils/indexedDB';
 
 const ClassificationEditScreen = ({ onBack, onSave }) => {
@@ -15,6 +15,7 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
   const [categories, setCategories] = useState([{ name: '', items: [''] }]);
   const [errors, setErrors] = useState({});
   const [previewMode, setPreviewMode] = useState(false);
+  const [categoryImages, setCategoryImages] = useState(Array(6).fill(null));
 
   useEffect(() => {
     const loadSets = async () => {
@@ -34,8 +35,22 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
       const set = await getSetById(parseInt(value));
       setSetTitle(set.title);
       setCategories(set.categories);
+      setCategoryImages(set.categories.map(category => category.image || null));
     } catch (error) {
       console.error("Error loading set:", error);
+    }
+  };
+
+  const handleImageUpload = (categoryIndex, event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const newImages = [...categoryImages];
+        newImages[categoryIndex] = e.target.result;
+        setCategoryImages(newImages);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -89,8 +104,8 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
       newErrors.title = 'セットタイトルを入力してください。';
     }
     categories.forEach((category, index) => {
-      if (!category.name.trim()) {
-        newErrors[`category${index}`] = 'カテゴリー名を入力してください。';
+      if (!category.name.trim() && !categoryImages[index]) {
+        newErrors[`category${index}`] = 'カテゴリー名または画像を入力してください。';
       }
       if (category.items.filter(item => item.trim()).length === 0) {
         newErrors[`category${index}items`] = '少なくとも1つの項目を入力してください。';
@@ -106,7 +121,10 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
         const updatedSet = { 
           id: parseInt(selectedSetId),
           title: setTitle, 
-          categories,
+          categories: categories.map((category, index) => ({
+            ...category,
+            image: categoryImages[index]
+          })),
           type: 'classification'
         };
         await updateSet(updatedSet);
@@ -190,11 +208,26 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
             <Card key={categoryIndex} className="mb-4">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-lg font-medium">カテゴリー {categoryIndex + 1}</CardTitle>
-                <Button variant="ghost" size="icon" onClick={() => removeCategory(categoryIndex)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center">
+                  <label htmlFor={`image-upload-${categoryIndex}`} className="cursor-pointer mr-2">
+                    <Upload className="h-4 w-4" />
+                    <input
+                      id={`image-upload-${categoryIndex}`}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => handleImageUpload(categoryIndex, e)}
+                    />
+                  </label>
+                  <Button variant="ghost" size="icon" onClick={() => removeCategory(categoryIndex)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
+                {categoryImages[categoryIndex] && (
+                  <img src={categoryImages[categoryIndex]} alt="Category" className="w-full h-32 object-cover mb-2" />
+                )}
                 <Input
                   placeholder="カテゴリー名"
                   value={category.name}
