@@ -36,10 +36,16 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
       const set = await getSetById(parseInt(value));
       console.log("Retrieved set:", set); // デバッグログ
       setSetTitle(set.title);
-      setCards(set.card); // 'cards' ではなく 'card' を使用
-      console.log("Cards set:", set.card); // デバッグログ
+      if (Array.isArray(set.cards) && set.cards.length > 0) {
+        setCards(set.cards);
+        console.log("Cards set:", set.cards); // デバッグログ
+      } else {
+        setCards([]);
+        console.log("No cards found or invalid card data"); // デバッグログ
+      }
     } catch (error) {
       console.error("Error loading set:", error);
+      setCards([]);
     }
   };
 
@@ -89,7 +95,7 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
         const updatedSet = { 
           id: parseInt(selectedSetId),
           title: setTitle, 
-          card: cards,
+          cards: cards,
           type: 'flashcard'
         };
         await updateSet(updatedSet);
@@ -206,7 +212,11 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
             </Card>
           ))
         ) : (
-          <p>カードがありません。新しいカードを追加してください。</p>
+          <p>
+            {selectedSetId 
+              ? "このセットにはカードがありません。新しいカードを追加してください。" 
+              : "セットを選択するか、新しいカードを追加してください。"}
+          </p>
         )}
 
         <div className="fixed-bottom">
