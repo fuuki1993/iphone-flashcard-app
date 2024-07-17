@@ -105,10 +105,10 @@ const FlashcardCreationScreen = ({ onBack, onSave }) => {
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-lg font-medium">カード {index + 1}</CardTitle>
               <div>
-                <Button variant="ghost" size="icon" onClick={() => togglePreview(index)} className="mobile-friendly-button">
+                <Button variant="ghost" size="icon" onClick={() => togglePreview(index)}>
                   {previewIndex === index ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
-                <Button variant="ghost" size="icon" onClick={() => removeCard(index)} className="mobile-friendly-button">
+                <Button variant="ghost" size="icon" onClick={() => removeCard(index)} >
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
@@ -160,10 +160,10 @@ const FlashcardCreationScreen = ({ onBack, onSave }) => {
 
       <div className="fixed-bottom">
         <div className="flex justify-between">
-          <Button onClick={addCard} className="mobile-friendly-button">
+          <Button onClick={addCard}>
             <Plus className="mr-2 h-4 w-4" /> カードを追加
           </Button>
-          <Button onClick={handleSave} className="mobile-friendly-button">
+          <Button onClick={handleSave}>
             <Save className="mr-2 h-4 w-4" /> 保存
           </Button>
         </div>

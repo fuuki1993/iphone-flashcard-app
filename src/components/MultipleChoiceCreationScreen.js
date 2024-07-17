@@ -145,10 +145,10 @@ const MultipleChoiceCreationScreen = ({ onBack, onSave }) => {
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-lg font-medium">問題 {qIndex + 1}</CardTitle>
               <div>
-                <Button variant="ghost" size="icon" onClick={() => togglePreview(qIndex)} className="mobile-friendly-button">
+                <Button variant="ghost" size="icon" onClick={() => togglePreview(qIndex)}>
                   {previewIndex === qIndex ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
-                <Button variant="ghost" size="icon" onClick={() => removeQuestion(qIndex)} className="mobile-friendly-button">
+                <Button variant="ghost" size="icon" onClick={() => removeQuestion(qIndex)} >
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
@@ -203,12 +203,12 @@ const MultipleChoiceCreationScreen = ({ onBack, onSave }) => {
                         className="mobile-friendly-input flex-grow mr-2 text-base"
                         style={{ fontSize: '16px' }}
                       />
-                      <Button variant="ghost" size="icon" onClick={() => removeChoice(qIndex, cIndex)} className="mobile-friendly-button">
+                      <Button variant="ghost" size="icon" onClick={() => removeChoice(qIndex, cIndex)} >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   ))}
-                  <Button onClick={() => addChoice(qIndex)} className="mobile-friendly-button mt-2">
+                  <Button onClick={() => addChoice(qIndex)}>
                     <Plus className="mr-2 h-4 w-4" /> 選択肢を追加
                   </Button>
                 </>
@@ -224,10 +224,10 @@ const MultipleChoiceCreationScreen = ({ onBack, onSave }) => {
 
         <div className="fixed-bottom">
           <div className="flex justify-between">
-            <Button onClick={addQuestion} className="mobile-friendly-button">
+            <Button onClick={addQuestion}>
               <Plus className="mr-2 h-4 w-4" /> 問題を追加
             </Button>
-            <Button onClick={handleSave} className="mobile-friendly-button">
+            <Button onClick={handleSave}>
               <Save className="mr-2 h-4 w-4" /> 保存
             </Button>
           </div>

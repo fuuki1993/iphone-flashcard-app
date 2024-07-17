@@ -40,7 +40,9 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
   };
 
   const addCategory = () => {
-    setCategories([...categories, { name: '', items: [''] }]);
+    if (categories.length < 6) {
+      setCategories([...categories, { name: '', items: [''] }]);
+    }
   };
 
   const updateCategory = (index, field, value) => {
@@ -171,7 +173,7 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
             <Card key={categoryIndex} className="mb-4">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-lg font-medium">カテゴリー {categoryIndex + 1}</CardTitle>
-                <Button variant="ghost" size="icon" onClick={() => removeCategory(categoryIndex)} className="mobile-friendly-button">
+                <Button variant="ghost" size="icon" onClick={() => removeCategory(categoryIndex)}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </CardHeader>
@@ -192,7 +194,7 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
                       className="mobile-friendly-input flex-grow mr-2 text-base"
                       style={{ fontSize: '16px' }}
                     />
-                    <Button variant="ghost" size="icon" onClick={() => removeItem(categoryIndex, itemIndex)} className="mobile-friendly-button">
+                    <Button variant="ghost" size="icon" onClick={() => removeItem(categoryIndex, itemIndex)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -211,10 +213,13 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
 
         <div className="fixed-bottom">
           <div className="flex justify-between">
-            <Button onClick={addCategory} className="mobile-friendly-button">
+            <Button 
+              onClick={addCategory} 
+              disabled={categories.length >= 6}
+            >
               <Plus className="mr-2 h-4 w-4" /> カテゴリーを追加
             </Button>
-            <Button onClick={handleSave} className="mobile-friendly-button">
+            <Button onClick={handleSave}>
               <Save className="mr-2 h-4 w-4" /> 保存
             </Button>
           </div>

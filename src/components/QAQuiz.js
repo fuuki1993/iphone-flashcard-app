@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,7 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
   const [error, setError] = useState(null);
   const [isLastQuestion, setIsLastQuestion] = useState(false);
   const [shuffledQuestions, setShuffledQuestions] = useState([]);
+  const startTimeRef = useRef(new Date());
 
   useEffect(() => {
     const loadQuestions = async () => {
@@ -22,7 +23,7 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
         setIsLoading(true);
         let allQuestions = [];
         if (setId === null) {
-          // 全て���セットを取得
+          // 全てセットを取得
           const allSets = await getSets('qa');
           allQuestions = allSets.flatMap(set => set.qaItems);
         } else {
@@ -82,7 +83,8 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
   const handleFinish = async () => {
     const score = calculateScore();
     const endTime = new Date();
-    await saveStudyHistory(setId, title, 'qa', score, endTime);
+    const studyDuration = Math.round((endTime - startTimeRef.current) / 1000); // 秒単位で計算
+    await saveStudyHistory(setId, title, 'qa', score, endTime, studyDuration);
     onFinish(score);
   };
 
@@ -110,15 +112,15 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
     <div className="mobile-friendly-form">
       <div className="scrollable-content p-4">
         <div className="flex justify-between items-center mb-4">
-          <Button variant="ghost" size="icon" onClick={onBack} className="mobile-friendly-button">
+          <Button variant="ghost" size="icon" onClick={onBack}>
             <ArrowLeft />
           </Button>
           <h2 className="text-xl font-bold">一問一答</h2>
           <div className="flex">
-            <Button variant="ghost" size="icon" onClick={handleShuffle} className="mobile-friendly-button mr-2">
+            <Button variant="ghost" size="icon" onClick={handleShuffle}>
               <Shuffle />
             </Button>
-            <Button variant="ghost" size="icon" onClick={handleFinish} className="mobile-friendly-button">
+            <Button variant="ghost" size="icon" onClick={handleFinish}>
               終了
             </Button>
           </div>
@@ -138,12 +140,11 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
               value={userAnswer}
               onChange={(e) => setUserAnswer(e.target.value)}
               disabled={showAnswer}
-              className="mobile-friendly-input"
             />
           </CardContent>
           <CardFooter className="flex justify-between">
             {!showAnswer ? (
-              <Button onClick={handleSubmit} className="mobile-friendly-button">回答する</Button>
+              <Button onClick={handleSubmit}>回答する</Button>
             ) : (
               <div className="flex items-center text-sm">
                 {results[currentQuestionIndex] ? (

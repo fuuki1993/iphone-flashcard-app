@@ -27,7 +27,7 @@ export const openDB = () => {
   });
 };
 
-export const saveStudyHistory = async (setId, setTitle, setType, score, endTime) => {
+export const saveStudyHistory = async (setId, setTitle, setType, score, endTime, studyDuration) => {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([HISTORY_STORE_NAME], 'readwrite');
@@ -38,6 +38,7 @@ export const saveStudyHistory = async (setId, setTitle, setType, score, endTime)
       setType,
       score,
       date: endTime.toISOString(),
+      studyDuration, // 学習時間を追加
     };
     const request = store.add(newEntry);
 
@@ -156,4 +157,44 @@ export const getSetTitle = async (setId) => {
       }
     };
   });
+};
+
+export const getLastResetDate = async () => {
+  const db = await openDB();
+  return db.get('settings', 'lastResetDate');
+};
+
+export const setLastResetDate = async (date) => {
+  const db = await openDB();
+  await db.put('settings', date, 'lastResetDate');
+};
+
+export const getLastGoalResetDate = async () => {
+  const db = await openDB();
+  return db.get('settings', 'lastGoalResetDate');
+};
+
+export const setLastGoalResetDate = async (date) => {
+  const db = await openDB();
+  await db.put('settings', date, 'lastGoalResetDate');
+};
+
+export const getTodayStudyTime = async () => {
+  const db = await openDB();
+  return await db.get('settings', 'todayStudyTime') || 0;
+};
+
+export const saveTodayStudyTime = async (time) => {
+  const db = await openDB();
+  await db.put('settings', time, 'todayStudyTime');
+};
+
+export const saveOverallProgress = async (progress) => {
+  const db = await openDB();
+  await db.put('settings', progress, 'overallProgress');
+};
+
+export const getOverallProgress = async () => {
+  const db = await openDB();
+  return await db.get('settings', 'overallProgress') || 0;
 };

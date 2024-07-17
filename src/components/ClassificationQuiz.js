@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getSetById, saveStudyHistory } from '@/utils/indexedDB';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Shuffle } from 'lucide-react';
 import { DndContext, DragOverlay, useSensors, useSensor, PointerSensor, useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -45,11 +45,15 @@ const DroppableCategory = memo(({ category, isActive, feedbackColor, isLeftSide 
     data: { category },
   });
 
-  const className = useMemo(() => `flex items-center justify-center h-32 w-8 px-1 rounded transition-all duration-300 ${
-    feedbackColor ? feedbackColor : 'bg-gray-100'
-  } ${isActive ? 'border-2 border-blue-500' : ''} ${
-    isActive ? (isLeftSide ? 'w-12' : 'w-12') : ''
-  }`, [feedbackColor, isActive, isLeftSide]);
+  const className = useMemo(() => `
+    flex items-center justify-center h-32 px-1 rounded transition-all duration-300
+    ${feedbackColor ? feedbackColor : 'bg-gray-100'}
+    ${isActive ? 'border-2 border-blue-500' : ''}
+    ${isLeftSide
+      ? `w-12 ${isActive ? 'w-16 ml-auto' : ''}`
+      : `w-12 ${isActive ? 'w-16 mr-0 ml-auto' : ''}`
+    }
+  `, [feedbackColor, isActive, isLeftSide]);
 
   return (
     <div ref={setNodeRef} className={className}>
@@ -76,6 +80,10 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
     const [hoveredCategory, setHoveredCategory] = useState(null);
     const [categoryFeedback, setCategoryFeedback] = useState({});
     const [tempFeedback, setTempFeedback] = useState({});
+    const [shuffledItems, setShuffledItems] = useState([]);
+    const [classifiedItems, setClassifiedItems] = useState({});
+    const [shuffledCategories, setShuffledCategories] = useState([]);
+    const startTimeRef = useRef(new Date());
 
     const sensors = useSensors(
       useSensor(PointerSensor, {
@@ -107,19 +115,23 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
                 isClassified: false 
               }))
             );
+            const shuffled = shuffleArray(newItems);
             const newCorrectClassification = set.categories.reduce((acc, cat) => {
               acc[cat.name] = cat.items;
               return acc;
             }, {});
+            const categories = set.categories.map(c => c.name);
             setQuizData({
               question: `以下の項目を正しく分類してください。`,
-              categories: set.categories.map(c => c.name),
+              categories: categories,
               items: newItems,
               correctClassification: newCorrectClassification,
               isFinished: false,
               showResults: false,
               score: 0,
             });
+            setShuffledItems(shuffled);
+            setShuffledCategories(shuffleArray(categories));
           } else {
             throw new Error('Invalid data structure');
           }
@@ -132,6 +144,20 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
       };
       loadQuestion();
     }, [setId]);
+
+    const shuffleArray = (array) => {
+      const shuffled = [...array];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    };
+
+    const handleShuffle = useCallback(() => {
+      setShuffledItems(shuffleArray(shuffledItems));
+      setShuffledCategories(shuffleArray(shuffledCategories));
+    }, [shuffledItems, shuffledCategories]);
 
     const handleDragStart = useCallback((event) => {
         const { active } = event;
@@ -153,6 +179,12 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
               ? { ...item, category: over.id, isClassified: true }
               : item
           );
+
+          // Update classifiedItems
+          setClassifiedItems(prevClassified => ({
+            ...prevClassified,
+            [over.id]: [...(prevClassified[over.id] || []), active.id]
+          }));
 
           const totalClassified = updatedItems.filter(item => item.isClassified).length;
           const correctClassified = updatedItems.filter(item => 
@@ -176,6 +208,9 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
             showResults: isFinished,
           };
         });
+
+        // Remove the item from shuffledItems
+        setShuffledItems(prev => prev.filter(item => item.id !== active.id));
       }
 
       setActiveId(null);
@@ -193,12 +228,12 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
     }, [tempFeedback]);
 
     const categories = useMemo(() => {
-      const middleIndex = Math.ceil(quizData.categories.length / 2);
+      const middleIndex = Math.ceil(shuffledCategories.length / 2);
       return {
-        left: quizData.categories.slice(0, middleIndex),
-        right: quizData.categories.slice(middleIndex)
+        left: shuffledCategories.slice(0, middleIndex),
+        right: shuffledCategories.slice(middleIndex)
       };
-    }, [quizData.categories]);
+    }, [shuffledCategories]);
   
     const renderCategory = useCallback((category, isLeftSide) => (
       <DroppableCategory 
@@ -207,8 +242,16 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
         isActive={hoveredCategory === category}
         feedbackColor={tempFeedback[category] || categoryFeedback[category]}
         isLeftSide={isLeftSide}
-      />
-    ), [hoveredCategory, categoryFeedback, tempFeedback]);
+      >
+        <div className={isLeftSide ? "ml-2 mt-1" : "mr-2 mt-1 text-right"}>
+          {classifiedItems[category]?.map(itemId => (
+            <div key={itemId} className="text-xs mb-1">
+              {quizData.items.find(item => item.id === itemId)?.content}
+            </div>
+          ))}
+        </div>
+      </DroppableCategory>
+    ), [hoveredCategory, categoryFeedback, tempFeedback, classifiedItems, quizData.items]);
   
     const handleRestart = useCallback(() => {
       setQuizData(prevData => ({
@@ -232,7 +275,8 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
     const handleFinish = async () => {
       const score = calculateScore();
       const endTime = new Date();
-      await saveStudyHistory(setId, title, 'classification', score, endTime);
+      const studyDuration = Math.round((endTime - startTimeRef.current) / 1000); // 秒単位で計算
+      await saveStudyHistory(setId, title, 'classification', score, endTime, studyDuration);
       onFinish(score);
     };
 
@@ -247,7 +291,12 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
             <ArrowLeft />
           </Button>
           <h2 className="text-xl font-bold">分類クイズ</h2>
-          <div className="text-lg font-bold">スコア: {quizData.score}%</div>
+          <div className="flex items-center">
+            <Button variant="ghost" size="icon" onClick={handleShuffle} className="mr-2">
+              <Shuffle />
+            </Button>
+            <div className="text-lg font-bold">スコア: {quizData.score}%</div>
+          </div>
         </div>
   
         <Card className="mb-4">
@@ -270,10 +319,10 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
                       </div>
                     ))}
                   </div>
-                  <div className="w-full px-10">
-                    <SortableContext items={quizData.items.filter(item => !item.isClassified)} strategy={verticalListSortingStrategy}>
+                  <div className="w-full px-16">
+                    <SortableContext items={shuffledItems} strategy={verticalListSortingStrategy}>
                       <div className="grid grid-cols-2 gap-2">
-                        {quizData.items.filter(item => !item.isClassified).map((item) => (
+                        {shuffledItems.map((item) => (
                           <SortableItem 
                             key={item.id} 
                             id={item.id} 
@@ -286,7 +335,7 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
                       </div>
                     </SortableContext>
                   </div>
-                  <div className="absolute right-0 top-0 bottom-0 flex flex-col justify-between">
+                  <div className="absolute right-0 top-0 bottom-0 flex flex-col justify-between items-end">
                     {categories.right.map((category, index) => (
                       <div key={category} className={index !== 0 ? "mt-4" : ""}>
                         {renderCategory(category, false)}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Check, X, Shuffle } from 'lucide-react';
@@ -14,6 +14,7 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isLastQuestion, setIsLastQuestion] = useState(false);
+  const startTimeRef = useRef(new Date());
 
   const calculateScore = () => {
     const totalQuestions = shuffledQuestions.length;
@@ -113,7 +114,8 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
   const handleFinish = async () => {
     const score = calculateScore();
     const endTime = new Date();
-    await saveStudyHistory(setId, title, 'multiple-choice', score, endTime);
+    const studyDuration = Math.round((endTime - startTimeRef.current) / 1000); // 秒単位で計算
+    await saveStudyHistory(setId, title, 'multiple-choice', score, endTime, studyDuration);
     onFinish(score);
   };
 

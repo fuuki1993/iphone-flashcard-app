@@ -18,7 +18,9 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
   const inputRef = useAutoScroll();
 
   const addCategory = () => {
-    setCategories([...categories, { name: '', items: [''] }]);
+    if (categories.length < 6) {
+      setCategories([...categories, { name: '', items: [''] }]);
+    }
   };
 
   const updateCategory = (index, field, value) => {
@@ -115,7 +117,7 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
           {errors.title && <Alert variant="destructive"><AlertDescription>{errors.title}</AlertDescription></Alert>}
         </div>
 
-        <Button onClick={() => setPreviewMode(!previewMode)} className="mobile-friendly-button mb-4">
+        <Button onClick={() => setPreviewMode(!previewMode)}>
           {previewMode ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
           {previewMode ? 'プレビューを終了' : 'プレビュー'}
         </Button>
@@ -139,7 +141,7 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
             <Card key={categoryIndex} className="mb-4">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-lg font-medium">カテゴリー {categoryIndex + 1}</CardTitle>
-                <Button variant="ghost" size="icon" onClick={() => removeCategory(categoryIndex)} className="mobile-friendly-button">
+                <Button variant="ghost" size="icon" onClick={() => removeCategory(categoryIndex)}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </CardHeader>
@@ -162,12 +164,12 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
                       className="mobile-friendly-input flex-grow mr-2 text-base"
                       style={{ fontSize: '16px' }}
                     />
-                    <Button variant="ghost" size="icon" onClick={() => removeItem(categoryIndex, itemIndex)} className="mobile-friendly-button">
+                    <Button variant="ghost" size="icon" onClick={() => removeItem(categoryIndex, itemIndex)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 ))}
-                <Button onClick={() => addItem(categoryIndex)} className="mobile-friendly-button mt-2">
+                <Button onClick={() => addItem(categoryIndex)}>
                   <Plus className="mr-2 h-4 w-4" /> 項目を追加
                 </Button>
               </CardContent>
@@ -182,10 +184,13 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
 
       <div className="fixed-bottom">
         <div className="flex justify-between">
-          <Button onClick={addCategory} className="mobile-friendly-button">
+          <Button 
+            onClick={addCategory} 
+            disabled={categories.length >= 6}
+          >
             <Plus className="mr-2 h-4 w-4" /> カテゴリーを追加
           </Button>
-          <Button onClick={handleSave} className="mobile-friendly-button">
+          <Button onClick={handleSave}>
             <Save className="mr-2 h-4 w-4" /> 保存
           </Button>
         </div>
