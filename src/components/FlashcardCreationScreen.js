@@ -82,7 +82,7 @@ const FlashcardCreationScreen = ({ onBack, onSave }) => {
     <div className="mobile-friendly-form max-w-full overflow-x-hidden">
       <div className="scrollable-content px-4">
         <div className="flex items-center mb-6">
-          <Button variant="ghost" size="icon" onClick={onBack} className="mobile-friendly-button">
+          <Button variant="ghost" size="icon" onClick={onBack}>
             <ArrowLeft />
           </Button>
           <h1 className="text-2xl font-bold ml-2">フラッシュカード作成</h1>
