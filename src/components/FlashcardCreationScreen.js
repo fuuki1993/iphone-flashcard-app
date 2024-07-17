@@ -80,7 +80,7 @@ const FlashcardCreationScreen = ({ onBack, onSave }) => {
     <div className="mobile-friendly-form">
       <div className="scrollable-content">
         <div className="flex items-center mb-6">
-          <Button variant="ghost" size="icon" onClick={onBack}>
+          <Button variant="ghost" size="icon" onClick={onBack} className="mobile-friendly-button">
             <ArrowLeft />
           </Button>
           <h1 className="text-2xl font-bold ml-2">フラッシュカード作成</h1>
@@ -91,7 +91,7 @@ const FlashcardCreationScreen = ({ onBack, onSave }) => {
             placeholder="セットのタイトル"
             value={setTitle}
             onChange={(e) => setSetTitle(e.target.value)}
-            className="mb-2"
+            className="mobile-friendly-input mb-2"
           />
           {errors.title && <Alert variant="destructive"><AlertDescription>{errors.title}</AlertDescription></Alert>}
         </div>
@@ -101,10 +101,10 @@ const FlashcardCreationScreen = ({ onBack, onSave }) => {
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-lg font-medium">カード {index + 1}</CardTitle>
               <div>
-                <Button variant="ghost" size="icon" onClick={() => togglePreview(index)}>
+                <Button variant="ghost" size="icon" onClick={() => togglePreview(index)} className="mobile-friendly-button">
                   {previewIndex === index ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
-                <Button variant="ghost" size="icon" onClick={() => removeCard(index)}>
+                <Button variant="ghost" size="icon" onClick={() => removeCard(index)} className="mobile-friendly-button">
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
@@ -124,19 +124,19 @@ const FlashcardCreationScreen = ({ onBack, onSave }) => {
                     placeholder="表面"
                     value={card.front}
                     onChange={(e) => updateCard(index, 'front', e.target.value)}
-                    className="mb-2"
+                    className="mobile-friendly-input mb-2"
                   />
                   <Textarea
                     placeholder="裏面"
                     value={card.back}
                     onChange={(e) => updateCard(index, 'back', e.target.value)}
-                    className="mb-2"
+                    className="mobile-friendly-input mb-2"
                   />
                   <Input
                     type="file"
                     accept="image/*"
                     onChange={(e) => handleImageUpload(index, e)}
-                    className="mb-2"
+                    className="mobile-friendly-input mb-2"
                   />
                   {card.image && <img src={card.image} alt="Uploaded" className="mt-2 max-w-full h-auto" />}
                 </>
@@ -151,10 +151,10 @@ const FlashcardCreationScreen = ({ onBack, onSave }) => {
 
       <div className="fixed-bottom">
         <div className="flex justify-between">
-          <Button onClick={addCard}>
+          <Button onClick={addCard} className="mobile-friendly-button">
             <Plus className="mr-2 h-4 w-4" /> カードを追加
           </Button>
-          <Button onClick={handleSave}>
+          <Button onClick={handleSave} className="mobile-friendly-button">
             <Save className="mr-2 h-4 w-4" /> 保存
           </Button>
         </div>

@@ -158,7 +158,7 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
           placeholder="セットのタイトル"
           value={setTitle}
           onChange={(e) => setSetTitle(e.target.value)}
-          className="mt-2"
+          className="mobile-friendly-input"
         />
         {errors.title && <Alert variant="destructive"><AlertDescription>{errors.title}</AlertDescription></Alert>}
       </div>
@@ -168,10 +168,10 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-lg font-medium">問題 {qIndex + 1}</CardTitle>
             <div>
-              <Button variant="ghost" size="icon" onClick={() => setPreviewIndex(previewIndex === qIndex ? null : qIndex)}>
+              <Button variant="ghost" size="icon" onClick={() => setPreviewIndex(previewIndex === qIndex ? null : qIndex)} className="mobile-friendly-button">
                 {previewIndex === qIndex ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
-              <Button variant="ghost" size="icon" onClick={() => removeQuestion(qIndex)}>
+              <Button variant="ghost" size="icon" onClick={() => removeQuestion(qIndex)} className="mobile-friendly-button">
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>

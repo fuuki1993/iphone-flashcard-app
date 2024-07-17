@@ -117,101 +117,105 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
   };
 
   return (
-    <div className="p-4 max-w-md mx-auto">
-      <div className="flex items-center mb-6">
-        <Button variant="ghost" size="icon" onClick={onBack}>
-          <ArrowLeft />
-        </Button>
-        <h1 className="text-2xl font-bold ml-2">分類問題編集</h1>
-      </div>
-
-      <div className="mb-6">
-        <Select onValueChange={handleSetChange} value={selectedSetId}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="編集するセットを選択" />
-          </SelectTrigger>
-          <SelectContent>
-            {sets.map(set => (
-              <SelectItem key={set.id} value={set.id.toString()}>{set.title}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Input
-          placeholder="セットのタイトル"
-          value={setTitle}
-          onChange={(e) => setSetTitle(e.target.value)}
-          className="mt-2"
-        />
-        {errors.title && <Alert variant="destructive"><AlertDescription>{errors.title}</AlertDescription></Alert>}
-      </div>
-
-      <Button onClick={() => setPreviewMode(!previewMode)} className="mb-4">
-        {previewMode ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
-        {previewMode ? 'プレビューを終了' : 'プレビュー'}
-      </Button>
-
-      {previewMode ? (
-        <div className="bg-gray-100 p-4 rounded-md mb-4">
-          <h2 className="text-xl font-bold mb-4">{setTitle}</h2>
-          {categories.map((category, index) => (
-            <div key={index} className="mb-4">
-              <h3 className="font-bold">{category.name}</h3>
-              <ul className="list-disc pl-5">
-                {category.items.map((item, itemIndex) => (
-                  <li key={itemIndex}>{item}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
+    <div className="mobile-friendly-form">
+      <div className="scrollable-content">
+        <div className="flex items-center mb-6">
+          <Button variant="ghost" size="icon" onClick={onBack}>
+            <ArrowLeft />
+          </Button>
+          <h1 className="text-2xl font-bold ml-2">分類問題編集</h1>
         </div>
-      ) : (
-        categories.map((category, categoryIndex) => (
-          <Card key={categoryIndex} className="mb-4">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-lg font-medium">カテゴリー {categoryIndex + 1}</CardTitle>
-              <Button variant="ghost" size="icon" onClick={() => removeCategory(categoryIndex)}>
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <Input
-                placeholder="カテゴリー名"
-                value={category.name}
-                onChange={(e) => updateCategory(categoryIndex, 'name', e.target.value)}
-                className="mb-2"
-              />
-              {category.items.map((item, itemIndex) => (
-                <div key={itemIndex} className="flex mb-2">
-                  <Input
-                    placeholder={`項目 ${itemIndex + 1}`}
-                    value={item}
-                    onChange={(e) => updateItem(categoryIndex, itemIndex, e.target.value)}
-                    className="flex-grow mr-2"
-                  />
-                  <Button variant="ghost" size="icon" onClick={() => removeItem(categoryIndex, itemIndex)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-              <Button onClick={() => addItem(categoryIndex)} className="mt-2">
-                <Plus className="mr-2 h-4 w-4" /> 項目を追加
-              </Button>
-            </CardContent>
-            <CardFooter>
-              {errors[`category${categoryIndex}`] && <Alert variant="destructive"><AlertDescription>{errors[`category${categoryIndex}`]}</AlertDescription></Alert>}
-              {errors[`category${categoryIndex}items`] && <Alert variant="destructive"><AlertDescription>{errors[`category${categoryIndex}items`]}</AlertDescription></Alert>}
-            </CardFooter>
-          </Card>
-        ))
-      )}
 
-      <div className="flex justify-between mt-4">
-        <Button onClick={addCategory}>
-          <Plus className="mr-2 h-4 w-4" /> カテゴリーを追加
+        <div className="mb-6">
+          <Select onValueChange={handleSetChange} value={selectedSetId}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="編集するセットを選択" />
+            </SelectTrigger>
+            <SelectContent>
+              {sets.map(set => (
+                <SelectItem key={set.id} value={set.id.toString()}>{set.title}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Input
+            placeholder="セットのタイトル"
+            value={setTitle}
+            onChange={(e) => setSetTitle(e.target.value)}
+            className="mobile-friendly-input"
+          />
+          {errors.title && <Alert variant="destructive"><AlertDescription>{errors.title}</AlertDescription></Alert>}
+        </div>
+
+        <Button onClick={() => setPreviewMode(!previewMode)} className="mb-4">
+          {previewMode ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
+          {previewMode ? 'プレビューを終了' : 'プレビュー'}
         </Button>
-        <Button onClick={handleSave}>
-          <Save className="mr-2 h-4 w-4" /> 保存
-        </Button>
+
+        {previewMode ? (
+          <div className="bg-gray-100 p-4 rounded-md mb-4">
+            <h2 className="text-xl font-bold mb-4">{setTitle}</h2>
+            {categories.map((category, index) => (
+              <div key={index} className="mb-4">
+                <h3 className="font-bold">{category.name}</h3>
+                <ul className="list-disc pl-5">
+                  {category.items.map((item, itemIndex) => (
+                    <li key={itemIndex}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        ) : (
+          categories.map((category, categoryIndex) => (
+            <Card key={categoryIndex} className="mb-4">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-lg font-medium">カテゴリー {categoryIndex + 1}</CardTitle>
+                <Button variant="ghost" size="icon" onClick={() => removeCategory(categoryIndex)} className="mobile-friendly-button">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <Input
+                  placeholder="カテゴリー名"
+                  value={category.name}
+                  onChange={(e) => updateCategory(categoryIndex, 'name', e.target.value)}
+                  className="mobile-friendly-input mb-2"
+                />
+                {category.items.map((item, itemIndex) => (
+                  <div key={itemIndex} className="flex mb-2">
+                    <Input
+                      placeholder={`項目 ${itemIndex + 1}`}
+                      value={item}
+                      onChange={(e) => updateItem(categoryIndex, itemIndex, e.target.value)}
+                      className="mobile-friendly-input flex-grow mr-2"
+                    />
+                    <Button variant="ghost" size="icon" onClick={() => removeItem(categoryIndex, itemIndex)} className="mobile-friendly-button">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button onClick={() => addItem(categoryIndex)} className="mobile-friendly-button mt-2">
+                  <Plus className="mr-2 h-4 w-4" /> 項目を追加
+                </Button>
+              </CardContent>
+              <CardFooter>
+                {errors[`category${categoryIndex}`] && <Alert variant="destructive"><AlertDescription>{errors[`category${categoryIndex}`]}</AlertDescription></Alert>}
+                {errors[`category${categoryIndex}items`] && <Alert variant="destructive"><AlertDescription>{errors[`category${categoryIndex}items`]}</AlertDescription></Alert>}
+              </CardFooter>
+            </Card>
+          ))
+        )}
+
+        <div className="fixed-bottom">
+          <div className="flex justify-between">
+            <Button onClick={addCategory} className="mobile-friendly-button">
+              <Plus className="mr-2 h-4 w-4" /> カテゴリーを追加
+            </Button>
+            <Button onClick={handleSave} className="mobile-friendly-button">
+              <Save className="mr-2 h-4 w-4" /> 保存
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );
