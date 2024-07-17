@@ -6,17 +6,10 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  experimental: {
-    viewport: {
-      width: 'device-width',
-      initialScale: 1,
-      maximumScale: 1,
-      userScalable: false,
-    },
-  },
 }
 
 module.exports = {
+  ...nextConfig,
   async headers() {
     return [
       {
