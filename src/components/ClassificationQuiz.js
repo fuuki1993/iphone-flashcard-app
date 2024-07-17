@@ -101,63 +101,52 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
     }, [hoveredCategory]);
   
     const handleDragEnd = useCallback((event) => {
-      const { active, over } = event;
-
-      if (over && active.id !== over.id) {
-        console.log('Before state update:', quizData);
-        setQuizData((prev) => {
-          const activeItem = prev.unclassifiedItems.find(item => item.id === active.id);
-          
-          if (activeItem) {
-            const toCategory = over.id;
-            const isCorrect = prev.correctClassification[toCategory]?.includes(activeItem.content) ?? false;
-
-            const newUserClassification = {
-              ...prev.userClassification,
-              [toCategory]: [...(prev.userClassification[toCategory] || []), { ...activeItem, category: toCategory }]
-            };
-            const newUnclassifiedItems = prev.unclassifiedItems.filter(item => item.id !== active.id);
+        const { active, over } = event;
+      
+        if (over && active.id !== over.id) {
+          setQuizData((prev) => {
+            const activeItem = prev.unclassifiedItems.find(item => item.id === active.id);
             
-            const totalClassified = Object.values(newUserClassification).flat().length;
-            const correctClassified = Object.values(newUserClassification).flat().filter(item => 
-              prev.correctClassification[item.category]?.includes(item.content) ?? false
-            ).length;
-            const newScore = totalClassified > 0 ? Math.round((correctClassified / totalClassified) * 100) : 0;
-            
-            const isFinished = newUnclassifiedItems.length === 0;
-
-            // カテゴリフィードバックの更新を別の非同期処理に移動
-            setTimeout(() => {
+            if (activeItem) {
+              const toCategory = over.id;
+              const isCorrect = prev.correctClassification[toCategory]?.includes(activeItem.content) ?? false;
+      
+              const newUserClassification = {
+                ...prev.userClassification,
+                [toCategory]: [...(prev.userClassification[toCategory] || []), { ...activeItem, category: toCategory }]
+              };
+              const newUnclassifiedItems = prev.unclassifiedItems.filter(item => item.id !== active.id);
+              
+              const totalClassified = Object.values(newUserClassification).flat().length;
+              const correctClassified = Object.values(newUserClassification).flat().filter(item => 
+                prev.correctClassification[item.category]?.includes(item.content) ?? false
+              ).length;
+              const newScore = totalClassified > 0 ? Math.round((correctClassified / totalClassified) * 100) : 0;
+              
+              const isFinished = newUnclassifiedItems.length === 0;
+      
+              // カテゴリーフィードバックの更新をここで行う
               setCategoryFeedback(prevFeedback => ({
                 ...prevFeedback,
                 [toCategory]: isCorrect ? 'bg-green-200' : 'bg-red-200'
               }));
-            }, 0);
-
-            console.log('After state update:', {
-              ...prev,
-              userClassification: newUserClassification,
-              unclassifiedItems: newUnclassifiedItems,
-              score: newScore,
-              isFinished: isFinished,
-              showResults: isFinished,
-            });
-            return {
-              ...prev,
-              userClassification: newUserClassification,
-              unclassifiedItems: newUnclassifiedItems,
-              score: newScore,
-              isFinished: isFinished,
-              showResults: isFinished,
-            };
-          }
-          return prev;
-        });
-      }
-  
-      setActiveId(null);
-      setHoveredCategory(null);
-    }, []);
+      
+              return {
+                ...prev,
+                userClassification: newUserClassification,
+                unclassifiedItems: newUnclassifiedItems,
+                score: newScore,
+                isFinished: isFinished,
+                showResults: isFinished,
+              };
+            }
+            return prev;
+          });
+        }
+      
+        setActiveId(null);
+        setHoveredCategory(null);
+      }, []);
   
     useEffect(() => {
       const loadQuestion = async () => {
@@ -199,11 +188,13 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
     }, [setId]);
   
     useEffect(() => {
-      const timer = setTimeout(() => {
-        setCategoryFeedback({});
-      }, 500);
-      return () => clearTimeout(timer);
-    }, [categoryFeedback]);
+        if (Object.keys(categoryFeedback).length > 0) {
+          const timer = setTimeout(() => {
+            setCategoryFeedback({});
+          }, 500);
+          return () => clearTimeout(timer);
+        }
+      }, [categoryFeedback]);
   
     const handleRestart = useCallback(() => {
       setQuizData(prev => ({
