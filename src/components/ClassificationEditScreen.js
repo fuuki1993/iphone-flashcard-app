@@ -249,7 +249,7 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
                     </Button>
                   </div>
                 ))}
-                <Button onClick={() => addItem(categoryIndex)} className="mobile-friendly-button mt-2">
+                <Button onClick={() => addItem(categoryIndex)}>
                   <Plus className="mr-2 h-4 w-4" /> 項目を追加
                 </Button>
               </CardContent>
