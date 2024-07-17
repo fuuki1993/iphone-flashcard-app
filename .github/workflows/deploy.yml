@@ -4,10 +4,23 @@ on:
   push:
     branches: [main]
 
+# GitHubページへの書き込み権限を設定
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 1つのデプロイメントのみを許可する並行実行の設定
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
 jobs:
   build-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,14 +39,20 @@ jobs:
       - name: Create .nojekyll file
         run: touch ./out/.nojekyll
 
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GH_PAGES_TOKEN }}
-          publish_dir: ./out
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
 
-      # ビルド出力を除外しない場合の設定
-      - name: Upload build output as artifact
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './out'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      # ビルド出力を除外しない場合の設定（オプション）
+      - name: Upload build output as additional artifact
         uses: actions/upload-artifact@v4
         with:
           name: build-output
