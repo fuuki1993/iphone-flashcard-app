@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "export": "next export",
-    "deploy": "next build && powershell -Command \"New-Item -Path .\\out\\.nojekyll -ItemType File\" && git add out/ && git commit -m \"Deploy to gh-pages\" && git subtree push --prefix out origin gh-pages",
+    "deploy": "next build && powershell -Command \"if (!(Test-Path -Path .\\out\\.nojekyll)) { New-Item -Path .\\out\\.nojekyll -ItemType File }\" && git add -f out/ && git commit -m \"Deploy to gh-pages\" && git subtree push --prefix out origin gh-pages",
     "dev:local": "cross-env NODE_ENV=development next dev"
   },
   "dependencies": {
