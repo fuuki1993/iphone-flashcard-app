@@ -8,12 +8,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ArrowLeft, Plus, Save, Trash2, Image, Eye, EyeOff } from 'lucide-react';
 import { saveSet } from '@/utils/indexedDB';
+import { useAutoScroll } from '@/hooks/useAutoScroll';
 
 const QACreationScreen = ({ onBack, onSave }) => {
   const [setTitle, setSetTitle] = useState('');
   const [qaItems, setQAItems] = useState([{ question: '', answer: '', image: null }]);
   const [errors, setErrors] = useState({});
   const [previewIndex, setPreviewIndex] = useState(null);
+  const inputRef = useAutoScroll();
 
   const addQAItem = () => {
     setQAItems([...qaItems, { question: '', answer: '', image: null }]);
@@ -77,8 +79,8 @@ const QACreationScreen = ({ onBack, onSave }) => {
   };
 
   return (
-    <div className="mobile-friendly-form">
-      <div className="scrollable-content">
+    <div className="mobile-friendly-form max-w-full overflow-x-hidden">
+      <div className="scrollable-content px-4">
         <div className="flex items-center mb-6">
           <Button variant="ghost" size="icon" onClick={onBack}>
             <ArrowLeft />
@@ -88,10 +90,12 @@ const QACreationScreen = ({ onBack, onSave }) => {
 
         <div className="mb-6">
           <Input
+            ref={inputRef}
             placeholder="セットのタイトル"
             value={setTitle}
             onChange={(e) => setSetTitle(e.target.value)}
-            className="mobile-friendly-input mb-2"
+            className="mobile-friendly-input mb-2 text-base"
+            style={{ fontSize: '16px' }}
           />
           {errors.title && <Alert variant="destructive"><AlertDescription>{errors.title}</AlertDescription></Alert>}
         </div>
@@ -121,18 +125,23 @@ const QACreationScreen = ({ onBack, onSave }) => {
               ) : (
                 <>
                   <Textarea
+                    ref={inputRef}
                     placeholder="質問"
                     value={item.question}
                     onChange={(e) => updateQAItem(index, 'question', e.target.value)}
-                    className="mobile-friendly-input mb-2"
+                    className="mobile-friendly-input mb-2 text-base"
+                    style={{ fontSize: '16px' }}
                   />
                   <Textarea
+                    ref={inputRef}
                     placeholder="回答"
                     value={item.answer}
                     onChange={(e) => updateQAItem(index, 'answer', e.target.value)}
-                    className="mobile-friendly-input mb-2"
+                    className="mobile-friendly-input mb-2 text-base"
+                    style={{ fontSize: '16px' }}
                   />
                   <Input
+                    ref={inputRef}
                     type="file"
                     accept="image/*"
                     onChange={(e) => handleImageUpload(index, e)}

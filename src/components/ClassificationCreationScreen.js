@@ -94,8 +94,8 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
   };
 
   return (
-    <div className="mobile-friendly-form">
-      <div className="scrollable-content">
+    <div className="mobile-friendly-form max-w-full overflow-x-hidden">
+      <div className="scrollable-content px-4">
         <div className="flex items-center mb-6">
           <Button variant="ghost" size="icon" onClick={onBack} className="mobile-friendly-button">
             <ArrowLeft />
@@ -109,7 +109,8 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
             placeholder="セットのタイトル"
             value={setTitle}
             onChange={(e) => setSetTitle(e.target.value)}
-            className="mobile-friendly-input mb-2"
+            className="mobile-friendly-input mb-2 text-base"
+            style={{ fontSize: '16px' }}
           />
           {errors.title && <Alert variant="destructive"><AlertDescription>{errors.title}</AlertDescription></Alert>}
         </div>
@@ -148,7 +149,8 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
                   placeholder="カテゴリー名"
                   value={category.name}
                   onChange={(e) => updateCategory(categoryIndex, 'name', e.target.value)}
-                  className="mobile-friendly-input mb-2"
+                  className="mobile-friendly-input mb-2 text-base"
+                  style={{ fontSize: '16px' }}
                 />
                 {category.items.map((item, itemIndex) => (
                   <div key={itemIndex} className="flex mb-2">
@@ -157,7 +159,8 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
                       placeholder={`項目 ${itemIndex + 1}`}
                       value={item}
                       onChange={(e) => updateItem(categoryIndex, itemIndex, e.target.value)}
-                      className="mobile-friendly-input flex-grow mr-2"
+                      className="mobile-friendly-input flex-grow mr-2 text-base"
+                      style={{ fontSize: '16px' }}
                     />
                     <Button variant="ghost" size="icon" onClick={() => removeItem(categoryIndex, itemIndex)} className="mobile-friendly-button">
                       <Trash2 className="h-4 w-4" />

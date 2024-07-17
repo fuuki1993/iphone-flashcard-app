@@ -8,12 +8,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ArrowLeft, Plus, Save, Trash2, Image, Eye, EyeOff } from 'lucide-react';
 import { saveSet } from '@/utils/indexedDB';
+import { useAutoScroll } from '@/hooks/useAutoScroll';
 
 const FlashcardCreationScreen = ({ onBack, onSave }) => {
   const [setTitle, setSetTitle] = useState('');
   const [cards, setCards] = useState([{ front: '', back: '', image: null }]);
   const [errors, setErrors] = useState({});
   const [previewIndex, setPreviewIndex] = useState(null);
+  const inputRef = useAutoScroll();
 
   const addCard = () => {
     setCards([...cards, { front: '', back: '', image: null }]);
@@ -77,8 +79,8 @@ const FlashcardCreationScreen = ({ onBack, onSave }) => {
   };
 
   return (
-    <div className="mobile-friendly-form">
-      <div className="scrollable-content">
+    <div className="mobile-friendly-form max-w-full overflow-x-hidden">
+      <div className="scrollable-content px-4">
         <div className="flex items-center mb-6">
           <Button variant="ghost" size="icon" onClick={onBack} className="mobile-friendly-button">
             <ArrowLeft />
@@ -88,10 +90,12 @@ const FlashcardCreationScreen = ({ onBack, onSave }) => {
 
         <div className="mb-6">
           <Input
+            ref={inputRef}
             placeholder="セットのタイトル"
             value={setTitle}
             onChange={(e) => setSetTitle(e.target.value)}
-            className="mobile-friendly-input mb-2"
+            className="mobile-friendly-input mb-2 text-base"
+            style={{ fontSize: '16px' }}
           />
           {errors.title && <Alert variant="destructive"><AlertDescription>{errors.title}</AlertDescription></Alert>}
         </div>
@@ -121,18 +125,23 @@ const FlashcardCreationScreen = ({ onBack, onSave }) => {
               ) : (
                 <>
                   <Textarea
+                    ref={inputRef}
                     placeholder="表面"
                     value={card.front}
                     onChange={(e) => updateCard(index, 'front', e.target.value)}
-                    className="mobile-friendly-input mb-2"
+                    className="mobile-friendly-input mb-2 text-base"
+                    style={{ fontSize: '16px' }}
                   />
                   <Textarea
+                    ref={inputRef}
                     placeholder="裏面"
                     value={card.back}
                     onChange={(e) => updateCard(index, 'back', e.target.value)}
-                    className="mobile-friendly-input mb-2"
+                    className="mobile-friendly-input mb-2 text-base"
+                    style={{ fontSize: '16px' }}
                   />
                   <Input
+                    ref={inputRef}
                     type="file"
                     accept="image/*"
                     onChange={(e) => handleImageUpload(index, e)}

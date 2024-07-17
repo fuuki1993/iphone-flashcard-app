@@ -135,117 +135,122 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
   };
 
   return (
-    <div className="p-4 max-w-md mx-auto">
-      <div className="flex items-center mb-6">
-        <Button variant="ghost" size="icon" onClick={onBack}>
-          <ArrowLeft />
-        </Button>
-        <h1 className="text-2xl font-bold ml-2">多肢選択問題編集</h1>
-      </div>
+    <div className="mobile-friendly-form max-w-full overflow-x-hidden">
+      <div className="scrollable-content px-4">
+        <div className="flex items-center mb-6">
+          <Button variant="ghost" size="icon" onClick={onBack} className="mobile-friendly-button">
+            <ArrowLeft />
+          </Button>
+          <h1 className="text-2xl font-bold ml-2">多肢選択問題編集</h1>
+        </div>
 
-      <div className="mb-6">
-        <Select onValueChange={handleSetChange} value={selectedSetId}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="編集するセットを選択" />
-          </SelectTrigger>
-          <SelectContent>
-            {sets.map(set => (
-              <SelectItem key={set.id} value={set.id.toString()}>{set.title}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Input
-          placeholder="セットのタイトル"
-          value={setTitle}
-          onChange={(e) => setSetTitle(e.target.value)}
-          className="mobile-friendly-input"
-        />
-        {errors.title && <Alert variant="destructive"><AlertDescription>{errors.title}</AlertDescription></Alert>}
-      </div>
+        <div className="mb-6">
+          <Select onValueChange={handleSetChange} value={selectedSetId}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="編集するセットを選択" />
+            </SelectTrigger>
+            <SelectContent>
+              {sets.map(set => (
+                <SelectItem key={set.id} value={set.id.toString()}>{set.title}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Input
+            placeholder="セットのタイトル"
+            value={setTitle}
+            onChange={(e) => setSetTitle(e.target.value)}
+            className="mobile-friendly-input mb-2 text-base"
+            style={{ fontSize: '16px' }}
+          />
+          {errors.title && <Alert variant="destructive"><AlertDescription>{errors.title}</AlertDescription></Alert>}
+        </div>
 
-      {questions.map((q, qIndex) => (
-        <Card key={qIndex} className="mb-4">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-lg font-medium">問題 {qIndex + 1}</CardTitle>
-            <div>
-              <Button variant="ghost" size="icon" onClick={() => setPreviewIndex(previewIndex === qIndex ? null : qIndex)} className="mobile-friendly-button">
-                {previewIndex === qIndex ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => removeQuestion(qIndex)} className="mobile-friendly-button">
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {previewIndex === qIndex ? (
-              <div className="bg-gray-100 p-4 rounded-md">
-                <h3 className="font-bold mb-2">問題:</h3>
-                <p>{q.question}</p>
-                {q.image && <img src={q.image} alt="Question" className="mt-2 max-w-full h-auto" />}
-                <h3 className="font-bold mt-4 mb-2">選択肢:</h3>
-                <ul className="list-disc pl-5">
-                  {q.choices.map((choice, cIndex) => (
-                    <li key={cIndex} className={choice.isCorrect ? "text-green-600 font-bold" : ""}>
-                      {choice.text} {choice.isCorrect && "(正解)"}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : (
-              <>
-                <Textarea
-                  placeholder="問題文"
-                  value={q.question}
-                  onChange={(e) => updateQuestion(qIndex, 'question', e.target.value)}
-                  className="mb-2"
-                />
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleImageUpload(qIndex, e)}
-                  className="mb-2"
-                />
-                {q.image && <img src={q.image} alt="Uploaded" className="mt-2 max-w-full h-auto" />}
-                <h4 className="font-medium mt-4 mb-2">選択肢:</h4>
-                {q.choices.map((choice, cIndex) => (
-                  <div key={cIndex} className="flex items-center mb-2">
-                    <Checkbox
-                      checked={choice.isCorrect}
-                      onCheckedChange={(checked) => updateChoice(qIndex, cIndex, 'isCorrect', checked)}
-                      className="mr-2"
-                    />
-                    <Input
-                      placeholder={`選択肢 ${cIndex + 1}`}
-                      value={choice.text}
-                      onChange={(e) => updateChoice(qIndex, cIndex, 'text', e.target.value)}
-                      className="flex-grow mr-2"
-                    />
-                    <Button variant="ghost" size="icon" onClick={() => removeChoice(qIndex, cIndex)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-                <Button onClick={() => addChoice(qIndex)} className="mt-2">
-                  <Plus className="mr-2 h-4 w-4" /> 選択肢を追加
+        {questions.map((q, qIndex) => (
+          <Card key={qIndex} className="mb-4">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-lg font-medium">問題 {qIndex + 1}</CardTitle>
+              <div>
+                <Button variant="ghost" size="icon" onClick={() => setPreviewIndex(previewIndex === qIndex ? null : qIndex)} className="mobile-friendly-button">
+                  {previewIndex === qIndex ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
-              </>
-            )}
-          </CardContent>
-          <CardFooter>
-            {errors[`question${qIndex}`] && <Alert variant="destructive"><AlertDescription>{errors[`question${qIndex}`]}</AlertDescription></Alert>}
-            {errors[`question${qIndex}choices`] && <Alert variant="destructive"><AlertDescription>{errors[`question${qIndex}choices`]}</AlertDescription></Alert>}
-            {errors[`question${qIndex}correct`] && <Alert variant="destructive"><AlertDescription>{errors[`question${qIndex}correct`]}</AlertDescription></Alert>}
-          </CardFooter>
-        </Card>
-      ))}
+                <Button variant="ghost" size="icon" onClick={() => removeQuestion(qIndex)} className="mobile-friendly-button">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {previewIndex === qIndex ? (
+                <div className="bg-gray-100 p-4 rounded-md">
+                  <h3 className="font-bold mb-2">問題:</h3>
+                  <p>{q.question}</p>
+                  {q.image && <img src={q.image} alt="Question" className="mt-2 max-w-full h-auto" />}
+                  <h3 className="font-bold mt-4 mb-2">選択肢:</h3>
+                  <ul className="list-disc pl-5">
+                    {q.choices.map((choice, cIndex) => (
+                      <li key={cIndex} className={choice.isCorrect ? "text-green-600 font-bold" : ""}>
+                        {choice.text} {choice.isCorrect && "(正解)"}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <>
+                  <Textarea
+                    placeholder="問題文"
+                    value={q.question}
+                    onChange={(e) => updateQuestion(qIndex, 'question', e.target.value)}
+                    className="mb-2"
+                  />
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleImageUpload(qIndex, e)}
+                    className="mb-2"
+                  />
+                  {q.image && <img src={q.image} alt="Uploaded" className="mt-2 max-w-full h-auto" />}
+                  <h4 className="font-medium mt-4 mb-2">選択肢:</h4>
+                  {q.choices.map((choice, cIndex) => (
+                    <div key={cIndex} className="flex items-center mb-2">
+                      <Checkbox
+                        checked={choice.isCorrect}
+                        onCheckedChange={(checked) => updateChoice(qIndex, cIndex, 'isCorrect', checked)}
+                        className="mr-2"
+                      />
+                      <Input
+                        placeholder={`選択肢 ${cIndex + 1}`}
+                        value={choice.text}
+                        onChange={(e) => updateChoice(qIndex, cIndex, 'text', e.target.value)}
+                        className="flex-grow mr-2"
+                      />
+                      <Button variant="ghost" size="icon" onClick={() => removeChoice(qIndex, cIndex)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button onClick={() => addChoice(qIndex)} className="mt-2">
+                    <Plus className="mr-2 h-4 w-4" /> 選択肢を追加
+                  </Button>
+                </>
+              )}
+            </CardContent>
+            <CardFooter>
+              {errors[`question${qIndex}`] && <Alert variant="destructive"><AlertDescription>{errors[`question${qIndex}`]}</AlertDescription></Alert>}
+              {errors[`question${qIndex}choices`] && <Alert variant="destructive"><AlertDescription>{errors[`question${qIndex}choices`]}</AlertDescription></Alert>}
+              {errors[`question${qIndex}correct`] && <Alert variant="destructive"><AlertDescription>{errors[`question${qIndex}correct`]}</AlertDescription></Alert>}
+            </CardFooter>
+          </Card>
+        ))}
 
-      <div className="flex justify-between mt-4">
-        <Button onClick={addQuestion}>
-          <Plus className="mr-2 h-4 w-4" /> 問題を追加
-        </Button>
-        <Button onClick={handleSave}>
-          <Save className="mr-2 h-4 w-4" /> 保存
-        </Button>
+        <div className="fixed-bottom">
+          <div className="flex justify-between">
+            <Button onClick={addQuestion} className="mobile-friendly-button">
+              <Plus className="mr-2 h-4 w-4" /> 問題を追加
+            </Button>
+            <Button onClick={handleSave} className="mobile-friendly-button">
+              <Save className="mr-2 h-4 w-4" /> 保存
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );
