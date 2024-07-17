@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback, useMemo, memo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { getSetById } from '@/utils/indexedDB';
+import { getSetById, saveStudyHistory } from '@/utils/indexedDB';
 import { ArrowLeft } from 'lucide-react';
 import { DndContext, DragOverlay, useSensors, useSensor, PointerSensor, useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
@@ -39,21 +39,21 @@ const SortableItem = memo(({ id, children, isDragging, isClassified }) => {
 
 SortableItem.displayName = 'SortableItem';
 
-const DroppableCategory = memo(({ category, children, isActive, feedbackColor, isLeftSide }) => {
+const DroppableCategory = memo(({ category, isActive, feedbackColor, isLeftSide }) => {
   const { setNodeRef } = useDroppable({
     id: category,
     data: { category },
   });
 
-  const className = useMemo(() => `flex items-center h-32 px-2 rounded transition-colors duration-300 ${
+  const className = useMemo(() => `flex items-center justify-center h-32 w-8 px-1 rounded transition-all duration-300 ${
     feedbackColor ? feedbackColor : 'bg-gray-100'
-  } ${isActive ? 'border-2 border-blue-500' : ''}`, [feedbackColor, isActive]);
+  } ${isActive ? 'border-2 border-blue-500' : ''} ${
+    isActive ? (isLeftSide ? 'w-12' : 'w-12') : ''
+  }`, [feedbackColor, isActive, isLeftSide]);
 
   return (
     <div ref={setNodeRef} className={className}>
-      {isLeftSide && isActive && <div className="mr-2 overflow-y-auto max-h-full">{children}</div>}
       <h3 className="text-center" style={{ writingMode: 'vertical-rl', textOrientation: 'upright' }}>{category}</h3>
-      {!isLeftSide && isActive && <div className="ml-2 overflow-y-auto max-h-full">{children}</div>}
     </div>
   );
 });
@@ -63,8 +63,8 @@ DroppableCategory.displayName = 'DroppableCategory';
 const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
     const [quizData, setQuizData] = useState({
       question: null,
-      userClassification: {},
-      unclassifiedItems: [],
+      categories: [],
+      items: [],
       correctClassification: {},
       isFinished: false,
       showResults: false,
@@ -74,79 +74,24 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
     const [error, setError] = useState(null);
     const [activeId, setActiveId] = useState(null);
     const [hoveredCategory, setHoveredCategory] = useState(null);
-    const hoveredCategoryRef = useRef(null);
     const [categoryFeedback, setCategoryFeedback] = useState({});
-  
+    const [tempFeedback, setTempFeedback] = useState({});
+
     const sensors = useSensors(
       useSensor(PointerSensor, {
         activationConstraint: {
           distance: 8,
+          delay: 100,
+          tolerance: 5,
         },
       })
     );
   
-    const calculateScore = () => {
-        return quizData.score;
-      };
-
-    const handleDragStart = useCallback((event) => {
-      setActiveId(event.active.id);
+    useEffect(() => {
+      const preventDefault = (e) => e.preventDefault();
+      document.addEventListener('touchmove', preventDefault, { passive: false });
+      return () => document.removeEventListener('touchmove', preventDefault);
     }, []);
-  
-    const handleDragOver = useCallback((event) => {
-      const newHoveredCategory = event.over ? event.over.id : null;
-      if (newHoveredCategory !== hoveredCategory) {
-        setHoveredCategory(newHoveredCategory);
-      }
-    }, [hoveredCategory]);
-  
-    const handleDragEnd = useCallback((event) => {
-        const { active, over } = event;
-      
-        if (over && active.id !== over.id) {
-          setQuizData((prev) => {
-            const activeItem = prev.unclassifiedItems.find(item => item.id === active.id);
-            
-            if (activeItem) {
-              const toCategory = over.id;
-              const isCorrect = prev.correctClassification[toCategory]?.includes(activeItem.content) ?? false;
-      
-              const newUserClassification = {
-                ...prev.userClassification,
-                [toCategory]: [...(prev.userClassification[toCategory] || []), { ...activeItem, category: toCategory }]
-              };
-              const newUnclassifiedItems = prev.unclassifiedItems.filter(item => item.id !== active.id);
-              
-              const totalClassified = Object.values(newUserClassification).flat().length;
-              const correctClassified = Object.values(newUserClassification).flat().filter(item => 
-                prev.correctClassification[item.category]?.includes(item.content) ?? false
-              ).length;
-              const newScore = totalClassified > 0 ? Math.round((correctClassified / totalClassified) * 100) : 0;
-              
-              const isFinished = newUnclassifiedItems.length === 0;
-      
-              // カテゴリーフィードバックの更新をここで行う
-              setCategoryFeedback(prevFeedback => ({
-                ...prevFeedback,
-                [toCategory]: isCorrect ? 'bg-green-200' : 'bg-red-200'
-              }));
-      
-              return {
-                ...prev,
-                userClassification: newUserClassification,
-                unclassifiedItems: newUnclassifiedItems,
-                score: newScore,
-                isFinished: isFinished,
-                showResults: isFinished,
-              };
-            }
-            return prev;
-          });
-        }
-      
-        setActiveId(null);
-        setHoveredCategory(null);
-      }, []);
   
     useEffect(() => {
       const loadQuestion = async () => {
@@ -154,21 +99,22 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
           setIsLoading(true);
           const set = await getSetById(parseInt(setId));
           if (set && Array.isArray(set.categories)) {
-            const newQuestion = {
-              question: `以下の項目を正しく分類してください。`,
-              categories: set.categories.map(c => c.name),
-              items: set.categories.flatMap(c => c.items.map((item, index) => ({ id: `${c.name}-${index}`, content: item, category: c.name }))),
-            };
+            const newItems = set.categories.flatMap(c => 
+              c.items.map((item, index) => ({ 
+                id: `${c.name}-${index}`, 
+                content: item, 
+                category: null, 
+                isClassified: false 
+              }))
+            );
             const newCorrectClassification = set.categories.reduce((acc, cat) => {
               acc[cat.name] = cat.items;
               return acc;
             }, {});
-            const newUserClassification = Object.fromEntries(newQuestion.categories.map(category => [category, []]));
-  
             setQuizData({
-              question: newQuestion,
-              userClassification: newUserClassification,
-              unclassifiedItems: newQuestion.items,
+              question: `以下の項目を正しく分類してください。`,
+              categories: set.categories.map(c => c.name),
+              items: newItems,
               correctClassification: newCorrectClassification,
               isFinished: false,
               showResults: false,
@@ -179,81 +125,123 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
           }
         } catch (error) {
           console.error("Error loading question:", error);
-          setError('質問の読み込み中にエラーが発生しました。');
+          setError('質問の読み込中にエラーが発生しまた。');
         } finally {
           setIsLoading(false);
         }
       };
       loadQuestion();
     }, [setId]);
+
+    const handleDragStart = useCallback((event) => {
+        const { active } = event;
+        setActiveId(active.id);
+      }, []);
+    
+      const handleDragOver = useCallback((event) => {
+        const { over } = event;
+        setHoveredCategory(over ? over.id : null);
+      }, []);
   
-    useEffect(() => {
-        if (Object.keys(categoryFeedback).length > 0) {
-          const timer = setTimeout(() => {
-            setCategoryFeedback({});
-          }, 500);
-          return () => clearTimeout(timer);
-        }
-      }, [categoryFeedback]);
-  
-    const handleRestart = useCallback(() => {
-      setQuizData(prev => ({
-        ...prev,
-        userClassification: Object.fromEntries(prev.question.categories.map(category => [category, []])),
-        unclassifiedItems: prev.question.items,
-        isFinished: false,
-        showResults: false,
-        score: 0,
-      }));
+    const handleDragEnd = useCallback((event) => {
+      const { active, over } = event;
+
+      if (over && active.id !== over.id) {
+        setQuizData((prev) => {
+          const updatedItems = prev.items.map(item => 
+            item.id === active.id 
+              ? { ...item, category: over.id, isClassified: true }
+              : item
+          );
+
+          const totalClassified = updatedItems.filter(item => item.isClassified).length;
+          const correctClassified = updatedItems.filter(item => 
+            item.isClassified && prev.correctClassification[item.category]?.includes(item.content)
+          ).length;
+          const newScore = totalClassified > 0 ? Math.round((correctClassified / totalClassified) * 100) : 0;
+          
+          const isFinished = updatedItems.every(item => item.isClassified);
+
+          const isCorrect = prev.correctClassification[over.id]?.includes(updatedItems.find(i => i.id === active.id).content);
+          setTempFeedback(prevFeedback => ({
+            ...prevFeedback,
+            [over.id]: isCorrect ? 'bg-green-200' : 'bg-red-200'
+          }));
+
+          return {
+            ...prev,
+            items: updatedItems,
+            score: newScore,
+            isFinished: isFinished,
+            showResults: isFinished,
+          };
+        });
+      }
+
+      setActiveId(null);
+      setHoveredCategory(null);
     }, []);
+
+    useEffect(() => {
+      if (Object.keys(tempFeedback).length > 0) {
+        const timer = setTimeout(() => {
+          setTempFeedback({});
+        }, 500);
+
+        return () => clearTimeout(timer);
+      }
+    }, [tempFeedback]);
+
+    const categories = useMemo(() => {
+      const middleIndex = Math.ceil(quizData.categories.length / 2);
+      return {
+        left: quizData.categories.slice(0, middleIndex),
+        right: quizData.categories.slice(middleIndex)
+      };
+    }, [quizData.categories]);
   
     const renderCategory = useCallback((category, isLeftSide) => (
       <DroppableCategory 
         key={category} 
         category={category} 
         isActive={hoveredCategory === category}
-        feedbackColor={categoryFeedback[category]}
+        feedbackColor={tempFeedback[category] || categoryFeedback[category]}
         isLeftSide={isLeftSide}
-      >
-        <SortableContext items={quizData.userClassification[category] || []} strategy={verticalListSortingStrategy}>
-          <div className="flex flex-row-reverse">
-            {(quizData.userClassification[category] || []).map((item) => (
-              <SortableItem 
-                key={item.id} 
-                id={item.id} 
-                isDragging={item.id === activeId}
-                isClassified={true}
-              >
-                {item.content}
-              </SortableItem>
-            ))}
-          </div>
-        </SortableContext>
-      </DroppableCategory>
-    ), [quizData.userClassification, hoveredCategory, activeId, categoryFeedback]);
+      />
+    ), [hoveredCategory, categoryFeedback, tempFeedback]);
   
-    const categories = useMemo(() => {
-      if (!quizData.question) return { left: [], right: [] };
-      const middleIndex = Math.ceil(quizData.question.categories.length / 2);
-      return {
-        left: quizData.question.categories.slice(0, middleIndex),
-        right: quizData.question.categories.slice(middleIndex)
-      };
-    }, [quizData.question]);
-  
+    const handleRestart = useCallback(() => {
+      setQuizData(prevData => ({
+        ...prevData,
+        items: prevData.items.map(item => ({ ...item, category: null, isClassified: false })),
+        isFinished: false,
+        showResults: false,
+        score: 0,
+      }));
+      setCategoryFeedback({});
+    }, []);
+
+    const calculateScore = () => {
+      const totalItems = quizData.items.length;
+      const correctItems = quizData.items.filter(item => 
+        quizData.correctClassification[item.category]?.includes(item.content)
+      ).length;
+      return Math.round((correctItems / totalItems) * 100);
+    };
+
     const handleFinish = async () => {
-        const score = calculateScore();
-        const endTime = new Date();
-        await saveStudyHistory(setId, setTitle, 'classification', score, endTime);
-        onFinish(score);
-      };
-  
+      const score = calculateScore();
+      const endTime = new Date();
+      await saveStudyHistory(setId, title, 'classification', score, endTime);
+      onFinish(score);
+    };
+
     if (isLoading) return <div>読み込み中...</div>;
     if (error) return <div>{error}</div>;
     if (!quizData.question) return <div>質問がありません。</div>;
   
     return (
-      <div className="p-4 max-w-md mx-auto relative">
+      <div className="max-w-md mx-auto relative">
         <div className="flex justify-between items-center mb-4">
           <Button variant="ghost" size="icon" onClick={onBack}>
             <ArrowLeft />
@@ -264,9 +252,9 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
   
         <Card className="mb-4">
           <CardHeader>
-            <CardTitle>{quizData.showResults ? "結果" : quizData.question.question}</CardTitle>
+            <CardTitle>{quizData.showResults ? "結果" : quizData.question}</CardTitle>
           </CardHeader>
-          <CardContent className="min-h-[300px] relative">
+          <CardContent className="min-h-[300px] relative p-0">
             {!quizData.showResults ? (
               <DndContext
                 sensors={sensors}
@@ -274,39 +262,48 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
                 onDragOver={handleDragOver}
                 onDragEnd={handleDragEnd}
               >
-                <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-start pt-4 gap-2">
-                  {categories.left.map(category => renderCategory(category, true))}
-                </div>
-                <div className="absolute right-0 top-0 bottom-0 flex flex-col justify-start pt-4 gap-2">
-                  {categories.right.map(category => renderCategory(category, false))}
-                </div>
-                <div className="flex justify-center items-center h-full">
-                  <SortableContext items={quizData.unclassifiedItems} strategy={verticalListSortingStrategy}>
-                    <div className="w-2/3 max-h-[250px] overflow-y-auto grid grid-cols-2 gap-2">
-                      {quizData.unclassifiedItems.map((item) => (
-                        <SortableItem 
-                          key={item.id} 
-                          id={item.id} 
-                          isDragging={item.id === activeId}
-                          isClassified={false}
-                        >
-                          {item.content}
-                        </SortableItem>
-                      ))}
-                    </div>
-                  </SortableContext>
+                <div className="flex justify-between w-full relative">
+                  <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between">
+                    {categories.left.map((category, index) => (
+                      <div key={category} className={index !== 0 ? "mt-4" : ""}>
+                        {renderCategory(category, true)}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="w-full px-10">
+                    <SortableContext items={quizData.items.filter(item => !item.isClassified)} strategy={verticalListSortingStrategy}>
+                      <div className="grid grid-cols-2 gap-2">
+                        {quizData.items.filter(item => !item.isClassified).map((item) => (
+                          <SortableItem 
+                            key={item.id} 
+                            id={item.id} 
+                            isDragging={item.id === activeId}
+                            isClassified={false}
+                          >
+                            {item.content}
+                          </SortableItem>
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </div>
+                  <div className="absolute right-0 top-0 bottom-0 flex flex-col justify-between">
+                    {categories.right.map((category, index) => (
+                      <div key={category} className={index !== 0 ? "mt-4" : ""}>
+                        {renderCategory(category, false)}
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 <DragOverlay>
                   {activeId ? (
                     <div className="bg-white p-2 rounded border shadow-lg">
-                      {quizData.unclassifiedItems.find(item => item.id === activeId)?.content ||
-                       Object.values(quizData.userClassification).flat().find(item => item.id === activeId)?.content}
+                      {quizData.items.find(item => item.id === activeId)?.content}
                     </div>
                   ) : null}
                 </DragOverlay>
               </DndContext>
             ) : (
-              <div className="flex flex-col items-center justify-center h-full">
+              <div className="flex flex-col items-center justify-center h-full p-6">
                 <h2 className="text-2xl font-bold mb-4">最終スコア: {quizData.score}%</h2>
                 <div className="flex gap-4">
                   <Button onClick={handleRestart}>

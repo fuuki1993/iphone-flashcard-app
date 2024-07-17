@@ -22,7 +22,7 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
         setIsLoading(true);
         let allQuestions = [];
         if (setId === null) {
-          // 全てのセットを取得
+          // 全て���セットを取得
           const allSets = await getSets('qa');
           allQuestions = allSets.flatMap(set => set.qaItems);
         } else {
@@ -107,56 +107,59 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
   const currentQuestion = shuffledQuestions[currentQuestionIndex];
 
   return (
-    <div className="p-4 max-w-md mx-auto">
-      <div className="flex justify-between items-center mb-4">
-        <Button variant="ghost" size="icon" onClick={onBack}>
-          <ArrowLeft />
-        </Button>
-        <h2 className="text-xl font-bold">一問一答</h2>
-        <div className="flex">
-          <Button variant="ghost" size="icon" onClick={handleShuffle} className="mr-2">
-            <Shuffle />
+    <div className="mobile-friendly-form">
+      <div className="scrollable-content p-4">
+        <div className="flex justify-between items-center mb-4">
+          <Button variant="ghost" size="icon" onClick={onBack} className="mobile-friendly-button">
+            <ArrowLeft />
           </Button>
-          <Button variant="ghost" size="icon" onClick={handleFinish}>
-            終了
-          </Button>
+          <h2 className="text-xl font-bold">一問一答</h2>
+          <div className="flex">
+            <Button variant="ghost" size="icon" onClick={handleShuffle} className="mobile-friendly-button mr-2">
+              <Shuffle />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={handleFinish} className="mobile-friendly-button">
+              終了
+            </Button>
+          </div>
         </div>
-      </div>
 
-      <Card className="mb-4">
-        <CardHeader>
-          <CardTitle>{currentQuestion.question}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {currentQuestion.image && (
-            <img src={currentQuestion.image} alt="Question" className="w-full mb-4" />
-          )}
-          <Input
-            type="text"
-            placeholder="回答を入力"
-            value={userAnswer}
-            onChange={(e) => setUserAnswer(e.target.value)}
-            disabled={showAnswer}
-          />
-        </CardContent>
-        <CardFooter className="flex justify-between">
-          {!showAnswer ? (
-            <Button onClick={handleSubmit}>回答する</Button>
-          ) : (
-            <div className="flex items-center">
-              {results[currentQuestionIndex] ? (
-                <Check className="text-green-500 mr-2" />
-              ) : (
-                <X className="text-red-500 mr-2" />
-              )}
-              <span>正解: {currentQuestion.answer}</span>
-            </div>
-          )}
-        </CardFooter>
-      </Card>
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="text-lg">{currentQuestion.question}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {currentQuestion.image && (
+              <img src={currentQuestion.image} alt="Question" className="w-full mb-4 max-h-48 object-contain" />
+            )}
+            <Input
+              type="text"
+              placeholder="回答を入力"
+              value={userAnswer}
+              onChange={(e) => setUserAnswer(e.target.value)}
+              disabled={showAnswer}
+              className="mobile-friendly-input"
+            />
+          </CardContent>
+          <CardFooter className="flex justify-between">
+            {!showAnswer ? (
+              <Button onClick={handleSubmit} className="mobile-friendly-button">回答する</Button>
+            ) : (
+              <div className="flex items-center text-sm">
+                {results[currentQuestionIndex] ? (
+                  <Check className="text-green-500 mr-2" />
+                ) : (
+                  <X className="text-red-500 mr-2" />
+                )}
+                <span>正解: {currentQuestion.answer}</span>
+              </div>
+            )}
+          </CardFooter>
+        </Card>
 
-      <div className="text-center">
-        <span>{currentQuestionIndex + 1} / {shuffledQuestions.length}</span>
+        <div className="text-center">
+          <span>{currentQuestionIndex + 1} / {shuffledQuestions.length}</span>
+        </div>
       </div>
     </div>
   );
