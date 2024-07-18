@@ -156,11 +156,13 @@ const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState 
             <FlashcardContent
               content={currentCard.front}
               image={currentCard.image}
+              isFront={true}
             />
           </div>
           <div className={styles.back}>
             <FlashcardContent
               content={currentCard.back}
+              isFront={false}
             />
           </div>
         </div>
@@ -185,15 +187,15 @@ const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState 
   );
 };
 
-const FlashcardContent = ({ content, image }) => (
-  <div className="text-center w-full">
-    <p className="mb-4 text-lg">{content}</p>
-    {image && (
-      <div className="mt-4 flex justify-center">
+const FlashcardContent = ({ content, image, isFront }) => (
+  <div className={`${styles.flashcardContent} ${isFront ? styles.frontContent : styles.backContent}`}>
+    <p className={styles.contentText}>{content}</p>
+    {image && isFront && (
+      <div className={styles.imageContainer}>
         <img 
           src={image} 
           alt="Flashcard image" 
-          className="max-w-full h-auto max-h-[200px] object-contain rounded-md"
+          className={styles.contentImage}
         />
       </div>
     )}

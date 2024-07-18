@@ -62,6 +62,7 @@ export const getStudyHistory = async () => {
       request.onerror = () => reject("Error getting study history");
       request.onsuccess = () => {
         const history = request.result.sort((a, b) => new Date(b.date) - new Date(a.date));
+        console.log('Retrieved study history length:', history.length); // デバッグ用
         resolve(history);
       };
     });
@@ -236,6 +237,18 @@ export const clearSessionState = async (setId, setType) => {
     const request = store.delete([setId, setType]);
 
     request.onerror = () => reject("Error clearing session state");
+    request.onsuccess = () => resolve();
+  });
+};
+
+export const deleteStudyHistoryEntry = async (entryId) => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([HISTORY_STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(HISTORY_STORE_NAME);
+    const request = store.delete(entryId);
+
+    request.onerror = () => reject("Error deleting study history entry");
     request.onsuccess = () => resolve();
   });
 };

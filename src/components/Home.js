@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getSetById, getSessionState } from '@/utils/indexedDB';
+import { getSetById, getSessionState, getStudyHistory, deleteStudyHistoryEntry } from '@/utils/indexedDB';
 import HomeScreen from '@/components/HomeScreen';
 import CreateEditSetSelectionScreen from '@/components/CreateEditSetSelectionScreen';
 import QuizTypeSelectionScreen from '@/components/QuizTypeSelectionScreen';
@@ -18,6 +18,8 @@ import QAQuiz from '@/components/QAQuiz';
 import MultipleChoiceQuiz from '@/components/MultipleChoiceQuiz';
 import ClassificationQuiz from '@/components/ClassificationQuiz';
 import StatisticsScreen from '../components/StatisticsScreen';
+import SettingsScreen from './SettingsScreen';
+import StudyHistoryScreen from '@/components/StudyHistoryScreen';
 import { useHashRouter } from '@/utils/hashRouter';
 
 export default function Home() {
@@ -34,6 +36,7 @@ export default function Home() {
   const [dailyGoal, setDailyGoal] = useState(60);
   const [todayStudyTime, setTodayStudyTime] = useState(0);
   const [sessionState, setSessionState] = useState(null);
+  const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
     if (isReady && !hashPath) {
@@ -69,10 +72,29 @@ export default function Home() {
       case 'statistics':
         setCurrentScreen('statistics');
         break;
+      case 'settings':
+        setCurrentScreen('settings');
+        break;
+      case 'studyHistory':
+        setCurrentScreen('studyHistory');
+        break;
       default:
         setCurrentScreen('home');
     }
   }, [hashPath]);
+
+  useEffect(() => {
+    const loadStudyHistory = async () => {
+      const history = await getStudyHistory();
+      setStudyHistory(history);
+    };
+    loadStudyHistory();
+  }, []);
+
+  const handleDeleteStudyEntry = async (entryId) => {
+    await deleteStudyHistoryEntry(entryId);
+    setStudyHistory(prevHistory => prevHistory.filter(entry => entry.id !== entryId));
+  };
 
   const navigateTo = (screen, subPath = '') => {
     console.log('Navigating to:', screen, subPath); // デバッグ用ログ
@@ -84,7 +106,7 @@ export default function Home() {
   };
   
   const handleStartLearning = async (setId, setType, savedSessionState = null) => {
-    console.log('handleStartLearning called');
+    console.log('handleStartLearning called', { setId, setType, savedSessionState });
     if (savedSessionState) {
       // 保存されたセッション状態がある場合、直接クイズを開始
       setQuizType(setType);
@@ -162,6 +184,14 @@ export default function Home() {
     navigateTo('home');
   };
 
+  const handleOpenSettings = () => {
+    navigateTo('settings');
+  };
+
+  const handleShowStudyHistory = () => {
+    navigateTo('studyHistory');
+  };
+
   const renderScreen = () => {
     console.log('Rendering screen:', currentScreen); // デバッグ用ログ
     switch (currentScreen) {
@@ -171,6 +201,7 @@ export default function Home() {
             onCreateSet={handleCreateSet}
             onStartLearning={handleStartLearning}
             onShowStatistics={handleShowStatistics}
+            onOpenSettings={handleOpenSettings}
             overallProgress={overallProgress}
             setOverallProgress={setOverallProgress}
             streak={streak}
@@ -276,6 +307,25 @@ export default function Home() {
             studyHistory={studyHistory}
             dailyGoal={dailyGoal}
             todayStudyTime={todayStudyTime}
+            onShowStudyHistory={handleShowStudyHistory}
+          />
+        );
+      case 'settings':
+        return (
+          <SettingsScreen
+            onBack={() => navigateTo('home')}
+            dailyGoal={dailyGoal}
+            setDailyGoal={setDailyGoal}
+            darkMode={darkMode}
+            setDarkMode={setDarkMode}
+          />
+        );
+      case 'studyHistory':
+        return (
+          <StudyHistoryScreen
+            studyHistory={studyHistory}
+            onDeleteEntry={handleDeleteStudyEntry}
+            onBack={() => navigateTo('statistics')}
           />
         );
       default:

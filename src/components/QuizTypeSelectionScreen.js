@@ -65,32 +65,33 @@ const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
   };
 
   return (
-    <div className="p-4 max-w-md mx-auto">
-      <div className="flex items-center mb-6">
-        <Button variant="ghost" size="icon" onClick={onBack}>
-          <ArrowLeft />
+    <div className="p-4 w-full">
+      <div className="flex items-center mb-4">
+        <Button variant="ghost" size="icon" onClick={onBack} className="mr-2 p-1">
+          <ArrowLeft className="h-5 w-5" />
         </Button>
-        <h1 className="text-2xl font-bold ml-2">学習タイプを選択</h1>
+        <h1 className="text-lg font-bold">学習タイプを選択</h1>
       </div>
 
-      <p className="text-gray-600 mb-6">
-        学習したいクイズタイプとセットを選択し、「学習開始」ボタンをクリックしてください。
+      <p className="text-sm text-gray-600 mb-4">
+        クイズタイプとセットを選択:
       </p>
 
-      <div className="space-y-4">
-        {quizTypes.map((type) => (
-          <Card key={type.id} className="hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-              <CardTitle className="text-lg font-medium">{type.title}</CardTitle>
-              <type.icon className="h-6 w-6 text-gray-500 ml-2" />
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-gray-500 mb-4">{type.description}</p>
+      <div className="space-y-3">
+      {quizTypes.map((type) => (
+        <Card key={type.id} className="hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center space-y-0 py-3 px-4">
+            <type.icon className="h-6 w-6 text-primary mr-3 flex-shrink-0" />
+            <CardTitle className="text-base font-medium">{type.title}</CardTitle>
+          </CardHeader>
+          <CardContent className="py-2 px-4">
+            <p className="text-xs text-gray-500 mb-3">{type.description}</p>
+            <div className="flex items-center space-x-2">
               <Select 
                 onValueChange={(value) => handleSetSelection(type.id, value)} 
                 value={selectedSets[type.id] || (quizSets[type.id]?.[0]?.id?.toString() || '')}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="text-xs flex-grow">
                   <SelectValue placeholder="セットを選択" />
                 </SelectTrigger>
                 <SelectContent>
@@ -99,20 +100,20 @@ const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
                   ))}
                 </SelectContent>
               </Select>
-            </CardContent>
-            <CardFooter>
               <Button 
-                className="w-full" 
+                size="sm"
+                className="text-xs whitespace-nowrap"
                 onClick={() => handleStartQuiz(type.id)}
               >
-                <Play className="mr-2 h-4 w-4" /> 学習開始
+                <Play className="mr-1 h-3 w-3" /> 学習開始
               </Button>
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
     </div>
-  );
+  </div>
+);
 };
 
 export default QuizTypeSelectionScreen;

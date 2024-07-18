@@ -3,9 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, Check, X, Shuffle } from 'lucide-react';
-import { getSetById, saveStudyHistory, getSets } from '@/utils/indexedDB';
+import { getSetById, saveStudyHistory, getSets, saveSessionState } from '@/utils/indexedDB';
 
-const QAQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
+const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState }) => {
   const [questions, setQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [userAnswer, setUserAnswer] = useState('');
@@ -23,7 +23,6 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
         setIsLoading(true);
         let allQuestions = [];
         if (setId === null) {
-          // 全てセットを取得
           const allSets = await getSets('qa');
           allQuestions = allSets.flatMap(set => set.qaItems);
         } else {
@@ -32,8 +31,14 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
         }
         if (Array.isArray(allQuestions)) {
           setQuestions(allQuestions);
-          setShuffledQuestions(shuffleArray([...allQuestions]));
-          setResults(new Array(allQuestions.length).fill(null));
+          if (sessionState) {
+            setShuffledQuestions(sessionState.shuffledQuestions);
+            setCurrentQuestionIndex(sessionState.currentQuestionIndex);
+            setResults(sessionState.results);
+          } else {
+            setShuffledQuestions(shuffleArray([...allQuestions]));
+            setResults(new Array(allQuestions.length).fill(null));
+          }
         } else {
           throw new Error('Invalid data structure');
         }
@@ -45,7 +50,20 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
       }
     };
     loadQuestions();
-  }, [setId]);
+  }, [setId, sessionState]);
+
+  useEffect(() => {
+    const saveState = async () => {
+      if (setId) {
+        await saveSessionState(setId, 'qa', {
+          shuffledQuestions,
+          currentQuestionIndex,
+          results,
+        });
+      }
+    };
+    saveState();
+  }, [setId, shuffledQuestions, currentQuestionIndex, results]);
 
   const shuffleArray = (array) => {
     for (let i = array.length - 1; i > 0; i--) {
@@ -56,11 +74,12 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
   };
 
   const handleShuffle = () => {
-    setShuffledQuestions(shuffleArray([...shuffledQuestions]));
+    setShuffledQuestions(shuffleArray([...questions]));
     setCurrentQuestionIndex(0);
     setUserAnswer('');
     setShowAnswer(false);
-    setResults(new Array(shuffledQuestions.length).fill(null));
+    setResults(new Array(questions.length).fill(null));
+    setIsLastQuestion(false);
   };
 
   const handleSubmit = useCallback(() => {
@@ -69,7 +88,6 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
     newResults[currentQuestionIndex] = isCorrect;
     setResults(newResults);
     setShowAnswer(true);
-    setIsLastQuestion(currentQuestionIndex === shuffledQuestions.length - 1);
 
     if (currentQuestionIndex < shuffledQuestions.length - 1) {
       setTimeout(() => {
@@ -77,6 +95,8 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
         setUserAnswer('');
         setShowAnswer(false);
       }, 1000);
+    } else {
+      setIsLastQuestion(true);
     }
   }, [userAnswer, shuffledQuestions, currentQuestionIndex, results]);
 
@@ -108,10 +128,30 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
 
   const currentQuestion = shuffledQuestions[currentQuestionIndex];
 
+  if (isLastQuestion) {
+    const finalScore = calculateScore();
+    return (
+      <div className="p-4 max-w-md mx-auto">
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="text-xl font-bold">クイズ終了</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-lg mb-4">最終スコア: {finalScore}%</p>
+            <div className="flex justify-between">
+              <Button onClick={handleShuffle}>もう一度挑戦</Button>
+              <Button onClick={() => onFinish(finalScore)}>終了</Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
-    <div className="mobile-friendly-form">
-      <div className="scrollable-content p-4">
-        <div className="flex justify-between items-center mb-4">
+    <div className="w-full max-w-md mx-auto px-4">
+      <div className="mb-4">
+        <div className="flex justify-between items-center">
           <Button variant="ghost" size="icon" onClick={onBack}>
             <ArrowLeft />
           </Button>
@@ -125,42 +165,42 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
             </Button>
           </div>
         </div>
+      </div>
 
-        <Card className="mb-4">
-          <CardHeader>
-            <CardTitle className="text-lg">{currentQuestion.question}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {currentQuestion.image && (
-              <img src={currentQuestion.image} alt="Question" className="w-full mb-4 max-h-48 object-contain" />
-            )}
-            <Input
-              type="text"
-              placeholder="回答を入力"
-              value={userAnswer}
-              onChange={(e) => setUserAnswer(e.target.value)}
-              disabled={showAnswer}
-            />
-          </CardContent>
-          <CardFooter className="flex justify-between">
-            {!showAnswer ? (
-              <Button onClick={handleSubmit}>回答する</Button>
-            ) : (
-              <div className="flex items-center text-sm">
-                {results[currentQuestionIndex] ? (
-                  <Check className="text-green-500 mr-2" />
-                ) : (
-                  <X className="text-red-500 mr-2" />
-                )}
-                <span>正解: {currentQuestion.answer}</span>
-              </div>
-            )}
-          </CardFooter>
-        </Card>
+      <Card className="w-full mb-4">
+        <CardHeader>
+          <CardTitle className="text-lg">{currentQuestion.question}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {currentQuestion.image && (
+            <img src={currentQuestion.image} alt="Question" className="w-full mb-4 max-h-48 object-contain" />
+          )}
+          <Input
+            type="text"
+            placeholder="回答を入力"
+            value={userAnswer}
+            onChange={(e) => setUserAnswer(e.target.value)}
+            disabled={showAnswer}
+          />
+        </CardContent>
+        <CardFooter className="flex justify-between">
+          {!showAnswer ? (
+            <Button onClick={handleSubmit}>回答する</Button>
+          ) : (
+            <div className="flex items-center text-sm">
+              {results[currentQuestionIndex] ? (
+                <Check className="text-green-500 mr-2" />
+              ) : (
+                <X className="text-red-500 mr-2" />
+              )}
+              <span>正解: {currentQuestion.answer}</span>
+            </div>
+          )}
+        </CardFooter>
+      </Card>
 
-        <div className="text-center">
-          <span>{currentQuestionIndex + 1} / {shuffledQuestions.length}</span>
-        </div>
+      <div className="text-center">
+        <span>{currentQuestionIndex + 1} / {shuffledQuestions.length}</span>
       </div>
     </div>
   );

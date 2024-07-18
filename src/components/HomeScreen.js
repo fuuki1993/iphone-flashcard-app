@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -22,13 +22,14 @@ const HomeScreen = ({
     dailyGoal, 
     setDailyGoal,
     todayStudyTime, 
-    setTodayStudyTime
+    setTodayStudyTime,
+    onOpenSettings
   }) => {
     const [isGoalAchieved, setIsGoalAchieved] = useState(false);
     const [scheduledEvents, setScheduledEvents] = useState([]);
     const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false);
     const [editingEvent, setEditingEvent] = useState(null);
-    const [incompleteSessions, setIncompleteSessions] = useState([]);
+    const [recentActivities, setRecentActivities] = useState([]);
 
     const loadData = useCallback(async () => {
       try {
@@ -192,39 +193,65 @@ const HomeScreen = ({
       }
     }, []);
 
-    useEffect(() => {
-      const loadIncompleteSessions = async () => {
+    const loadRecentActivities = useCallback(async () => {
+      try {
         const allSets = await getAllSets();
         const incompleteSessions = await Promise.all(
           allSets.map(async (set) => {
             const sessionState = await getSessionState(set.id, set.type);
             if (sessionState && sessionState.state) {
-              return { ...set, sessionState: sessionState.state, timestamp: sessionState.timestamp };
+              return { 
+                ...set, 
+                sessionState: sessionState.state, 
+                timestamp: sessionState.timestamp,
+                type: set.type // セットの実際のタイプを使用
+              };
             }
             return null;
           })
         );
-        const filteredIncompleteSessions = incompleteSessions.filter(Boolean);
-        console.log('Incomplete sessions:', filteredIncompleteSessions); // デバッグログ
-        setIncompleteSessions(filteredIncompleteSessions.slice(0, 3));
-      };
-      loadIncompleteSessions();
+
+        const filteredIncompleteSessions = incompleteSessions
+          .filter(Boolean)
+          .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+          .slice(0, 3);
+
+        setRecentActivities(filteredIncompleteSessions);
+      } catch (error) {
+        console.error("Error loading recent activities:", error);
+      }
     }, []);
-    
+
     useEffect(() => {
-      const loadStudyHistory = async () => {
-        const history = await getStudyHistory();
-        console.log('Study history:', history); // デバッグログ
-        setStudyHistory(history.slice(0, 3));
-      };
-      loadStudyHistory();
-    }, [setStudyHistory]);
+      loadRecentActivities();
+    }, [loadRecentActivities]);
+
+    const renderActivityItem = useCallback((activity) => {
+      return (
+        <li 
+          key={activity.id} 
+          className="flex items-center p-2 rounded-md hover:bg-gray-200 cursor-pointer transition-colors duration-200"
+          onClick={() => onStartLearning(
+            activity.id,
+            activity.type,
+            activity.sessionState
+          )}
+        >
+          {getIconForSetType(activity.type)}
+          <div className="flex-1 ml-2">
+            <span className="font-medium text-xs">{activity.title}</span>
+            <p className="text-[10px] text-gray-500">{formatDate(activity.timestamp)}</p>
+          </div>
+          <span className="text-xs text-blue-500">再開</span>
+        </li>
+      );
+    }, [onStartLearning, getIconForSetType, formatDate]);
 
     return (
       <div className="p-3 w-full max-w-[390px] mx-auto bg-gray-100">
         <div className="flex justify-between items-center mb-3">
           <h1 className="text-lg font-bold text-gray-800">暗記アプリ</h1>
-          <Button variant="ghost" size="sm" onClick={() => console.log('設定を開く')}>
+          <Button variant="ghost" size="sm" onClick={onOpenSettings}>
             <Settings className="text-gray-600 h-5 w-5" />
           </Button>
         </div>
@@ -271,36 +298,13 @@ const HomeScreen = ({
           <TabsContent value="recent">
             <Card>
               <CardContent className="py-2 px-3">
-                <ul className="space-y-2">
-                  {incompleteSessions.map((session) => (
-                    <li 
-                      key={session.id} 
-                      className="flex items-center p-2 rounded-md hover:bg-gray-200 cursor-pointer transition-colors duration-200"
-                      onClick={() => onStartLearning(session.id, session.type, session.sessionState)}
-                    >
-                      {getIconForSetType(session.type)}
-                      <div className="flex-1 ml-2">
-                        <span className="font-medium text-xs">{session.title}</span>
-                        <p className="text-[10px] text-gray-500">{formatDate(session.timestamp)}</p>
-                      </div>
-                      <span className="text-xs text-blue-500">再開</span>
-                    </li>
-                  ))}
-                  {studyHistory.map((entry) => (
-                    <li 
-                      key={entry.id} 
-                      className="flex items-center p-2 rounded-md hover:bg-gray-200 cursor-pointer transition-colors duration-200"
-                      onClick={() => onStartLearning(entry.setId, entry.setType)}
-                    >
-                      {getIconForSetType(entry.setType)}
-                      <div className="flex-1 ml-2">
-                        <span className="font-medium text-xs">{entry.setTitle}</span>
-                        <p className="text-[10px] text-gray-500">{formatDate(entry.date)}</p>
-                      </div>
-                      <span className="text-[10px] font-medium">{Math.round(entry.score)}%</span>
-                    </li>
-                  ))}
-                </ul>
+                {recentActivities.length > 0 ? (
+                  <ul className="space-y-2">
+                    {recentActivities.map(renderActivityItem)}
+                  </ul>
+                ) : (
+                  <p className="text-center text-gray-500">未完了のセッションはありません</p>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

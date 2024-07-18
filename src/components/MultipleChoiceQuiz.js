@@ -117,7 +117,6 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
       newResults[currentQuestionIndex] = isCorrect;
       setResults(newResults);
       setShowResult(true);
-      setIsLastQuestion(currentQuestionIndex === shuffledQuestions.length - 1);
 
       if (currentQuestionIndex < shuffledQuestions.length - 1) {
         setTimeout(() => {
@@ -125,6 +124,8 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
           setSelectedAnswers([]);
           setShowResult(false);
         }, 1000);
+      } else {
+        setIsLastQuestion(true);
       }
     }
   }, [selectedAnswers, currentQuestionIndex, shuffledQuestions, results]);
@@ -138,37 +139,59 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
   };
 
   if (isLoading) {
-    return <div>読み込み中...</div>;
+    return <div className="w-full max-w-md mx-auto px-4">読み込み中...</div>;
   }
 
   if (error) {
-    return <div>{error}</div>;
+    return <div className="w-full max-w-md mx-auto px-4">{error}</div>;
   }
 
   if (shuffledQuestions.length === 0) {
-    return <div>質問がありません。</div>;
+    return <div className="w-full max-w-md mx-auto px-4">質問がありません。</div>;
   }
 
   const currentQuestion = shuffledQuestions[currentQuestionIndex];
 
+  if (isLastQuestion) {
+    const finalScore = calculateScore();
+    return (
+      <div className="w-full max-w-md mx-auto px-4">
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="text-xl font-bold">クイズ終了</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-lg mb-4">最終スコア: {finalScore}%</p>
+            <div className="flex justify-between">
+              <Button onClick={handleShuffle}>もう一度挑戦</Button>
+              <Button onClick={() => onFinish(finalScore)}>終了</Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-4 max-w-md mx-auto">
-      <div className="flex justify-between items-center mb-4">
-        <Button variant="ghost" size="icon" onClick={onBack}>
-          <ArrowLeft />
-        </Button>
-        <h2 className="text-xl font-bold">多肢選択問題</h2>
-        <div className="flex">
-          <Button variant="ghost" size="icon" onClick={handleShuffle} className="mr-2">
-            <Shuffle />
+    <div className="w-full max-w-md mx-auto px-4">
+      <div className="mb-4">
+        <div className="flex justify-between items-center">
+          <Button variant="ghost" size="icon" onClick={onBack}>
+            <ArrowLeft />
           </Button>
-          <Button variant="ghost" size="icon" onClick={handleFinish}>
-            終了
-          </Button>
+          <h2 className="text-xl font-bold">多肢選択問題</h2>
+          <div className="flex">
+            <Button variant="ghost" size="icon" onClick={handleShuffle} className="mr-2">
+              <Shuffle />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={handleFinish}>
+              終了
+            </Button>
+          </div>
         </div>
       </div>
 
-      <Card className="mb-4">
+      <Card className="w-full mb-4">
         <CardHeader>
           <CardTitle>{currentQuestion.question}</CardTitle>
         </CardHeader>

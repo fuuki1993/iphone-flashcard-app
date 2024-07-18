@@ -2,18 +2,18 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, BarChart2, Trophy, Clock, BookOpen, Target } from 'lucide-react';
+import { ArrowLeft, BarChart2, Trophy, Clock, BookOpen, ChevronRight } from 'lucide-react';
 
-const StatisticsScreen = ({ onBack, overallProgress, streak, studyHistory, dailyGoal, todayStudyTime }) => {
+const StatisticsScreen = ({ onBack, overallProgress, streak, dailyGoal, todayStudyTime, onShowStudyHistory }) => {
   const maxStreak = 10; // この値は実際のデータから計算する必要があります
 
   return (
-    <div className="p-4 max-w-md mx-auto">
+    <div className="p-4 w-full max-w-3xl mx-auto">
       <div className="flex items-center mb-6">
         <Button variant="ghost" size="icon" onClick={onBack}>
           <ArrowLeft />
         </Button>
-        <h1 className="text-2xl font-bold ml-2">学習統計</h1>
+        <h1 className="text-2xl font-bold ml-2">統計</h1>
       </div>
 
       <Card className="mb-4">
@@ -55,26 +55,17 @@ const StatisticsScreen = ({ onBack, overallProgress, streak, studyHistory, daily
         </CardContent>
       </Card>
 
-      <Card className="mb-4">
+      <Card className="mb-4 w-full cursor-pointer" onClick={onShowStudyHistory}>
         <CardHeader>
-          <CardTitle className="flex items-center">
-            <BookOpen className="mr-2 text-purple-500" size={24} />
-            最近の学習
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center">
+              <BookOpen className="mr-2 text-purple-500" size={24} />
+              学習履歴
+            </div>
+            <ChevronRight size={24} />
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <ul className="space-y-2">
-            {studyHistory.slice(0, 5).map((entry, index) => (
-              <li key={index} className="flex justify-between">
-                <span>{entry.setTitle}</span>
-                <span>{entry.score}%</span>
-              </li>
-            ))}
-          </ul>
-        </CardContent>
       </Card>
-
-      {/* ここに他の統計情報を追加できます */}
     </div>
   );
 };
