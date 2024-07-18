@@ -1,0 +1,8 @@
+2:I[6513,[],"ClientPageRoot"]
+3:I[1676,["935","static/chunks/935-c2d4b2905105974a.js","931","static/chunks/app/page-1b91eae713f0df2a.js"],"default"]
+4:I[9275,[],""]
+5:I[1343,[],""]
+6:I[503,["160","static/chunks/app/not-found-49517c18b69df833.js"],"default"]
+0:["zA-3mwD1UykliiL7f5lMG",[[["",{"children":["__PAGE__",{}]},"$undefined","$undefined",true],["",{"children":["__PAGE__",{},[["$L1",["$","$L2",null,{"props":{"params":{},"searchParams":{}},"Component":"$3"}]],null],null]},[["$","html",null,{"lang":"en","children":[null,["$","body",null,{"children":["$","$L4",null,{"parallelRouterKey":"children","segmentPath":["children"],"error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L5",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":["$","$L6",null,{}],"notFoundStyles":[],"styles":[["$","link","0",{"rel":"stylesheet","href":"/iphone-flashcard-app/_next/static/css/725fafcc700fa067.css","precedence":"next","crossOrigin":"$undefined"}]]}]}]]}],null],null],[[["$","link","0",{"rel":"stylesheet","href":"/iphone-flashcard-app/_next/static/css/65fd1a0ea432bebd.css","precedence":"next","crossOrigin":"$undefined"}]],[null,"$L7"]]]]]
+7:[["$","meta","0",{"name":"viewport","content":"width=device-width, initial-scale=1"}],["$","meta","1",{"charSet":"utf-8"}],["$","title","2",{"children":"iPhone Flashcard App"}],["$","meta","3",{"name":"description","content":"A flashcard app for iPhone"}],["$","link","4",{"rel":"manifest","href":"/manifest.json","crossOrigin":"use-credentials"}],["$","link","5",{"rel":"icon","href":"/iphone-flashcard-app/favicon.ico","type":"image/x-icon","sizes":"16x16"}]]
+1:null
