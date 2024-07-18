@@ -15,7 +15,7 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
   const [categories, setCategories] = useState([{ name: '', items: [''] }]);
   const [errors, setErrors] = useState({});
   const [previewMode, setPreviewMode] = useState(false);
-  const [categoryImages, setCategoryImages] = useState(Array(6).fill(null));
+  const [categoryImages, setCategoryImages] = useState(Array(10).fill(null));
 
   useEffect(() => {
     const loadSets = async () => {
@@ -55,7 +55,7 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
   };
 
   const addCategory = () => {
-    if (categories.length < 6) {
+    if (categories.length < 10) {
       setCategories([...categories, { name: '', items: [''] }]);
     }
   };
@@ -265,7 +265,7 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
           <div className="flex justify-between">
             <Button 
               onClick={addCategory} 
-              disabled={categories.length >= 6}
+              disabled={categories.length >= 10}
             >
               <Plus className="mr-2 h-4 w-4" /> カテゴリーを追加
             </Button>

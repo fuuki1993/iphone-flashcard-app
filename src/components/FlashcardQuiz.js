@@ -2,10 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowRight, RotateCw, Shuffle } from 'lucide-react';
-import { getSetById, saveStudyHistory, getSets } from '@/utils/indexedDB';
+import { getSetById, saveStudyHistory, getSets, saveSessionState, getSessionState } from '@/utils/indexedDB';
 import styles from '@/app/FlashcardQuiz.module.css';
 
-const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
+const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState }) => {
   const [cards, setCards] = useState([]);
   const [shuffledCards, setShuffledCards] = useState([]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
@@ -36,7 +36,6 @@ const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
         setIsLoading(true);
         let allCards = [];
         if (setId === null) {
-          // 全てのセットを取得
           const allSets = await getSets('flashcard');
           allCards = allSets.flatMap(set => set.cards);
         } else {
@@ -45,9 +44,14 @@ const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
         }
         if (Array.isArray(allCards)) {
           setCards(allCards);
-          const shuffled = shuffleArray(allCards);
-          setShuffledCards(shuffled);
-          setCompleted(new Array(shuffled.length).fill(false));
+          if (sessionState) {
+            setShuffledCards(sessionState.shuffledCards);
+            setCurrentCardIndex(sessionState.currentCardIndex);
+            setCompleted(sessionState.completed);
+          } else {
+            setShuffledCards(shuffleArray([...allCards]));
+            setCompleted(new Array(allCards.length).fill(false));
+          }
         } else {
           throw new Error('Invalid data structure');
         }
@@ -59,7 +63,20 @@ const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
       }
     };
     loadCards();
-  }, [setId]);
+  }, [setId, sessionState]);
+
+  useEffect(() => {
+    const saveState = async () => {
+      if (setId) {
+        await saveSessionState(setId, 'flashcard', {
+          shuffledCards,
+          currentCardIndex,
+          completed,
+        });
+      }
+    };
+    saveState();
+  }, [setId, shuffledCards, currentCardIndex, completed]);
 
   const handleShuffle = () => {
     const shuffled = shuffleArray(cards);

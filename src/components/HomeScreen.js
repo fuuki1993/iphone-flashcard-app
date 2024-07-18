@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PlusCircle, BookOpen, BarChart2, Settings, Calendar, Clock, Trophy, Book, Globe, Code, Trash2 } from 'lucide-react';
-import { getStudyHistory, getAllSets } from '@/utils/indexedDB';
+import { getStudyHistory, getAllSets, getSessionState } from '@/utils/indexedDB';
 import AddEventModal from './AddEventModal';
 
 const HomeScreen = ({ 
@@ -28,7 +28,8 @@ const HomeScreen = ({
     const [scheduledEvents, setScheduledEvents] = useState([]);
     const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false);
     const [editingEvent, setEditingEvent] = useState(null);
-  
+    const [incompleteSessions, setIncompleteSessions] = useState([]);
+
     const loadData = useCallback(async () => {
       try {
         const history = await getStudyHistory();
@@ -114,12 +115,14 @@ const HomeScreen = ({
     const formatDate = (dateString) => {
       const date = new Date(dateString);
       const now = new Date();
-      const diffTime = Math.abs(now - date);
+      const diffTime = now.getTime() - date.getTime();
       const diffMinutes = Math.floor(diffTime / (1000 * 60));
       const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-      if (diffMinutes < 60) {
+    
+      if (isNaN(date.getTime())) {
+        return '日付不明';
+      } else if (diffMinutes < 60) {
         return `${diffMinutes}分前`;
       } else if (diffHours < 24) {
         return `${diffHours}時間前`;
@@ -189,6 +192,34 @@ const HomeScreen = ({
       }
     }, []);
 
+    useEffect(() => {
+      const loadIncompleteSessions = async () => {
+        const allSets = await getAllSets();
+        const incompleteSessions = await Promise.all(
+          allSets.map(async (set) => {
+            const sessionState = await getSessionState(set.id, set.type);
+            if (sessionState && sessionState.state) {
+              return { ...set, sessionState: sessionState.state, timestamp: sessionState.timestamp };
+            }
+            return null;
+          })
+        );
+        const filteredIncompleteSessions = incompleteSessions.filter(Boolean);
+        console.log('Incomplete sessions:', filteredIncompleteSessions); // デバッグログ
+        setIncompleteSessions(filteredIncompleteSessions.slice(0, 3));
+      };
+      loadIncompleteSessions();
+    }, []);
+    
+    useEffect(() => {
+      const loadStudyHistory = async () => {
+        const history = await getStudyHistory();
+        console.log('Study history:', history); // デバッグログ
+        setStudyHistory(history.slice(0, 3));
+      };
+      loadStudyHistory();
+    }, [setStudyHistory]);
+
     return (
       <div className="p-3 w-full max-w-[390px] mx-auto bg-gray-100">
         <div className="flex justify-between items-center mb-3">
@@ -241,8 +272,26 @@ const HomeScreen = ({
             <Card>
               <CardContent className="py-2 px-3">
                 <ul className="space-y-2">
+                  {incompleteSessions.map((session) => (
+                    <li 
+                      key={session.id} 
+                      className="flex items-center p-2 rounded-md hover:bg-gray-200 cursor-pointer transition-colors duration-200"
+                      onClick={() => onStartLearning(session.id, session.type, session.sessionState)}
+                    >
+                      {getIconForSetType(session.type)}
+                      <div className="flex-1 ml-2">
+                        <span className="font-medium text-xs">{session.title}</span>
+                        <p className="text-[10px] text-gray-500">{formatDate(session.timestamp)}</p>
+                      </div>
+                      <span className="text-xs text-blue-500">再開</span>
+                    </li>
+                  ))}
                   {studyHistory.map((entry) => (
-                    <li key={entry.id} className="flex items-center">
+                    <li 
+                      key={entry.id} 
+                      className="flex items-center p-2 rounded-md hover:bg-gray-200 cursor-pointer transition-colors duration-200"
+                      onClick={() => onStartLearning(entry.setId, entry.setType)}
+                    >
                       {getIconForSetType(entry.setType)}
                       <div className="flex-1 ml-2">
                         <span className="font-medium text-xs">{entry.setTitle}</span>

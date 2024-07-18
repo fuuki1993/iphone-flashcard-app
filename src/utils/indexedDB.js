@@ -4,6 +4,7 @@ const DB_NAME = 'FlashcardApp';
 const DB_VERSION = 3; // バージョンを上げて、新しいオブジェクトストアを追加
 const SETS_STORE_NAME = 'sets';
 const HISTORY_STORE_NAME = 'studyHistory';
+const SESSION_STATES_STORE_NAME = 'sessionStates';
 
 export const openDB = () => {
   return new Promise((resolve, reject) => {
@@ -23,6 +24,10 @@ export const openDB = () => {
         const historyStore = db.createObjectStore(HISTORY_STORE_NAME, { keyPath: 'id', autoIncrement: true });
         historyStore.createIndex('date', 'date', { unique: false });
       }
+      if (!db.objectStoreNames.contains(SESSION_STATES_STORE_NAME)) {
+        const sessionStore = db.createObjectStore(SESSION_STATES_STORE_NAME, { keyPath: ['setId', 'setType'] });
+        sessionStore.createIndex('timestamp', 'timestamp', { unique: false });
+      }
     };
   });
 };
@@ -37,8 +42,8 @@ export const saveStudyHistory = async (setId, setTitle, setType, score, endTime,
       setTitle,
       setType,
       score,
-      date: endTime.toISOString(),
-      studyDuration, // 学習時間を追加
+      date: new Date(endTime).toISOString(), // 確実にISOString形式で保存
+      studyDuration,
     };
     const request = store.add(newEntry);
 
@@ -197,4 +202,40 @@ export const saveOverallProgress = async (progress) => {
 export const getOverallProgress = async () => {
   const db = await openDB();
   return await db.get('settings', 'overallProgress') || 0;
+};
+
+export const saveSessionState = async (setId, setType, state) => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([SESSION_STATES_STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(SESSION_STATES_STORE_NAME);
+    const request = store.put({ setId, setType, state, timestamp: new Date() });
+
+    request.onerror = () => reject("Error saving session state");
+    request.onsuccess = () => resolve(request.result);
+  });
+};
+
+export const getSessionState = async (setId, setType) => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([SESSION_STATES_STORE_NAME], 'readonly');
+    const store = transaction.objectStore(SESSION_STATES_STORE_NAME);
+    const request = store.get([setId, setType]);
+
+    request.onerror = () => reject("Error getting session state");
+    request.onsuccess = () => resolve(request.result);
+  });
+};
+
+export const clearSessionState = async (setId, setType) => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([SESSION_STATES_STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(SESSION_STATES_STORE_NAME);
+    const request = store.delete([setId, setType]);
+
+    request.onerror = () => reject("Error clearing session state");
+    request.onsuccess = () => resolve();
+  });
 };

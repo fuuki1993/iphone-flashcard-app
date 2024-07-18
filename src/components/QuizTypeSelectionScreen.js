@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, BookOpen, List, CheckSquare, Layers, Play } from 'lucide-react';
-import { getSets } from '@/utils/indexedDB';
+import { getSets, clearSessionState } from '@/utils/indexedDB';
 
 const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
   const [quizSets, setQuizSets] = useState({
@@ -55,9 +55,11 @@ const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
     setSelectedSets(prev => ({ ...prev, [quizType]: setId }));
   };
 
-  const handleStartQuiz = (quizType) => {
+  const handleStartQuiz = async (quizType) => {
     const selectedSetId = selectedSets[quizType] || quizSets[quizType]?.[0]?.id?.toString();
     if (selectedSetId) {
+      // セッション状態をクリア
+      await clearSessionState(parseInt(selectedSetId, 10), quizType);
       onStartQuiz(quizType, parseInt(selectedSetId, 10));
     }
   };

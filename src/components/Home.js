@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getSetById } from '@/utils/indexedDB';
+import { getSetById, getSessionState } from '@/utils/indexedDB';
 import HomeScreen from '@/components/HomeScreen';
 import CreateEditSetSelectionScreen from '@/components/CreateEditSetSelectionScreen';
 import QuizTypeSelectionScreen from '@/components/QuizTypeSelectionScreen';
@@ -33,6 +33,7 @@ export default function Home() {
   const [studyHistory, setStudyHistory] = useState([]);
   const [dailyGoal, setDailyGoal] = useState(60);
   const [todayStudyTime, setTodayStudyTime] = useState(0);
+  const [sessionState, setSessionState] = useState(null);
 
   useEffect(() => {
     if (isReady && !hashPath) {
@@ -82,9 +83,57 @@ export default function Home() {
     navigateTo('createEditSet');
   };
   
-  const handleStartLearning = () => {
+  const handleStartLearning = async (setId, setType, savedSessionState = null) => {
     console.log('handleStartLearning called');
-    navigateTo('quizTypeSelection');
+    if (savedSessionState) {
+      // 保存されたセッション状態がある場合、直接クイズを開始
+      setQuizType(setType);
+      setQuizSetId(setId);
+      setSessionState(savedSessionState);
+      try {
+        const set = await getSetById(setId);
+        setQuizSetTitle(set.title);
+        navigateTo('quiz');
+      } catch (error) {
+        console.error("Error fetching set title:", error);
+        // エラーハンドリング
+      }
+    } else {
+      // 新しいセッションの場合、クイズタイプ選択画面に遷移
+      navigateTo('quizTypeSelection');
+    }
+  };
+
+  const handleStartQuiz = async (type, setId) => {
+    try {
+      // setId を整数に変換
+      const numericSetId = parseInt(setId, 10);
+      if (isNaN(numericSetId)) {
+        throw new Error('Invalid setId');
+      }
+
+      // セッション状態を取得
+      const sessionState = await getSessionState(numericSetId, type);
+
+      setQuizType(type);
+      setQuizSetId(numericSetId);
+      setSessionState(sessionState);
+      try {
+        if (numericSetId === null) {
+          setQuizSetTitle("すべてのセット");
+        } else {
+          const set = await getSetById(numericSetId);
+          setQuizSetTitle(set.title);
+        }
+        navigateTo('quiz');
+      } catch (error) {
+        console.error("Error fetching set data:", error);
+        // エラーハンドリング
+      }
+    } catch (error) {
+      console.error('Error fetching set data:', error);
+      // エラーハンドリング（例：ユーザーにエラーメッセージを表示）
+    }
   };
 
   const handleShowStatistics = () => {
@@ -99,24 +148,6 @@ export default function Home() {
   const handleEditType = (type) => {
     setCurrentSetType(type);
     navigateTo(type, 'edit');
-  };
-
-  const handleStartQuiz = async (type, setId) => {
-    setQuizType(type);
-    setQuizSetId(setId);
-    try {
-      if (setId === null) {
-        // "すべてのセット"が選択された場合
-        setQuizSetTitle("すべてのセット");
-      } else {
-        const set = await getSetById(setId);
-        setQuizSetTitle(set.title);
-      }
-      navigateTo('quiz');
-    } catch (error) {
-      console.error("Error fetching set title:", error);
-      // エラーハンドリングを行う（例：ユーザーにエラーメッセージを表示する）
-    }
   };
 
   const handleSave = (data) => {
@@ -226,13 +257,13 @@ export default function Home() {
       case 'quiz':
         switch (quizType) {
           case 'flashcard':
-            return <FlashcardQuiz setId={quizSetId} title={quizSetTitle} quizType={quizType} onBack={() => navigateTo('quizTypeSelection')} onFinish={handleFinishQuiz} />;
+            return <FlashcardQuiz setId={quizSetId} title={quizSetTitle} quizType={quizType} onBack={() => navigateTo('quizTypeSelection')} onFinish={handleFinishQuiz} sessionState={sessionState} />;
           case 'qa':
-            return <QAQuiz setId={quizSetId} title={quizSetTitle} quizType={quizType} onBack={() => navigateTo('quizTypeSelection')} onFinish={handleFinishQuiz} />;
+            return <QAQuiz setId={quizSetId} title={quizSetTitle} quizType={quizType} onBack={() => navigateTo('quizTypeSelection')} onFinish={handleFinishQuiz} sessionState={sessionState} />;
           case 'multiple-choice':
-            return <MultipleChoiceQuiz setId={quizSetId} title={quizSetTitle} quizType={quizType} onBack={() => navigateTo('quizTypeSelection')} onFinish={handleFinishQuiz} />;
+            return <MultipleChoiceQuiz setId={quizSetId} title={quizSetTitle} quizType={quizType} onBack={() => navigateTo('quizTypeSelection')} onFinish={handleFinishQuiz} sessionState={sessionState} />;
           case 'classification':
-            return <ClassificationQuiz setId={quizSetId} title={quizSetTitle} quizType={quizType} onBack={() => navigateTo('quizTypeSelection')} onFinish={handleFinishQuiz} />;
+            return <ClassificationQuiz setId={quizSetId} title={quizSetTitle} quizType={quizType} onBack={() => navigateTo('quizTypeSelection')} onFinish={handleFinishQuiz} sessionState={sessionState} />;
           default:
             return null;
         }

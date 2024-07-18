@@ -2,9 +2,9 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Check, X, Shuffle } from 'lucide-react';
-import { getSetById, saveStudyHistory } from '@/utils/indexedDB';
+import { getSetById, saveStudyHistory, getSets, saveSessionState, getSessionState } from '@/utils/indexedDB';
 
-const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
+const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState }) => {
   const [questions, setQuestions] = useState([]);
   const [shuffledQuestions, setShuffledQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -44,7 +44,6 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
         setIsLoading(true);
         let allQuestions = [];
         if (setId === null) {
-          // 全てのセットを取得
           const allSets = await getSets('multiple-choice');
           allQuestions = allSets.flatMap(set => set.questions);
         } else {
@@ -53,10 +52,16 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
         }
         if (Array.isArray(allQuestions)) {
           setQuestions(allQuestions);
-          const shuffledWithChoices = allQuestions.map(shuffleQuestionAndChoices);
-          const shuffled = shuffleArray(shuffledWithChoices);
-          setShuffledQuestions(shuffled);
-          setResults(new Array(shuffled.length).fill(null));
+          if (sessionState) {
+            setShuffledQuestions(sessionState.shuffledQuestions);
+            setCurrentQuestionIndex(sessionState.currentQuestionIndex);
+            setResults(sessionState.results);
+          } else {
+            const shuffledWithChoices = allQuestions.map(shuffleQuestionAndChoices);
+            const shuffled = shuffleArray(shuffledWithChoices);
+            setShuffledQuestions(shuffled);
+            setResults(new Array(shuffled.length).fill(null));
+          }
         } else {
           throw new Error('Invalid data structure');
         }
@@ -68,7 +73,20 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType }) => {
       }
     };
     loadQuestions();
-  }, [setId]);
+  }, [setId, sessionState]);
+
+  useEffect(() => {
+    const saveState = async () => {
+      if (setId) {
+        await saveSessionState(setId, 'multiple-choice', {
+          shuffledQuestions,
+          currentQuestionIndex,
+          results,
+        });
+      }
+    };
+    saveState();
+  }, [setId, shuffledQuestions, currentQuestionIndex, results]);
 
   const handleShuffle = () => {
     const shuffledWithChoices = questions.map(shuffleQuestionAndChoices);
