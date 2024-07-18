@@ -1,7 +1,7 @@
 // utils/indexedDB.js
 
 const DB_NAME = 'FlashcardApp';
-const DB_VERSION = 3; // バージョンを上げて、新しいオブジェクトストアを追加
+const DB_VERSION = 4; // 3から4に増やす
 const SETS_STORE_NAME = 'sets';
 const HISTORY_STORE_NAME = 'studyHistory';
 const SESSION_STATES_STORE_NAME = 'sessionStates';
@@ -17,16 +17,16 @@ export const openDB = () => {
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
       if (!db.objectStoreNames.contains(SETS_STORE_NAME)) {
-        const store = db.createObjectStore(SETS_STORE_NAME, { keyPath: 'id', autoIncrement: true });
-        store.createIndex('type', 'type', { unique: false });
+        db.createObjectStore(SETS_STORE_NAME, { keyPath: 'id', autoIncrement: true });
       }
       if (!db.objectStoreNames.contains(HISTORY_STORE_NAME)) {
-        const historyStore = db.createObjectStore(HISTORY_STORE_NAME, { keyPath: 'id', autoIncrement: true });
-        historyStore.createIndex('date', 'date', { unique: false });
+        db.createObjectStore(HISTORY_STORE_NAME, { keyPath: 'id', autoIncrement: true });
       }
       if (!db.objectStoreNames.contains(SESSION_STATES_STORE_NAME)) {
-        const sessionStore = db.createObjectStore(SESSION_STATES_STORE_NAME, { keyPath: ['setId', 'setType'] });
-        sessionStore.createIndex('timestamp', 'timestamp', { unique: false });
+        db.createObjectStore(SESSION_STATES_STORE_NAME, { keyPath: ['setId', 'setType'] });
+      }
+      if (!db.objectStoreNames.contains('settings')) {
+        db.createObjectStore('settings');
       }
     };
   });
