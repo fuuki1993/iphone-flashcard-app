@@ -117,3 +117,7 @@
   border-radius: 4px;
   cursor: pointer;
 }
+
+body {
+  overscroll-behavior-y: none;
+}

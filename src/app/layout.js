@@ -8,6 +8,17 @@ export const metadata = {
   title: "iPhone Flashcard App",
   description: "A flashcard app for iPhone",
   manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "iPhone Flashcard App",
+  },
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+  },
 };
 
 export default function RootLayout({ children }) {
