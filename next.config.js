@@ -12,6 +12,7 @@ const nextConfig = {
     maximumScale: 1,
     userScalable: false,
   },
+  reactStrictMode: true,
 }
 
 module.exports = {
