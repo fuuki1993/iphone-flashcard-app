@@ -9,12 +9,12 @@ export const metadata = {
   manifest: "/manifest.json",
   icons: {
     icon: [
-      { url: '/iphone-flashcard-app/icon-192x192.png', sizes: '192x192', type: 'image/png' },
-      { url: '/iphone-flashcard-app/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+      { url: '/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512x512.png', sizes: '512x512', type: 'image/png' },
     ],
     apple: [
-      { url: '/iphone-flashcard-app/icon-192x192.png', sizes: '192x192', type: 'image/png' },
-      { url: '/iphone-flashcard-app/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+      { url: '/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512x512.png', sizes: '512x512', type: 'image/png' },
     ],
   },
   appleWebApp: {
