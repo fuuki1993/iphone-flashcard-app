@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
-  <rect width="192" height="192" rx="42" fill="#4a4a4a"/>
-  <circle cx="96" cy="96" r="74" fill="none" stroke="#d5d5d5" stroke-width="4"/>
-  <path id="circular-text-192" d="M96,22 A74,74 0 0 1 96,170 A74,74 0 0 1 96,22" fill="none"/>
-  <text font-family="Arial, sans-serif" font-size="23" fill="#d5d5d5">
-    <textPath href="#circular-text-192" startOffset="5">memorization app</textPath>
-  </text>
-  <text x="96" y="108" font-family="Arial, sans-serif" font-size="52" fill="#d5d5d5" text-anchor="middle">M</text>
-</svg>
