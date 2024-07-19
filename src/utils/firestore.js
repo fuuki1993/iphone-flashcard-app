@@ -127,7 +127,7 @@ export const deleteSet = async (id) => {
   }
 };
 
-export const saveStudyHistory = async (setId, setTitle, setType, score, endTime, studyDuration) => {
+export const saveStudyHistory = async (setId, setTitle, setType, score, endTime, studyDuration, cardsStudied) => {
   try {
     const newEntry = {
       setId,
@@ -136,6 +136,7 @@ export const saveStudyHistory = async (setId, setTitle, setType, score, endTime,
       score,
       date: new Date(endTime).toISOString(),
       studyDuration,
+      cardsStudied,
       createdAt: serverTimestamp()
     };
     const docRef = await addDoc(collection(db, HISTORY_COLLECTION), newEntry);

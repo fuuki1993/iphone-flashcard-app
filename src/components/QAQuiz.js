@@ -100,13 +100,13 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTod
   const handleFinish = useCallback(async () => {
     const score = calculateScore();
     const endTime = new Date();
-    const studyDuration = Math.round((endTime - startTimeRef.current) / 1000); // 秒単位で保存
-    const cardsStudied = currentQuestionIndex + 1; // 学習したカード数
-    await saveStudyHistory(setId, title, 'qa', score, endTime, studyDuration);
+    const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
+    const cardsStudied = shuffledQuestions.length;
+    await saveStudyHistory(setId, title, 'qa', score, endTime, studyDuration, cardsStudied);
     setTodayStudyTime(prevTime => prevTime + studyDuration);
     onFinish(score, studyDuration, cardsStudied);
-  }, [setId, title, calculateScore, onFinish, setTodayStudyTime, currentQuestionIndex]);
-
+  }, [setId, title, calculateScore, onFinish, setTodayStudyTime, shuffledQuestions.length]);
+  
   if (isLoading) {
     return <div>読み込み中...</div>;
   }

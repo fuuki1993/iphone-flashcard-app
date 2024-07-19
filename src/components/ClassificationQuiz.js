@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, memo, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { getSetById, saveSessionState, getSessionState } from '@/utils/firestore';
+import { getSetById, saveSessionState, getSessionState, saveStudyHistory } from '@/utils/firestore';
 import { ArrowLeft, Shuffle } from 'lucide-react';
 import { DndContext, DragOverlay, useSensors, useSensor, PointerSensor, useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
@@ -330,13 +330,13 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
   const handleFinish = useCallback(async () => {
     const score = quizData.score;
     const endTime = new Date();
-    const studyDuration = Math.round((endTime - startTimeRef.current) / 1000); // 秒単位で保存
-    const cardsStudied = quizData.items.length; // 分類したアイテムの総数
-    await saveStudyHistory(setId, title, 'classification', score, endTime, studyDuration);
+    const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
+    const cardsStudied = quizData.items.length;
+    await saveStudyHistory(setId, title, 'classification', score, endTime, studyDuration, cardsStudied);
     setTodayStudyTime(prevTime => prevTime + studyDuration);
     onFinish(score, studyDuration, cardsStudied);
   }, [setId, title, quizData, onFinish, setTodayStudyTime]);
-
+  
   const getGridSizeStyle = useCallback(() => {
     const columns = 3;
     const rows = 4;

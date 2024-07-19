@@ -115,12 +115,12 @@ const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState,
   const handleFinish = useCallback(async () => {
     const score = calculateScore();
     const endTime = new Date();
-    const studyDuration = Math.round((endTime - startTimeRef.current) / 1000); // 秒単位で保存
-    const cardsStudied = currentCardIndex + 1; // 学習したカード数
-    await saveStudyHistory(setId, title, 'flashcard', score, endTime, studyDuration);
+    const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
+    const cardsStudied = shuffledCards.length;
+    await saveStudyHistory(setId, title, 'flashcard', score, endTime, studyDuration, cardsStudied);
     setTodayStudyTime(prevTime => prevTime + studyDuration);
     onFinish(score, studyDuration, cardsStudied);
-  }, [setId, title, calculateScore, onFinish, setTodayStudyTime, currentCardIndex]);
+  }, [setId, title, calculateScore, onFinish, setTodayStudyTime, shuffledCards.length]);
 
   const currentCard = useMemo(() => shuffledCards[currentCardIndex], [shuffledCards, currentCardIndex]);
 

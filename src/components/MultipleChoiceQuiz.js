@@ -135,6 +135,16 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
     );
   }, []);
 
+  const handleFinish = useCallback(async () => {
+    const score = calculateScore();
+    const endTime = new Date();
+    const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
+    const cardsStudied = shuffledQuestions.length;
+    await saveStudyHistory(setId, title, 'multiple-choice', score, endTime, studyDuration, cardsStudied);
+    setTodayStudyTime(prevTime => prevTime + studyDuration);
+    onFinish(score, studyDuration, cardsStudied);
+  }, [setId, title, calculateScore, onFinish, setTodayStudyTime, shuffledQuestions.length]);
+  
   const handleSubmit = useCallback(() => {
     if (selectedAnswers.length > 0 && currentQuestionIndex < shuffledQuestions.length) {
       const currentQuestion = shuffledQuestions[currentQuestionIndex];
@@ -146,27 +156,18 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
       setResults(newResults);
       setShowResult(true);
 
-      if (currentQuestionIndex < shuffledQuestions.length - 1) {
+      if (currentQuestionIndex === shuffledQuestions.length - 1) {
+        setIsLastQuestion(true);
+        handleFinish();
+      } else {
         setTimeout(() => {
           setCurrentQuestionIndex(prevIndex => prevIndex + 1);
           setSelectedAnswers([]);
           setShowResult(false);
         }, 1000);
-      } else {
-        setIsLastQuestion(true);
       }
     }
-  }, [selectedAnswers, currentQuestionIndex, shuffledQuestions, results]);
-
-  const handleFinish = useCallback(async () => {
-    const score = calculateScore();
-    const endTime = new Date();
-    const studyDuration = Math.round((endTime - startTimeRef.current) / 1000); // 秒単位で保存
-    const cardsStudied = currentQuestionIndex + 1; // 学習したカード数
-    await saveStudyHistory(setId, title, 'multiple-choice', score, endTime, studyDuration);
-    setTodayStudyTime(prevTime => prevTime + studyDuration);
-    onFinish(score, studyDuration, cardsStudied);
-  }, [setId, title, calculateScore, onFinish, setTodayStudyTime, currentQuestionIndex]);
+  }, [selectedAnswers, currentQuestionIndex, shuffledQuestions, results, handleFinish]);
 
   if (isLoading) {
     return <div className="w-full max-w-md mx-auto px-4">読み込み中...</div>;
