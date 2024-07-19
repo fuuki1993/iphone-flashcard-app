@@ -59,7 +59,6 @@ export default function Home() {
   }, [isReady, hashPath, push]);
 
   useEffect(() => {
-    console.log('Current hash path:', hashPath); // デバッグ用ログ
     // Handle routing based on hashPath
     const [mainPath, subPath] = hashPath.split('/');
     switch (mainPath) {
@@ -114,10 +113,6 @@ export default function Home() {
         .filter(entry => new Date(entry.date).toDateString() === today)
         .reduce((acc, entry) => acc + (entry.cardsStudied || 0), 0);
       setTodayStudiedCards(todayCards);
-
-      // デバッグ用のログ
-      console.log('Total study time:', total);
-      console.log('Today studied cards:', todayCards);
     };
     loadStudyHistory();
   }, []);
@@ -128,7 +123,6 @@ export default function Home() {
   };
 
   const navigateTo = (screen, subPath = '') => {
-    console.log('Navigating to:', screen, subPath); // デバッグ用ログ
     push(subPath ? `${screen}/${subPath}` : screen);
   };
 
@@ -137,7 +131,6 @@ export default function Home() {
   };
   
   const handleStartLearning = async (setId, setType, savedSessionState = null) => {
-    console.log('handleStartLearning called', { setId, setType, savedSessionState });
     if (savedSessionState) {
       // 保存されたセッション状態がある場合、直接クイズを開始
       setQuizType(setType);
@@ -148,7 +141,6 @@ export default function Home() {
         setQuizSetTitle(set.title);
         navigateTo('quiz');
       } catch (error) {
-        console.error("Error fetching set title:", error);
         // エラーハンドリング
       }
     } else {
@@ -159,10 +151,8 @@ export default function Home() {
 
   const handleStartQuiz = async (type, setId) => {
     try {
-      console.log('Starting quiz:', { type, setId }); // デバッグ用ログ
   
       if (!setId || typeof setId !== 'string' || setId.trim() === '') {
-        console.error('Invalid setId:', setId);
         // エラーハンドリング（例：ユーザーにエラーメッセージを表示）
         return;
       }
@@ -182,7 +172,6 @@ export default function Home() {
   
       navigateTo('quiz');
     } catch (error) {
-      console.error('Error fetching set data:', error);
       // エラーハンドリング（例：ユーザーにエラーメッセージを表示）
     }
   };
@@ -202,19 +191,14 @@ export default function Home() {
   };
 
   const handleSave = (data) => {
-    console.log('Saving data:', data);
     // ここでデータを保存する処理を実装
     navigateTo('home');
   };
 
   const handleFinishQuiz = useCallback((results, studyDuration, cardsStudied) => {
-    console.log('Quiz finished with results:', results);
-    console.log('Study duration:', studyDuration, 'seconds');
-    console.log('Cards studied:', cardsStudied);
     
     setTodayStudyTime(prevTime => {
       const newTime = prevTime + studyDuration;
-      console.log('Updated todayStudyTime:', newTime); // デバッグログ
       return newTime;
     });
     
@@ -240,7 +224,6 @@ export default function Home() {
       return <AuthScreen onSignIn={() => console.log('Signed in')} onSignUp={() => console.log('Signed up')} />;
     }
 
-    console.log('Rendering screen:', currentScreen); // デバッグ用ログ
     switch (currentScreen) {
       case 'home':
         return (
@@ -263,7 +246,6 @@ export default function Home() {
               onSignOut={() => {
                 const auth = getAuth();
                 auth.signOut().then(() => {
-                  console.log('Signed out');
                   // 必要に応じて追加の処理を行う
                 });
               }}
@@ -342,9 +324,7 @@ export default function Home() {
           />
         );
       case 'quiz':
-        console.log('Quiz type:', quizType);  // デバッグ用ログ
         if (!quizType) {
-          console.error('Quiz type is not set');
           return <div>エラー: クイズタイプが設定されていません</div>;
         }
         const QuizComponent = React.lazy(() => {

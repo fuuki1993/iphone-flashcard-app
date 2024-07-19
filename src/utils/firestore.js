@@ -31,7 +31,7 @@ export const saveSet = async (set) => {
     });
     return docRef.id;
   } catch (error) {
-    console.error("Error saving set:", error);
+
     throw error;
   }
 };
@@ -46,7 +46,7 @@ export const getSets = async (type = null) => {
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
-    console.error("Error getting sets:", error);
+
     throw error;
   }
 };
@@ -57,28 +57,28 @@ export const getAllSets = async () => {
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
-    console.error("Error getting all sets:", error);
+
     throw error;
   }
 };
 
 export const getSetById = async (setId) => {
   try {
-    console.log('Getting set with ID:', setId); // デバッグ用ログ
+
     if (!setId || typeof setId !== 'string' || setId.trim() === '') {
       throw new Error('無効なsetIdです');
     }
     const setRef = doc(db, 'sets', setId);
     const setSnap = await getDoc(setRef);
     if (setSnap.exists()) {
-      console.log('Set data:', setSnap.data()); // デバッグ用ログ
+
       return { id: setSnap.id, ...setSnap.data() };
     } else {
-      console.log('No such set!'); // デバッグ用ログ
+
       throw new Error('セットが見つかりません');
     }
   } catch (error) {
-    console.error('Error getting set:', error);
+
     throw error;
   }
 };
@@ -113,7 +113,7 @@ export const updateSet = async (set) => {
 
     return set.id;
   } catch (error) {
-    console.error("Error updating set:", error);
+
     throw error;
   }
 };
@@ -122,7 +122,7 @@ export const deleteSet = async (id) => {
   try {
     await deleteDoc(doc(db, SETS_COLLECTION, id));
   } catch (error) {
-    console.error("Error deleting set:", error);
+
     throw error;
   }
 };
@@ -141,7 +141,7 @@ export const saveStudyHistory = async (setId, setTitle, setType, score, endTime,
     const docRef = await addDoc(collection(db, HISTORY_COLLECTION), newEntry);
     return docRef.id;
   } catch (error) {
-    console.error("Error saving study history:", error);
+
     throw error;
   }
 };
@@ -152,7 +152,7 @@ export const getStudyHistory = async () => {
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
-    console.error("Error getting study history:", error);
+
     throw error;
   }
 };
@@ -167,7 +167,7 @@ export const saveSessionState = async (setId, setType, state) => {
       updatedAt: serverTimestamp() 
     });
   } catch (error) {
-    console.error("Error saving session state:", error);
+
     throw error;
   }
 };
@@ -182,7 +182,7 @@ export const getSessionState = async (setId, setType) => {
       return null;
     }
   } catch (error) {
-    console.error("Error getting session state:", error);
+
     throw error;
   }
 };
@@ -191,7 +191,7 @@ export const clearSessionState = async (setId, setType) => {
   try {
     await deleteDoc(doc(db, SESSION_STATES_COLLECTION, `${setId}_${setType}`));
   } catch (error) {
-    console.error("Error clearing session state:", error);
+
     throw error;
   }
 };
@@ -203,7 +203,7 @@ export const saveSettings = async (key, value) => {
       updatedAt: serverTimestamp() 
     });
   } catch (error) {
-    console.error("Error saving settings:", error);
+
     throw error;
   }
 };
@@ -218,7 +218,7 @@ export const getSettings = async (key) => {
       return null;
     }
   } catch (error) {
-    console.error("Error getting settings:", error);
+
     throw error;
   }
 };
@@ -260,7 +260,7 @@ export const getSetTitle = async (setId) => {
     const set = await getSetById(setId);
     return set.title;
   } catch (error) {
-    console.error("Error getting set title:", error);
+
     throw error;
   }
 };
@@ -269,7 +269,7 @@ export const deleteStudyHistoryEntry = async (entryId) => {
   try {
     await deleteDoc(doc(db, HISTORY_COLLECTION, entryId));
   } catch (error) {
-    console.error("Error deleting study history entry:", error);
+
     throw error;
   }
 };
@@ -281,7 +281,7 @@ export const uploadImage = async (file, path) => {
     const downloadURL = await getDownloadURL(snapshot.ref);
     return downloadURL;
   } catch (error) {
-    console.error("Error uploading image:", error);
+
     throw error;
   }
 };
