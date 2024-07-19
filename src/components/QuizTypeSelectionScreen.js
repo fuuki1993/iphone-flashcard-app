@@ -58,10 +58,10 @@ const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
   }, []);
 
   const handleStartQuiz = useCallback(async (quizType) => {
-    const selectedSetId = selectedSets[quizType] || quizSets[quizType]?.[0]?.id?.toString();
+    const selectedSetId = selectedSets[quizType] || quizSets[quizType]?.[0]?.id;
     if (selectedSetId) {
-      await clearSessionState(parseInt(selectedSetId, 10), quizType);
-      onStartQuiz(quizType, parseInt(selectedSetId, 10));
+      await clearSessionState(selectedSetId, quizType);
+      onStartQuiz(quizType, selectedSetId);
     }
   }, [selectedSets, quizSets, onStartQuiz]);
 
@@ -90,14 +90,14 @@ const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
               <div className="flex items-center space-x-2">
                 <Select 
                   onValueChange={(value) => handleSetSelection(type.id, value)} 
-                  value={selectedSets[type.id] || (quizSets[type.id]?.[0]?.id?.toString() || '')}
+                  value={selectedSets[type.id] || (quizSets[type.id]?.[0]?.id || '')}
                 >
                   <SelectTrigger className="text-xs flex-grow">
                     <SelectValue placeholder="セットを選択" />
                   </SelectTrigger>
                   <SelectContent>
                     {quizSets[type.id]?.map(set => (
-                      <SelectItem key={set.id} value={set.id.toString()}>{set.title}</SelectItem>
+                      <SelectItem key={set.id} value={set.id}>{set.title}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
