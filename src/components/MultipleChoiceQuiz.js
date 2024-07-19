@@ -45,30 +45,48 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
         let allQuestions = [];
         if (setId === null) {
           const allSets = await getSets('multiple-choice');
-          console.log('All sets:', allSets);  // デバッグ用ログ
-          allQuestions = allSets.flatMap(set => set.questions);
+          console.log('All sets:', allSets);
+          if (Array.isArray(allSets)) {
+            allQuestions = allSets.flatMap(set => {
+              console.log('Set:', set);
+              return Array.isArray(set.questions) ? set.questions : [];
+            });
+          } else {
+            throw new Error('Invalid data structure: allSets is not an array');
+          }
         } else {
           const set = await getSetById(parseInt(setId));
-          console.log('Set:', set);  // デバッグ用ログ
-          allQuestions = set.questions;
+          console.log('Set:', set);
+          if (set && Array.isArray(set.questions)) {
+            allQuestions = set.questions;
+          } else {
+            throw new Error('Invalid data structure: set.questions is not an array');
+          }
         }
-        console.log('All questions:', allQuestions);  // デバッグ用ログ
+        console.log('All questions:', allQuestions);
         if (Array.isArray(allQuestions)) {
           setQuestions(allQuestions);
           if (sessionState) {
-            console.log('Session state:', sessionState);  // デバッグ用ログ
+            console.log('Session state:', sessionState);
             setShuffledQuestions(sessionState.shuffledQuestions);
             setCurrentQuestionIndex(sessionState.currentQuestionIndex);
             setResults(sessionState.results);
           } else {
-            const shuffledWithChoices = allQuestions.map(shuffleQuestionAndChoices);
+            const shuffledWithChoices = allQuestions.map(question => {
+              if (question && Array.isArray(question.choices)) {
+                return shuffleQuestionAndChoices(question);
+              } else {
+                console.error('Invalid question structure:', question);
+                return null;
+              }
+            }).filter(q => q !== null);
             const shuffled = shuffleArray(shuffledWithChoices);
-            console.log('Shuffled questions:', shuffled);  // デバッグ用ログ
+            console.log('Shuffled questions:', shuffled);
             setShuffledQuestions(shuffled);
             setResults(new Array(shuffled.length).fill(null));
           }
         } else {
-          throw new Error('Invalid data structure');
+          throw new Error('Invalid data structure: allQuestions is not an array');
         }
       } catch (error) {
         console.error("Error loading questions:", error);

@@ -24,26 +24,40 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState }) => {
         let allQuestions = [];
         if (setId === null) {
           const allSets = await getSets('qa');
-          console.log('All sets:', allSets);  // デバッグ用ログ
-          allQuestions = allSets.flatMap(set => set.qaItems);
+          console.log('All sets:', allSets);
+          if (Array.isArray(allSets)) {
+            allQuestions = allSets.flatMap(set => {
+              console.log('Set:', set);
+              return Array.isArray(set.qaItems) ? set.qaItems : [];
+            });
+          } else {
+            throw new Error('Invalid data structure: allSets is not an array');
+          }
         } else {
           const set = await getSetById(parseInt(setId));
-          console.log('Set:', set);  // デバッグ用ログ
-          allQuestions = set.qaItems;
+          console.log('Set:', set);
+          if (set && Array.isArray(set.qaItems)) {
+            allQuestions = set.qaItems;
+          } else {
+            throw new Error('Invalid data structure: set.qaItems is not an array');
+          }
         }
-        console.log('All questions:', allQuestions);  // デバッグ用ログ
+        console.log('All questions:', allQuestions);
         if (Array.isArray(allQuestions)) {
           setQuestions(allQuestions);
           if (sessionState) {
+            console.log('Session state:', sessionState);
             setShuffledQuestions(sessionState.shuffledQuestions);
             setCurrentQuestionIndex(sessionState.currentQuestionIndex);
             setResults(sessionState.results);
           } else {
-            setShuffledQuestions(shuffleArray([...allQuestions]));
-            setResults(new Array(allQuestions.length).fill(null));
+            const shuffled = shuffleArray([...allQuestions]);
+            console.log('Shuffled questions:', shuffled);
+            setShuffledQuestions(shuffled);
+            setResults(new Array(shuffled.length).fill(null));
           }
         } else {
-          throw new Error('Invalid data structure');
+          throw new Error('Invalid data structure: allQuestions is not an array');
         }
       } catch (error) {
         console.error("Error loading questions:", error);
@@ -53,7 +67,7 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState }) => {
       }
     };
     loadQuestions();
-  }, [setId, sessionState]);
+  }, [setId, sessionState, shuffleArray]);
 
   useEffect(() => {
     const saveState = async () => {
