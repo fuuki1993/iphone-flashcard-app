@@ -281,6 +281,7 @@ export default function Home() {
           />
         );
       case 'quiz':
+        console.log('Quiz type:', quizType);  // デバッグ用ログ
         switch (quizType) {
           case 'flashcard':
             return <FlashcardQuiz setId={quizSetId} title={quizSetTitle} quizType={quizType} onBack={() => navigateTo('quizTypeSelection')} onFinish={handleFinishQuiz} sessionState={sessionState} />;
@@ -291,7 +292,7 @@ export default function Home() {
           case 'classification':
             return <ClassificationQuiz setId={quizSetId} title={quizSetTitle} quizType={quizType} onBack={() => navigateTo('quizTypeSelection')} onFinish={handleFinishQuiz} sessionState={sessionState} />;
           default:
-            return null;
+            return <div>Unknown quiz type: {quizType}</div>;
         }
       case 'statistics':
         return (
