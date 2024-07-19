@@ -61,7 +61,7 @@ const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
     const selectedSetId = selectedSets[quizType] || quizSets[quizType]?.[0]?.id;
     if (selectedSetId) {
       await clearSessionState(selectedSetId, quizType);
-      onStartQuiz(quizType, selectedSetId);
+      onStartQuiz(quizType, selectedSetId.toString());
     }
   }, [selectedSets, quizSets, onStartQuiz]);
 
