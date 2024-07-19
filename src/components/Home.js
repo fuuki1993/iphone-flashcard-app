@@ -128,9 +128,9 @@ export default function Home() {
 
   const handleStartQuiz = async (type, setId) => {
     try {
-      let numericSetId = setId === null ? null : Number(setId);
-      if (setId !== null && isNaN(numericSetId)) {
-        throw new Error('Invalid setId');
+      let numericSetId = null;
+      if (setId !== null && setId !== undefined && setId !== '') {
+        numericSetId = setId;
       }
 
       // セッション状態を取得
