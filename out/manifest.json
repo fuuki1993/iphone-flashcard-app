@@ -1,8 +1,8 @@
 {
   "name": "iPhone Flashcard App",
   "short_name": "Flashcard",
-  "start_url": "/iphone-flashcard-app/",
-  "display": "standalone",
+  "start_url": "/",
+  "display": "fullscreen",
   "background_color": "#ffffff",
   "theme_color": "#000000",
   "icons": [

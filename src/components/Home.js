@@ -128,10 +128,12 @@ export default function Home() {
 
   const handleStartQuiz = async (type, setId) => {
     try {
-      // setId を整数に変換
-      const numericSetId = parseInt(setId, 10);
-      if (isNaN(numericSetId)) {
-        throw new Error('Invalid setId');
+      let numericSetId = null;
+      if (setId !== null) {
+        numericSetId = parseInt(setId, 10);
+        if (isNaN(numericSetId)) {
+          throw new Error('Invalid setId');
+        }
       }
 
       // セッション状態を取得
@@ -140,18 +142,14 @@ export default function Home() {
       setQuizType(type);
       setQuizSetId(numericSetId);
       setSessionState(sessionState);
-      try {
-        if (numericSetId === null) {
-          setQuizSetTitle("すべてのセット");
-        } else {
-          const set = await getSetById(numericSetId);
-          setQuizSetTitle(set.title);
-        }
-        navigateTo('quiz');
-      } catch (error) {
-        console.error("Error fetching set data:", error);
-        // エラーハンドリング
+
+      if (numericSetId === null) {
+        setQuizSetTitle("すべてのセット");
+      } else {
+        const set = await getSetById(numericSetId);
+        setQuizSetTitle(set.title);
       }
+      navigateTo('quiz');
     } catch (error) {
       console.error('Error fetching set data:', error);
       // エラーハンドリング（例：ユーザーにエラーメッセージを表示）
