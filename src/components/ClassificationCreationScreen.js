@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,13 +10,15 @@ import { ArrowLeft, Plus, Save, Trash2, Image, Eye, EyeOff, Upload } from 'lucid
 import { saveSet } from '@/utils/firestore';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { compressImage } from '@/utils/imageCompression';
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { getAuth } from "firebase/auth";
 
 const ClassificationCreationScreen = ({ onBack, onSave }) => {
   const [setTitle, setSetTitle] = useState('');
   const [categories, setCategories] = useState([{ name: '', items: [''] }]);
   const [errors, setErrors] = useState({});
   const [previewMode, setPreviewMode] = useState(false);
-  const [categoryImages, setCategoryImages] = useState(Array(10).fill(null));
+  const [categoryImages, setCategoryImages] = useState(() => Array(10).fill(null));
   const inputRef = useAutoScroll();
 
   const addCategory = () => {
@@ -63,24 +65,35 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
     setCategories(updatedCategories);
   };
 
-  const handleImageUpload = async (categoryIndex, event) => {
+  const handleImageUpload = useCallback(async (categoryIndex, event) => {
     const file = event.target.files[0];
     if (file) {
       try {
         const compressedImage = await compressImage(file);
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const newImages = [...categoryImages];
-          newImages[categoryIndex] = reader.result;
-          setCategoryImages(newImages);
-        };
-        reader.readAsDataURL(compressedImage);
+        const auth = getAuth();
+        const user = auth.currentUser;
+        
+        if (!user) {
+          throw new Error("User not authenticated");
+        }
+
+        const storage = getStorage();
+        const storageRef = ref(storage, `classification/${user.uid}/${Date.now()}_${file.name}`);
+        
+        const snapshot = await uploadBytes(storageRef, compressedImage);
+        const downloadURL = await getDownloadURL(snapshot.ref);
+        
+        setCategoryImages(prevImages => {
+          const newImages = [...prevImages];
+          newImages[categoryIndex] = downloadURL;
+          return newImages;
+        });
       } catch (error) {
-        console.error("Error compressing image:", error);
-        // エラーメッセージをユーザーに表示
+        console.error("Error uploading image:", error);
+        setErrors(prev => ({ ...prev, image: "画像のアップロード中にエラーが発生しました。" }));
       }
     }
-  };
+  }, []);
 
   const validateForm = () => {
     const newErrors = {};

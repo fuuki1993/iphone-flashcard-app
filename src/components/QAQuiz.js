@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { ArrowLeft, Check, X, Shuffle } from 'lucide-react';
 import { getSetById, saveStudyHistory, getSets, saveSessionState } from '@/utils/firestore';
 
-const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState }) => {
+const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTodayStudyTime }) => {
   const [questions, setQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [userAnswer, setUserAnswer] = useState('');
@@ -26,58 +26,36 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState }) => {
     return shuffled;
   }, []);
 
+  const calculateScore = useCallback(() => {
+    const totalQuestions = shuffledQuestions.length;
+    const correctAnswers = results.filter(Boolean).length;
+    return Math.round((correctAnswers / totalQuestions) * 100);
+  }, [shuffledQuestions.length, results]);
+
   useEffect(() => {
     const loadQuestions = async () => {
       try {
-        setIsLoading(true);
-        let allQuestions = [];
-        if (setId === null) {
-          const allSets = await getSets('qa');
-          console.log('All sets:', allSets);
-          if (Array.isArray(allSets)) {
-            allQuestions = allSets.flatMap(set => {
-              console.log('Set:', set);
-              return Array.isArray(set.qaItems) ? set.qaItems : [];
-            });
-          } else {
-            throw new Error('Invalid data structure: allSets is not an array');
-          }
-        } else {
-          console.log('SetId:', setId); // デバッグ用ログ
-          const set = await getSetById(setId);
-          console.log('Set:', set); // デバッグ用ログ
-          if (set && Array.isArray(set.qaItems)) {
-            allQuestions = set.qaItems;
-          } else {
-            throw new Error('Invalid data structure: set.qaItems is not an array');
-          }
+        if (!setId) {
+          throw new Error('setId is not provided');
         }
-        console.log('All questions:', allQuestions);
-        if (Array.isArray(allQuestions)) {
-          setQuestions(allQuestions);
-          if (sessionState) {
-            console.log('Session state:', sessionState);
-            setShuffledQuestions(sessionState.shuffledQuestions);
-            setCurrentQuestionIndex(sessionState.currentQuestionIndex);
-            setResults(sessionState.results);
-          } else {
-            const shuffled = shuffleArray(allQuestions);
-            console.log('Shuffled questions:', shuffled);
-            setShuffledQuestions(shuffled);
-            setResults(new Array(shuffled.length).fill(null));
-          }
-        } else {
-          throw new Error('Invalid data structure: allQuestions is not an array');
+        console.log('Loading questions for setId:', setId);
+        const set = await getSetById(setId);
+        console.log('Loaded set:', set); // デバッグ用ログ
+        if (!set || !Array.isArray(set.qaItems)) {
+          throw new Error('Invalid set data');
         }
+        setQuestions(set.qaItems);
+        setShuffledQuestions(shuffleArray([...set.qaItems]));
       } catch (error) {
-        console.error("Error loading questions:", error);
-        setError('質問の読み込み中にエラーが発生しました。');
+        console.error('Error loading questions:', error);
+        setError(error.message);
       } finally {
         setIsLoading(false);
       }
     };
+
     loadQuestions();
-  }, [setId, sessionState, shuffleArray]);
+  }, [setId]);
 
   useEffect(() => {
     const saveState = async () => {
@@ -122,16 +100,12 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState }) => {
   const handleFinish = useCallback(async () => {
     const score = calculateScore();
     const endTime = new Date();
-    const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
+    const studyDuration = Math.round((endTime - startTimeRef.current) / 1000); // 秒単位で保存
+    const cardsStudied = currentQuestionIndex + 1; // 学習したカード数
     await saveStudyHistory(setId, title, 'qa', score, endTime, studyDuration);
-    onFinish(score);
-  }, [setId, title, onFinish]);
-
-  const calculateScore = useCallback(() => {
-    const totalQuestions = shuffledQuestions.length;
-    const correctAnswers = results.filter(Boolean).length;
-    return Math.round((correctAnswers / totalQuestions) * 100);
-  }, [shuffledQuestions.length, results]);
+    setTodayStudyTime(prevTime => prevTime + studyDuration);
+    onFinish(score, studyDuration, cardsStudied);
+  }, [setId, title, calculateScore, onFinish, setTodayStudyTime, currentQuestionIndex]);
 
   if (isLoading) {
     return <div>読み込み中...</div>;

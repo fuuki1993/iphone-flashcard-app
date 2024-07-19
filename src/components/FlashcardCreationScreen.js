@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,8 @@ import { ArrowLeft, Plus, Save, Trash2, Image, Eye, EyeOff } from 'lucide-react'
 import { saveSet } from '@/utils/firestore';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { compressImage } from '@/utils/imageCompression';
+import { getStorage, ref, uploadBytes, getDownloadURL, getBlob, deleteObject } from "firebase/storage";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 const FlashcardCreationScreen = ({ onBack, onSave }) => {
   const [setTitle, setSetTitle] = useState('');
@@ -17,6 +19,16 @@ const FlashcardCreationScreen = ({ onBack, onSave }) => {
   const [errors, setErrors] = useState({});
   const [previewIndex, setPreviewIndex] = useState(null);
   const inputRef = useAutoScroll();
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const addCard = useCallback(() => {
     setCards(prevCards => [...prevCards, { front: '', back: '', image: null }]);
@@ -33,21 +45,29 @@ const FlashcardCreationScreen = ({ onBack, onSave }) => {
   }, []);
 
   const handleImageUpload = useCallback(async (index, event) => {
+    if (!user) {
+      console.error("User is not authenticated");
+      setErrors(prevErrors => ({ ...prevErrors, image: "ユーザー認証が必要です。" }));
+      return;
+    }
+
     const file = event.target.files[0];
     if (file) {
       try {
         const compressedImage = await compressImage(file);
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          updateCard(index, 'image', reader.result);
-        };
-        reader.readAsDataURL(compressedImage);
+        const storage = getStorage();
+        const storageRef = ref(storage, `flashcards/${user.uid}/temp_${Date.now()}_${index}`);
+        
+        const snapshot = await uploadBytes(storageRef, compressedImage);
+        const downloadURL = await getDownloadURL(snapshot.ref);
+        
+        updateCard(index, 'image', downloadURL);
       } catch (error) {
-        console.error("Error compressing image:", error);
-        setErrors(prevErrors => ({ ...prevErrors, image: "画像の圧縮中にエラーが発生しました。" }));
+        console.error("Error uploading image:", error);
+        setErrors(prevErrors => ({ ...prevErrors, image: "画像のアップロード中にエラーが発生しました。" }));
       }
     }
-  }, [updateCard]);
+  }, [user, updateCard]);
 
   const validateForm = useCallback(() => {
     const newErrors = {};
@@ -68,7 +88,28 @@ const FlashcardCreationScreen = ({ onBack, onSave }) => {
       try {
         const newSet = { 
           title: setTitle, 
-          cards: cards,
+          cards: await Promise.all(cards.map(async (card, i) => {
+            if (card.image) {
+              const storage = getStorage();
+              const oldRef = ref(storage, card.image);
+              const newRef = ref(storage, `flashcards/${user.uid}/card_${Date.now()}_${i}`);
+              
+              // 既存のファイルを取得
+              const oldBlob = await getBlob(oldRef);
+              
+              // 新しい場所にアップロード
+              await uploadBytes(newRef, oldBlob);
+              
+              // 新しいURLを取得
+              const newUrl = await getDownloadURL(newRef);
+              
+              // 古いファイルを削除
+              await deleteObject(oldRef);
+
+              return { ...card, image: newUrl };
+            }
+            return card;
+          })),
           type: 'flashcard'
         };
         const id = await saveSet(newSet);
@@ -78,7 +119,7 @@ const FlashcardCreationScreen = ({ onBack, onSave }) => {
         setErrors(prevErrors => ({ ...prevErrors, save: "セットの保存中にエラーが発生しました。" }));
       }
     }
-  }, [setTitle, cards, validateForm, onSave]);
+  }, [setTitle, cards, validateForm, onSave, user]);
 
   const togglePreview = useCallback((index) => {
     setPreviewIndex(prevIndex => prevIndex === index ? null : index);

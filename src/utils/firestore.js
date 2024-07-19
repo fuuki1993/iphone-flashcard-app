@@ -14,6 +14,8 @@ import {
   orderBy,
   limit
 } from 'firebase/firestore';
+import { storage } from './firebase';
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const SETS_COLLECTION = 'sets';
 const HISTORY_COLLECTION = 'studyHistory';
@@ -63,7 +65,7 @@ export const getAllSets = async () => {
 export const getSetById = async (setId) => {
   try {
     console.log('Getting set with ID:', setId); // デバッグ用ログ
-    if (!setId) {
+    if (!setId || typeof setId !== 'string' || setId.trim() === '') {
       throw new Error('無効なsetIdです');
     }
     const setRef = doc(db, 'sets', setId);
@@ -84,10 +86,31 @@ export const getSetById = async (setId) => {
 export const updateSet = async (set) => {
   try {
     const docRef = doc(db, SETS_COLLECTION, set.id);
+    const { categoryImages, ...setWithoutImages } = set;
+    
+    // Update main set data without images
     await updateDoc(docRef, {
-      ...set,
+      ...setWithoutImages,
       updatedAt: serverTimestamp()
     });
+
+    // If there are images, upload them to Firebase Storage and update URLs in Firestore
+    if (categoryImages && categoryImages.length > 0) {
+      const imageUrls = await Promise.all(categoryImages.map(async (image, index) => {
+        if (image && image.startsWith('data:')) {
+          const response = await fetch(image);
+          const blob = await response.blob();
+          const imagePath = `sets/${set.id}/category_${index}.jpg`;
+          return await uploadImage(blob, imagePath);
+        }
+        return image; // If it's already a URL, keep it as is
+      }));
+
+      await updateDoc(docRef, {
+        categoryImages: imageUrls
+      });
+    }
+
     return set.id;
   } catch (error) {
     console.error("Error updating set:", error);
@@ -247,6 +270,18 @@ export const deleteStudyHistoryEntry = async (entryId) => {
     await deleteDoc(doc(db, HISTORY_COLLECTION, entryId));
   } catch (error) {
     console.error("Error deleting study history entry:", error);
+    throw error;
+  }
+};
+
+export const uploadImage = async (file, path) => {
+  try {
+    const storageRef = ref(storage, path);
+    const snapshot = await uploadBytes(storageRef, file);
+    const downloadURL = await getDownloadURL(snapshot.ref);
+    return downloadURL;
+  } catch (error) {
+    console.error("Error uploading image:", error);
     throw error;
   }
 };

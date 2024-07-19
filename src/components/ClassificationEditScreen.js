@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, Plus, Save, Trash2, Eye, EyeOff, Upload } from 'lucide-react';
 import { getSets, getSetById, updateSet, deleteSet } from '@/utils/firestore';
 import { compressImage } from '@/utils/imageCompression';
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import { getAuth } from "firebase/auth";
 
 const ClassificationEditScreen = ({ onBack, onSave }) => {
   const [sets, setSets] = useState([]);
@@ -15,7 +17,8 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
   const [categories, setCategories] = useState([{ name: '', items: [''] }]);
   const [errors, setErrors] = useState({});
   const [previewMode, setPreviewMode] = useState(false);
-  const [categoryImages, setCategoryImages] = useState(Array(10).fill(null));
+  const [categoryImages, setCategoryImages] = useState(() => Array(10).fill(null));
+  const [originalCategories, setOriginalCategories] = useState([]);
 
   useEffect(() => {
     const loadSets = async () => {
@@ -36,31 +39,43 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
       const set = await getSetById(value);
       setSetTitle(set.title);
       setCategories(set.categories || [{ name: '', items: [''] }]);
-      setCategoryImages(set.categoryImages || Array(10).fill(null));
+      setOriginalCategories(set.categories || [{ name: '', items: [''] }]);
+      setCategoryImages(set.categories.map(category => category.image) || Array(10).fill(null));
     } catch (error) {
       console.error("Error loading set:", error);
       setErrors({ ...errors, load: "セットの読み込み中にエラーが発生しました。" });
     }
   };
 
-  const handleImageUpload = async (categoryIndex, event) => {
+  const handleImageUpload = useCallback(async (categoryIndex, event) => {
     const file = event.target.files[0];
     if (file) {
       try {
         const compressedImage = await compressImage(file);
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const newImages = [...categoryImages];
-          newImages[categoryIndex] = reader.result;
-          setCategoryImages(newImages);
-        };
-        reader.readAsDataURL(compressedImage);
+        const auth = getAuth();
+        const user = auth.currentUser;
+        
+        if (!user) {
+          throw new Error("User not authenticated");
+        }
+
+        const storage = getStorage();
+        const storageRef = ref(storage, `classification/${user.uid}/${Date.now()}_${file.name}`);
+        
+        const snapshot = await uploadBytes(storageRef, compressedImage);
+        const downloadURL = await getDownloadURL(snapshot.ref);
+        
+        setCategoryImages(prevImages => {
+          const newImages = [...prevImages];
+          newImages[categoryIndex] = downloadURL;
+          return newImages;
+        });
       } catch (error) {
-        console.error("Error compressing image:", error);
-        setErrors({ ...errors, image: "画像の圧縮中にエラーが発生しました。" });
+        console.error("Error uploading image:", error);
+        setErrors(prev => ({ ...prev, image: "画像のアップロード中にエラーが発生しました。" }));
       }
     }
-  };
+  }, []);
 
   const addCategory = () => {
     if (categories.length < 10) {
@@ -123,28 +138,70 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = async () => {
+  const deleteUnusedImages = useCallback(async (originalCategories, updatedCategories) => {
+    const storage = getStorage();
+    const auth = getAuth();
+    const user = auth.currentUser;
+
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+
+    const originalImageUrls = originalCategories.map(category => category.image).filter(Boolean);
+    const updatedImageUrls = updatedCategories.map(category => category.image).filter(Boolean);
+
+    for (const imageUrl of originalImageUrls) {
+      if (!updatedImageUrls.includes(imageUrl)) {
+        try {
+          const imageRef = ref(storage, imageUrl);
+          await deleteObject(imageRef);
+        } catch (error) {
+          console.error("Error deleting image:", error);
+        }
+      }
+    }
+  }, []);
+
+  const handleSave = useCallback(async () => {
     if (validateForm()) {
       try {
         const updatedSet = { 
           id: selectedSetId,
           title: setTitle, 
-          categories: categories,
-          categoryImages: categoryImages,
+          categories: categories.map((category, index) => ({
+            ...category,
+            image: categoryImages[index] || null
+          })),
           type: 'classification'
         };
+
+        const changedCategories = categories.filter((category, index) => {
+          return JSON.stringify(category) !== JSON.stringify(originalCategories[index]);
+        });
+
+        await deleteUnusedImages(originalCategories, changedCategories);
+
         await updateSet(updatedSet);
         onSave(updatedSet);
+
+        setOriginalCategories(updatedSet.categories);
       } catch (error) {
         console.error("Error updating set:", error);
         setErrors({ ...errors, save: "セットの更新中にエラーが発生しました。" });
       }
     }
-  };
+  }, [selectedSetId, setTitle, categories, categoryImages, validateForm, onSave, originalCategories, deleteUnusedImages]);
 
-  const handleDelete = async () => {
+  const handleDelete = useCallback(async () => {
     if (window.confirm('このセットを削除してもよろしいですか？この操作は取り消せません。')) {
       try {
+        const storage = getStorage();
+        for (const image of categoryImages) {
+          if (image) {
+            const imageRef = ref(storage, image);
+            await deleteObject(imageRef);
+          }
+        }
         await deleteSet(selectedSetId);
         onBack();
       } catch (error) {
@@ -152,7 +209,11 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
         setErrors({ ...errors, delete: "セットの削除中にエラーが発生しました。" });
       }
     }
-  };
+  }, [selectedSetId, categoryImages, onBack]);
+
+  useEffect(() => {
+    console.log('Current categoryImages:', categoryImages);
+  }, [categoryImages]);
 
   return (
     <div className="mobile-friendly-form max-w-full overflow-x-hidden">
@@ -232,7 +293,15 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
               </CardHeader>
               <CardContent>
                 {categoryImages[categoryIndex] && (
-                  <img src={categoryImages[categoryIndex]} alt="Category" className="w-full h-32 object-cover mb-2" />
+                  <img 
+                    src={categoryImages[categoryIndex]} 
+                    alt={`Category ${categoryIndex + 1}`} 
+                    className="w-full h-32 object-cover mb-2" 
+                    onError={(e) => {
+                      console.error(`Error loading image for category ${categoryIndex}:`, e);
+                      e.target.style.display = 'none';
+                    }}
+                  />
                 )}
                 <Input
                   placeholder="カテゴリー名"

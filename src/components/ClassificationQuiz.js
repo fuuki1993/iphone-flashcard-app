@@ -21,6 +21,7 @@ const SortableItem = memo(({ id, children, isDragging, isClassified }) => {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+    touchAction: 'none',
   }), [transform, transition, isDragging]);
 
   return (
@@ -65,7 +66,7 @@ const DroppableCategory = memo(({ category, isActive, feedbackColor, style }) =>
 
 DroppableCategory.displayName = 'DroppableCategory';
 
-const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState }) => {
+const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTodayStudyTime }) => {
   const [quizData, setQuizData] = useState({
     question: null,
     categories: [],
@@ -83,11 +84,11 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
   const [tempFeedback, setTempFeedback] = useState({});
   const [shuffledItems, setShuffledItems] = useState([]);
   const [classifiedItems, setClassifiedItems] = useState({});
-  const [remainingItems, setRemainingItems] = useState([]);
   const [shuffledCategories, setShuffledCategories] = useState([]);
+  const [currentItemIndex, setCurrentItemIndex] = useState(0);
+  const [unclassifiedItems, setUnclassifiedItems] = useState([]);
   const startTimeRef = useRef(new Date());
   const { width, height } = useWindowSize();
-  const [currentItemIndex, setCurrentItemIndex] = useState(0);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -97,8 +98,17 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
     })
   );
 
+  const shuffleArray = useCallback((array) => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }, []);
+
   useEffect(() => {
-    console.log('setId:', setId); // デバッグ用ログ
+    console.log('setId:', setId);
     const loadQuestion = async () => {
       try {
         setIsLoading(true);
@@ -111,8 +121,9 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
             setQuizData(sessionState.quizData);
             setShuffledItems(sessionState.shuffledItems);
             setShuffledCategories(sessionState.shuffledCategories);
-            setCurrentItemIndex(sessionState.currentItemIndex);
             setClassifiedItems(sessionState.classifiedItems);
+            setCurrentItemIndex(sessionState.currentItemIndex);
+            setUnclassifiedItems(sessionState.unclassifiedItems);
           } else {
             const newItems = set.categories.flatMap(c => 
               c.items.map((item, index) => ({ 
@@ -122,24 +133,26 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
                 isClassified: false 
               }))
             );
-            const shuffled = shuffleArray(newItems);
+            const shuffledItems = shuffleArray(newItems);
+            const shuffledCategories = shuffleArray([...set.categories]);
             const newCorrectClassification = set.categories.reduce((acc, cat) => {
               acc[cat.name] = cat.items;
               return acc;
             }, {});
             setQuizData({
               question: null,
-              categories: set.categories,
-              items: newItems,
+              categories: shuffledCategories,
+              items: shuffledItems,
               correctClassification: newCorrectClassification,
               isFinished: false,
               showResults: false,
               score: 0,
             });
-            setShuffledItems(shuffled);
-            setShuffledCategories(shuffleArray(set.categories));
-            setCurrentItemIndex(0);
+            setShuffledItems(shuffledItems);
+            setShuffledCategories(shuffledCategories);
             setClassifiedItems({});
+            setCurrentItemIndex(0);
+            setUnclassifiedItems(shuffledItems);
           }
         } else {
           throw new Error('無効なデータ構造です');
@@ -152,7 +165,7 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
       }
     };
     loadQuestion();
-  }, [setId, sessionState]);
+  }, [setId, sessionState, shuffleArray]);
 
   useEffect(() => {
     const saveState = async () => {
@@ -161,28 +174,30 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
           quizData,
           shuffledItems,
           shuffledCategories,
-          currentItemIndex,
           classifiedItems,
+          currentItemIndex,
+          unclassifiedItems,
         });
       }
     };
     saveState();
-  }, [setId, quizData, shuffledItems, shuffledCategories, currentItemIndex, classifiedItems]);
+  }, [setId, quizData, shuffledItems, shuffledCategories, classifiedItems, currentItemIndex, unclassifiedItems]);
 
-  const shuffleArray = useCallback((array) => {
-    const shuffled = [...array];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  useEffect(() => {
+    if (quizData.items.length > 0) {
+      const newUnclassifiedItems = quizData.items.filter(item => !item.isClassified);
+      setUnclassifiedItems(newUnclassifiedItems);
+      if (newUnclassifiedItems.length > 0 && currentItemIndex >= newUnclassifiedItems.length) {
+        setCurrentItemIndex(0);
+      }
     }
-    return shuffled;
-  }, []);
+  }, [quizData.items, currentItemIndex]);
 
   const handleShuffle = useCallback(() => {
-    setShuffledItems(shuffleArray(shuffledItems));
+    setUnclassifiedItems(prevItems => shuffleArray(prevItems));
     setShuffledCategories(shuffleArray(shuffledCategories));
     setCurrentItemIndex(0);
-  }, [shuffledItems, shuffledCategories, shuffleArray]);
+  }, [shuffleArray, shuffledCategories]);
 
   const handleDragStart = useCallback((event) => {
     const { active } = event;
@@ -205,7 +220,6 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
             : item
         );
 
-        // Update classifiedItems
         setClassifiedItems(prevClassified => ({
           ...prevClassified,
           [over.id]: [...(prevClassified[over.id] || []), active.id]
@@ -225,12 +239,17 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
           [over.id]: isCorrect ? 'bg-green-200' : 'bg-red-200'
         }));
 
-        // Move to the next item
-        if (currentItemIndex < shuffledItems.length - 1) {
-          setCurrentItemIndex(currentItemIndex + 1);
-        } else {
-          setCurrentItemIndex(shuffledItems.length - 1); // All items classified
-        }
+        // Update unclassified items
+        const newUnclassifiedItems = updatedItems.filter(item => !item.isClassified);
+        setUnclassifiedItems(newUnclassifiedItems);
+
+        // Move to the next unclassified item or reset to 0 if all items are classified
+        setCurrentItemIndex(prevIndex => {
+          if (newUnclassifiedItems.length > 0) {
+            return (prevIndex + 1) % newUnclassifiedItems.length;
+          }
+          return 0;
+        });
 
         return {
           ...prev,
@@ -244,7 +263,7 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
 
     setActiveId(null);
     setHoveredCategory(null);
-  }, [shuffledItems, currentItemIndex]);
+  }, []);
 
   useEffect(() => {
     if (Object.keys(tempFeedback).length > 0) {
@@ -255,16 +274,6 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
       return () => clearTimeout(timer);
     }
   }, [tempFeedback]);
-
-  const ScoreDisplay = () => (
-    <div className="flex flex-col items-center justify-center h-32">
-      <div className="writing-vertical-rl text-lg font-bold mb-2 whitespace-nowrap">スコア</div>
-      <div className="flex items-center">
-        <span className="text-lg font-bold mr-1">:</span>
-        <span className="text-lg font-bold">{quizData.score}%</span>
-      </div>
-    </div>
-  );
 
   const handleRestart = useCallback(() => {
     const loadQuestion = async () => {
@@ -284,13 +293,14 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
             }))
           );
           const shuffled = shuffleArray(newItems);
+          const shuffledCategories = shuffleArray([...set.categories]);
           const newCorrectClassification = set.categories.reduce((acc, cat) => {
             acc[cat.name] = cat.items;
             return acc;
           }, {});
           setQuizData({
             question: null,
-            categories: set.categories,
+            categories: shuffledCategories,
             items: newItems,
             correctClassification: newCorrectClassification,
             isFinished: false,
@@ -298,9 +308,10 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
             score: 0,
           });
           setShuffledItems(shuffled);
-          setShuffledCategories(shuffleArray(set.categories));
-          setCurrentItemIndex(0);
+          setShuffledCategories(shuffledCategories);
           setClassifiedItems({});
+          setCurrentItemIndex(0);
+          setUnclassifiedItems(shuffled);
           setTempFeedback({});
           startTimeRef.current = new Date();
         } else {
@@ -316,9 +327,15 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
     loadQuestion();
   }, [setId, shuffleArray]);
 
-  const handleFinish = useCallback(() => {
-    onFinish(quizData.score);
-  }, [onFinish, quizData.score]);
+  const handleFinish = useCallback(async () => {
+    const score = quizData.score;
+    const endTime = new Date();
+    const studyDuration = Math.round((endTime - startTimeRef.current) / 1000); // 秒単位で保存
+    const cardsStudied = quizData.items.length; // 分類したアイテムの総数
+    await saveStudyHistory(setId, title, 'classification', score, endTime, studyDuration);
+    setTodayStudyTime(prevTime => prevTime + studyDuration);
+    onFinish(score, studyDuration, cardsStudied);
+  }, [setId, title, quizData, onFinish, setTodayStudyTime]);
 
   const getGridSizeStyle = useCallback(() => {
     const columns = 3;
@@ -348,12 +365,19 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
     { col: 1, row: 4 },
   ], []);
 
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
+
   if (isLoading) return <div>読み込み中...</div>;
   if (error) return <div>エラー: {error}</div>;
   if (!quizData) return null;
   
   return (
-    <div className="flex flex-col h-screen w-screen p-2">
+    <div className="flex flex-col h-screen w-screen p-2 overflow-hidden">
       <div className="flex justify-between items-center mb-2">
         <Button variant="ghost" size="icon" onClick={onBack}>
           <ArrowLeft />
@@ -362,7 +386,7 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
         <div className="flex items-center">
           <Button variant="ghost" size="icon" onClick={handleShuffle} className="mr-2">
             <Shuffle />
-          </Button>
+            </Button>
           <Button variant="ghost" size="icon" onClick={handleFinish} className="mr-2">
             終了
           </Button>
@@ -371,7 +395,7 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
       </div>
 
       <Card className="flex-grow overflow-hidden">
-        <CardContent className="h-full p-2">
+        <CardContent className="h-full p-2 overflow-hidden">
           {!quizData.showResults ? (
             <DndContext
               sensors={sensors}
@@ -393,14 +417,14 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
                   />
                 ))}
                 <div className="col-start-2 row-start-2 row-span-2 flex items-center justify-center">
-                  {shuffledItems[currentItemIndex] && (
-                    <SortableContext items={[shuffledItems[currentItemIndex]]} strategy={verticalListSortingStrategy}>
+                  {unclassifiedItems.length > 0 && (
+                    <SortableContext items={[unclassifiedItems[currentItemIndex]]} strategy={verticalListSortingStrategy}>
                       <SortableItem 
-                        id={shuffledItems[currentItemIndex].id} 
-                        isDragging={shuffledItems[currentItemIndex].id === activeId}
+                        id={unclassifiedItems[currentItemIndex].id} 
+                        isDragging={unclassifiedItems[currentItemIndex].id === activeId}
                         isClassified={false}
                       >
-                        {shuffledItems[currentItemIndex].content}
+                        {unclassifiedItems[currentItemIndex].content}
                       </SortableItem>
                     </SortableContext>
                   )}
@@ -416,16 +440,16 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
             </DndContext>
           ) : (
             <div className="flex items-center justify-center h-full">
-            <div className="flex flex-col gap-24">
-              <Button onClick={handleRestart} className="transform rotate-90 w-32 h-12">
-                <span className="inline-block text-sm">もう一度挑戦</span>
-              </Button>
-              <Button onClick={handleFinish} className="transform rotate-90 w-32 h-12">
-                <span className="inline-block text-sm">終了</span>
-              </Button>
+              <div className="flex flex-col gap-24">
+                <Button onClick={handleRestart} className="transform rotate-90 w-32 h-12">
+                  <span className="inline-block text-sm">もう一度挑戦</span>
+                </Button>
+                <Button onClick={handleFinish} className="transform rotate-90 w-32 h-12">
+                  <span className="inline-block text-sm">終了</span>
+                </Button>
+              </div>
+              <h2 className="text-2xl font-bold transform rotate-90 whitespace-nowrap">最終スコア: {quizData.score}%</h2>
             </div>
-            <h2 className="text-2xl font-bold transform rotate-90 whitespace-nowrap">最終スコア: {quizData.score}%</h2>
-          </div>
           )}
         </CardContent>
       </Card>

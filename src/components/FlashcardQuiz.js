@@ -5,7 +5,7 @@ import { ArrowLeft, ArrowRight, RotateCw, Shuffle } from 'lucide-react';
 import { getSetById, saveStudyHistory, getSets, saveSessionState, getSessionState } from '@/utils/firestore';
 import styles from '@/app/FlashcardQuiz.module.css';
 
-const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState }) => {
+const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTodayStudyTime }) => {
   const [cards, setCards] = useState([]);
   const [shuffledCards, setShuffledCards] = useState([]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
@@ -115,10 +115,12 @@ const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState 
   const handleFinish = useCallback(async () => {
     const score = calculateScore();
     const endTime = new Date();
-    const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
+    const studyDuration = Math.round((endTime - startTimeRef.current) / 1000); // 秒単位で保存
+    const cardsStudied = currentCardIndex + 1; // 学習したカード数
     await saveStudyHistory(setId, title, 'flashcard', score, endTime, studyDuration);
-    onFinish(score);
-  }, [calculateScore, setId, title, onFinish]);
+    setTodayStudyTime(prevTime => prevTime + studyDuration);
+    onFinish(score, studyDuration, cardsStudied);
+  }, [setId, title, calculateScore, onFinish, setTodayStudyTime, currentCardIndex]);
 
   const currentCard = useMemo(() => shuffledCards[currentCardIndex], [shuffledCards, currentCardIndex]);
 

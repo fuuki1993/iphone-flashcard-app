@@ -9,6 +9,8 @@ import { ArrowLeft, Plus, Save, Trash2, Image, Eye, EyeOff } from 'lucide-react'
 import { saveSet } from '@/utils/firestore';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { compressImage } from '@/utils/imageCompression';
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { getAuth } from "firebase/auth";
 
 const MultipleChoiceCreationScreen = ({ onBack, onSave }) => {
   const [setTitle, setSetTitle] = useState('');
@@ -67,14 +69,23 @@ const MultipleChoiceCreationScreen = ({ onBack, onSave }) => {
     if (file) {
       try {
         const compressedImage = await compressImage(file);
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          updateQuestion(index, 'image', reader.result);
-        };
-        reader.readAsDataURL(compressedImage);
+        const auth = getAuth();
+        const user = auth.currentUser;
+        
+        if (!user) {
+          throw new Error("User not authenticated");
+        }
+
+        const storage = getStorage();
+        const storageRef = ref(storage, `multiple_choice/${user.uid}/${Date.now()}_${file.name}`);
+        
+        const snapshot = await uploadBytes(storageRef, compressedImage);
+        const downloadURL = await getDownloadURL(snapshot.ref);
+        
+        updateQuestion(index, 'image', downloadURL);
       } catch (error) {
-        console.error("Error compressing image:", error);
-        setErrors(prevErrors => ({ ...prevErrors, image: "画像の圧縮中にエラーが発生しました。" }));
+        console.error("Error uploading image:", error);
+        setErrors(prevErrors => ({ ...prevErrors, image: "画像のアップロード中にエラーが発生しました。" }));
       }
     }
   }, [updateQuestion]);
@@ -104,7 +115,10 @@ const MultipleChoiceCreationScreen = ({ onBack, onSave }) => {
       try {
         const newSet = { 
           title: setTitle, 
-          questions,
+          questions: questions.map(q => ({
+            ...q,
+            image: q.image // この時点で image は既に Firebase Storage の URL
+          })),
           type: 'multiple-choice'
         };
         const id = await saveSet(newSet);

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { getSetById, getSessionState, getStudyHistory, deleteStudyHistoryEntry } from '@/utils/firestore';
 import HomeScreen from '@/components/HomeScreen';
 import CreateEditSetSelectionScreen from '@/components/CreateEditSetSelectionScreen';
@@ -17,6 +17,9 @@ import StatisticsScreen from '../components/StatisticsScreen';
 import SettingsScreen from './SettingsScreen';
 import StudyHistoryScreen from '@/components/StudyHistoryScreen';
 import { useHashRouter } from '@/utils/hashRouter';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import AuthScreen from './AuthScreen'; // 新しく追加
+import SignOut from './SignOut';  // SignOutコンポーネントをインポート
 
 export default function Home() {
   const { hashPath, push, isReady } = useHashRouter();
@@ -33,6 +36,21 @@ export default function Home() {
   const [todayStudyTime, setTodayStudyTime] = useState(0);
   const [sessionState, setSessionState] = useState(null);
   const [darkMode, setDarkMode] = useState(false);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [totalStudyTime, setTotalStudyTime] = useState(0);
+  const [todayStudiedCards, setTodayStudiedCards] = useState(0);
+  const [weeklyStudyTime, setWeeklyStudyTime] = useState([]);
+
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (isReady && !hashPath) {
@@ -83,6 +101,23 @@ export default function Home() {
     const loadStudyHistory = async () => {
       const history = await getStudyHistory();
       setStudyHistory(history);
+      
+      // 総学習時間の計算
+      const total = history.reduce((acc, entry) => acc + (entry.duration || 0), 0);
+      setTotalStudyTime(total);
+
+      // 今日の日付を取得
+      const today = new Date().toDateString();
+      
+      // 今日学習したカードの数を計算
+      const todayCards = history
+        .filter(entry => new Date(entry.date).toDateString() === today)
+        .reduce((acc, entry) => acc + (entry.cardsStudied || 0), 0);
+      setTodayStudiedCards(todayCards);
+
+      // デバッグ用のログ
+      console.log('Total study time:', total);
+      console.log('Today studied cards:', todayCards);
     };
     loadStudyHistory();
   }, []);
@@ -125,20 +160,26 @@ export default function Home() {
   const handleStartQuiz = async (type, setId) => {
     try {
       console.log('Starting quiz:', { type, setId }); // デバッグ用ログ
-
-      // セッション状態を取得
-      const sessionState = await getSessionState(setId, type);
-
+  
+      if (!setId || typeof setId !== 'string' || setId.trim() === '') {
+        console.error('Invalid setId:', setId);
+        // エラーハンドリング（例：ユーザーにエラーメッセージを表示）
+        return;
+      }
+  
       setQuizType(type);
       setQuizSetId(setId);
+  
+      // セッション状態を取得
+      const sessionState = await getSessionState(setId, type);
       setSessionState(sessionState);
-
-      if (!setId) {
-        setQuizSetTitle("すべてのセット");
-      } else {
-        const set = await getSetById(setId);
-        setQuizSetTitle(set.title);
+  
+      const set = await getSetById(setId);
+      if (!set) {
+        throw new Error('Set not found');
       }
+      setQuizSetTitle(set.title);
+  
       navigateTo('quiz');
     } catch (error) {
       console.error('Error fetching set data:', error);
@@ -166,11 +207,21 @@ export default function Home() {
     navigateTo('home');
   };
 
-  const handleFinishQuiz = (results) => {
+  const handleFinishQuiz = useCallback((results, studyDuration, cardsStudied) => {
     console.log('Quiz finished with results:', results);
-    // ここでクイズ結果を処理する
+    console.log('Study duration:', studyDuration, 'seconds');
+    console.log('Cards studied:', cardsStudied);
+    
+    setTodayStudyTime(prevTime => {
+      const newTime = prevTime + studyDuration;
+      console.log('Updated todayStudyTime:', newTime); // デバッグログ
+      return newTime;
+    });
+    
+    setTotalStudyTime(prevTime => prevTime + studyDuration);
+    setTodayStudiedCards(prevCards => prevCards + cardsStudied);
     navigateTo('home');
-  };
+  }, [navigateTo]);
 
   const handleOpenSettings = () => {
     navigateTo('settings');
@@ -180,27 +231,44 @@ export default function Home() {
     navigateTo('studyHistory');
   };
 
-  const renderScreen = () => {
+  const renderScreen = useCallback(() => {
+    if (loading) {
+      return <div>Loading...</div>;
+    }
+
+    if (!user) {
+      return <AuthScreen onSignIn={() => console.log('Signed in')} onSignUp={() => console.log('Signed up')} />;
+    }
+
     console.log('Rendering screen:', currentScreen); // デバッグ用ログ
     switch (currentScreen) {
       case 'home':
         return (
-          <HomeScreen 
-            onCreateSet={handleCreateSet}
-            onStartLearning={handleStartLearning}
-            onShowStatistics={handleShowStatistics}
-            onOpenSettings={handleOpenSettings}
-            overallProgress={overallProgress}
-            setOverallProgress={setOverallProgress}
-            streak={streak}
-            setStreak={setStreak}
-            studyHistory={studyHistory}
-            setStudyHistory={setStudyHistory}
-            dailyGoal={dailyGoal}
-            setDailyGoal={setDailyGoal}
-            todayStudyTime={todayStudyTime}
-            setTodayStudyTime={setTodayStudyTime}
-          />
+          <>
+            <HomeScreen 
+              onCreateSet={handleCreateSet}
+              onStartLearning={handleStartLearning}
+              onShowStatistics={handleShowStatistics}
+              onOpenSettings={handleOpenSettings}
+              overallProgress={overallProgress}
+              setOverallProgress={setOverallProgress}
+              streak={streak}
+              setStreak={setStreak}
+              studyHistory={studyHistory}
+              setStudyHistory={setStudyHistory}
+              dailyGoal={dailyGoal}
+              setDailyGoal={setDailyGoal}
+              todayStudyTime={todayStudyTime}
+              setTodayStudyTime={setTodayStudyTime}
+              onSignOut={() => {
+                const auth = getAuth();
+                auth.signOut().then(() => {
+                  console.log('Signed out');
+                  // 必要に応じて追加の処理を行う
+                });
+              }}
+            />
+          </>
         );
       case 'createEditSet':
         return (
@@ -275,6 +343,10 @@ export default function Home() {
         );
       case 'quiz':
         console.log('Quiz type:', quizType);  // デバッグ用ログ
+        if (!quizType) {
+          console.error('Quiz type is not set');
+          return <div>エラー: クイズタイプが設定されていません</div>;
+        }
         const QuizComponent = React.lazy(() => {
           switch (quizType) {
             case 'flashcard':
@@ -296,8 +368,9 @@ export default function Home() {
               title={quizSetTitle}
               quizType={quizType}
               onBack={() => navigateTo('quizTypeSelection')}
-              onFinish={handleFinishQuiz}
+              onFinish={(results, studyDuration, cardsStudied) => handleFinishQuiz(results, studyDuration, cardsStudied)}
               sessionState={sessionState}
+              setTodayStudyTime={setTodayStudyTime}
             />
           </React.Suspense>
         );
@@ -305,12 +378,9 @@ export default function Home() {
         return (
           <StatisticsScreen
             onBack={() => navigateTo('home')}
-            overallProgress={overallProgress}
-            streak={streak}
-            studyHistory={studyHistory}
-            dailyGoal={dailyGoal}
-            todayStudyTime={todayStudyTime}
-            onShowStudyHistory={handleShowStudyHistory}
+            totalStudyTime={totalStudyTime}
+            todayStudiedCards={todayStudiedCards}
+            weeklyStudyTime={weeklyStudyTime}
           />
         );
       case 'settings':
@@ -334,15 +404,17 @@ export default function Home() {
       default:
         return <div>Unknown screen: {currentScreen}</div>;
     }
-  };
+  }, [currentScreen, user, loading, todayStudyTime, overallProgress, streak, studyHistory, dailyGoal, navigateTo, handleFinishQuiz, setTodayStudyTime, quizType, quizSetId, quizSetTitle, sessionState]);
 
   if (!isReady) {
     return null; // または適切なローディング表示
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-4">
-      {renderScreen()}
-    </main>
+    <div className="bg-gray-100 min-h-screen w-full">
+      <main className="flex flex-col items-center justify-between max-w-4xl mx-auto">
+        {renderScreen()}
+      </main>
+    </div>
   );
 }

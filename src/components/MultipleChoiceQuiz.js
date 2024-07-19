@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Check, X, Shuffle } from 'lucide-react';
 import { getSetById, saveStudyHistory, getSets, saveSessionState, getSessionState } from '@/utils/firestore';
 
-const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState }) => {
+const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTodayStudyTime }) => {
   const [questions, setQuestions] = useState([]);
   const [shuffledQuestions, setShuffledQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -161,10 +161,12 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
   const handleFinish = useCallback(async () => {
     const score = calculateScore();
     const endTime = new Date();
-    const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
+    const studyDuration = Math.round((endTime - startTimeRef.current) / 1000); // 秒単位で保存
+    const cardsStudied = currentQuestionIndex + 1; // 学習したカード数
     await saveStudyHistory(setId, title, 'multiple-choice', score, endTime, studyDuration);
-    onFinish(score);
-  }, [setId, title, calculateScore, onFinish]);
+    setTodayStudyTime(prevTime => prevTime + studyDuration);
+    onFinish(score, studyDuration, cardsStudied);
+  }, [setId, title, calculateScore, onFinish, setTodayStudyTime, currentQuestionIndex]);
 
   if (isLoading) {
     return <div className="w-full max-w-md mx-auto px-4">読み込み中...</div>;

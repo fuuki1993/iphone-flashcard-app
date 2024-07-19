@@ -1,5 +1,18 @@
 {
   "emulators": {
     "singleProjectMode": true
+  },
+  "hosting": {
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "Access-Control-Allow-Origin",
+            "value": "*"
+          }
+        ]
+      }
+    ]
   }
 }

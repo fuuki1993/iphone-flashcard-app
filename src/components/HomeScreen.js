@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PlusCircle, BookOpen, BarChart2, Settings, Calendar, Clock, Trophy, Book, Globe, Code } from 'lucide-react';
 import { getAllSets, getSessionState } from '@/utils/firestore';
 import AddEventModal from './AddEventModal';
+import StatisticsScreen from './StatisticsScreen';
 
 const HomeScreen = ({ 
   onCreateSet, 
@@ -23,13 +24,25 @@ const HomeScreen = ({
   setDailyGoal,
   todayStudyTime, 
   setTodayStudyTime,
-  onOpenSettings
+  onOpenSettings,
+  onSignOut
 }) => {
   const [isGoalAchieved, setIsGoalAchieved] = useState(false);
   const [scheduledEvents, setScheduledEvents] = useState([]);
   const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [recentActivities, setRecentActivities] = useState([]);
+  const [showStatistics, setShowStatistics] = useState(false);
+  const [weeklyStudyTime, setWeeklyStudyTime] = useState(Array(7).fill(0));
+  const [todayStudiedCards, setTodayStudiedCards] = useState(0);
+
+  const convertSecondsToMinutes = useCallback((seconds) => {
+    return Math.floor(seconds / 60);
+  }, []);
+
+  useEffect(() => {
+    console.log('Current todayStudyTime:', todayStudyTime); // デバッグログ
+  }, [todayStudyTime]);
 
   const loadData = useCallback(async () => {
     try {
@@ -46,8 +59,38 @@ const HomeScreen = ({
   }, [loadData]);
 
   useEffect(() => {
-    setIsGoalAchieved(todayStudyTime >= dailyGoal);
-  }, [todayStudyTime, dailyGoal]);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const totalStudyTimeToday = studyHistory
+      .filter(entry => {
+        const entryDate = new Date(entry.date);
+        return entryDate.getFullYear() === today.getFullYear() &&
+               entryDate.getMonth() === today.getMonth() &&
+               entryDate.getDate() === today.getDate();
+      })
+      .reduce((total, entry) => total + entry.studyDuration, 0);
+
+    console.log('Study history:', studyHistory); // デバッグログ
+    console.log('Filtered entries:', studyHistory.filter(entry => {
+      const entryDate = new Date(entry.date);
+      return entryDate.getFullYear() === today.getFullYear() &&
+             entryDate.getMonth() === today.getMonth() &&
+             entryDate.getDate() === today.getDate();
+    })); // デバッグログ
+    console.log('Total study time today (seconds):', totalStudyTimeToday); // デバッグログ
+
+    setTodayStudyTime(totalStudyTimeToday);
+  }, [studyHistory, setTodayStudyTime]);
+
+  useEffect(() => {
+    console.log('Current todayStudyTime (seconds):', todayStudyTime); // デバッグログ
+    console.log('Converted to minutes:', convertSecondsToMinutes(todayStudyTime)); // デバッグログ
+  }, [todayStudyTime, convertSecondsToMinutes]);
+
+  useEffect(() => {
+    setIsGoalAchieved(convertSecondsToMinutes(todayStudyTime) >= dailyGoal);
+  }, [todayStudyTime, dailyGoal, convertSecondsToMinutes]);
 
   const updateStreak = useCallback(() => {
     // ストリーク更新ロジックをここに実装
@@ -79,9 +122,13 @@ const HomeScreen = ({
     const diffMinutes = Math.floor(diffTime / (1000 * 60));
     const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  
+
     if (isNaN(date.getTime())) {
       return '日付不明';
+    } else if (diffTime < 0) {
+      return '今';
+    } else if (diffMinutes < 1) {
+      return 'たった今';
     } else if (diffMinutes < 60) {
       return `${diffMinutes}分前`;
     } else if (diffHours < 24) {
@@ -90,8 +137,10 @@ const HomeScreen = ({
       return '今日';
     } else if (diffDays === 1) {
       return '昨日';
-    } else {
+    } else if (diffDays < 7) {
       return `${diffDays}日前`;
+    } else {
+      return date.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
     }
   }, []);
 
@@ -164,19 +213,19 @@ const HomeScreen = ({
             return { 
               ...set, 
               sessionState: sessionState.state, 
-              timestamp: sessionState.timestamp,
+              timestamp: sessionState.updatedAt ? sessionState.updatedAt.toDate() : new Date(),
               type: set.type
             };
           }
           return null;
         })
       );
-
+  
       const filteredIncompleteSessions = incompleteSessions
         .filter(Boolean)
-        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+        .sort((a, b) => b.timestamp - a.timestamp)
         .slice(0, 3);
-
+  
       setRecentActivities(filteredIncompleteSessions);
     } catch (error) {
       console.error("Error loading recent activities:", error);
@@ -204,6 +253,62 @@ const HomeScreen = ({
     );
   }, [onStartLearning, getIconForSetType, formatDate]);
 
+  const calculateWeeklyStudyTime = useCallback(() => {
+    const today = new Date();
+    const oneWeekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+    
+    const weeklyData = studyHistory
+      .filter(entry => new Date(entry.date) >= oneWeekAgo)
+      .reduce((acc, entry) => {
+        const dayOfWeek = new Date(entry.date).getDay();
+        acc[dayOfWeek] += entry.studyDuration;
+        return acc;
+      }, Array(7).fill(0));
+
+    setWeeklyStudyTime(weeklyData);
+  }, [studyHistory]);
+
+  useEffect(() => {
+    calculateWeeklyStudyTime();
+  }, [calculateWeeklyStudyTime]);
+
+  const handleShowStatistics = useCallback(() => {
+    setShowStatistics(true);
+  }, []);
+
+  const handleBackFromStatistics = useCallback(() => {
+    setShowStatistics(false);
+  }, []);
+
+  const calculateTodayStudiedCards = useCallback(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const todayCards = studyHistory
+      .filter(entry => {
+        const entryDate = new Date(entry.date);
+        return entryDate >= today;
+      })
+      .reduce((total, entry) => total + (entry.cardsStudied || 0), 0);
+
+    setTodayStudiedCards(todayCards);
+  }, [studyHistory]);
+
+  useEffect(() => {
+    calculateTodayStudiedCards();
+  }, [calculateTodayStudiedCards]);
+
+  if (showStatistics) {
+    return (
+      <StatisticsScreen
+        onBack={handleBackFromStatistics}
+        totalStudyTime={studyHistory.reduce((total, entry) => total + entry.studyDuration, 0)}
+        todayStudiedCards={todayStudiedCards}
+        weeklyStudyTime={weeklyStudyTime}
+      />
+    );
+  }
+
   return (
     <div className="p-3 w-full max-w-[390px] mx-auto bg-gray-100">
       <div className="flex justify-between items-center mb-3">
@@ -223,7 +328,7 @@ const HomeScreen = ({
             <Button 
               variant="outline" 
               size="xs" 
-              onClick={onShowStatistics}
+              onClick={handleShowStatistics}
               className="text-xs px-2 py-1 text-gray-800 bg-gray-200 hover:bg-gray-300"
             >
               <BarChart2 className="mr-1 h-3 w-3" />
@@ -297,9 +402,12 @@ const HomeScreen = ({
         </CardHeader>
         <CardContent className="py-2 px-3">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-xs">{todayStudyTime}分 / {dailyGoal}分</span>
+            <span className="text-xs">
+              {convertSecondsToMinutes(todayStudyTime)}分 / {dailyGoal}分
+              （{todayStudyTime}秒）
+            </span>
             <Progress 
-              value={(todayStudyTime / dailyGoal) * 100} 
+              value={(convertSecondsToMinutes(todayStudyTime) / dailyGoal) * 100} 
               className="w-1/2 h-2" 
             />
           </div>
@@ -308,6 +416,12 @@ const HomeScreen = ({
           )}
         </CardContent>
       </Card>
+
+      <div className="mt-6">
+        <Button onClick={onSignOut} variant="outline" className="w-full">
+          サインアウト
+        </Button>
+      </div>
 
       <AddEventModal
         isOpen={isAddEventModalOpen}

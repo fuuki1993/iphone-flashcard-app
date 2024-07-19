@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, Plus, Save, Trash2, Image, Eye, EyeOff } from 'lucide-react';
 import { getSets, getSetById, updateSet, deleteSet } from '@/utils/firestore';
 import { compressImage } from '@/utils/imageCompression';
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import { getAuth } from "firebase/auth";
 
 const FlashcardEditScreen = ({ onBack, onSave }) => {
   const [sets, setSets] = useState([]);
@@ -18,6 +20,8 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
   const [cards, setCards] = useState([]);
   const [errors, setErrors] = useState({});
   const [previewIndex, setPreviewIndex] = useState(null);
+  const [categoryImages, setCategoryImages] = useState(() => Array(10).fill(null));
+  const [originalCards, setOriginalCards] = useState([]);
 
   useEffect(() => {
     const loadSets = async () => {
@@ -39,13 +43,16 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
       setSetTitle(set.title);
       if (Array.isArray(set.cards) && set.cards.length > 0) {
         setCards(set.cards);
+        setOriginalCards(set.cards); // 元のカードを保存
       } else {
         setCards([]);
+        setOriginalCards([]);
       }
     } catch (error) {
       console.error("Error loading set:", error);
       setErrors({ ...errors, load: "セットの読み込み中にエラーが発生しました。" });
       setCards([]);
+      setOriginalCards([]);
     }
   };
 
@@ -53,35 +60,36 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
     setCards([...cards, { front: '', back: '', image: null }]);
   };
 
-  const updateCard = (index, field, value) => {
-    const updatedCards = cards.map((card, i) => 
+  const updateCard = useCallback((index, field, value) => {
+    setCards(prevCards => prevCards.map((card, i) => 
       i === index ? { ...card, [field]: value } : card
-    );
-    setCards(updatedCards);
-  };
+    ));
+  }, []);
 
   const removeCard = (index) => {
     setCards(cards.filter((_, i) => i !== index));
   };
 
-  const handleImageUpload = async (index, event) => {
+  const handleImageUpload = useCallback(async (index, event) => {
     const file = event.target.files[0];
     if (file) {
       try {
         const compressedImage = await compressImage(file);
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          updateCard(index, 'image', reader.result);
-        };
-        reader.readAsDataURL(compressedImage);
+        const storage = getStorage();
+        const storageRef = ref(storage, `flashcards/${selectedSetId}/card_${index}`);
+        
+        const snapshot = await uploadBytes(storageRef, compressedImage);
+        const downloadURL = await getDownloadURL(snapshot.ref);
+        
+        updateCard(index, 'image', downloadURL);
       } catch (error) {
-        console.error("Error compressing image:", error);
-        setErrors({ ...errors, image: "画像の圧縮中にエラーが発生しました。" });
+        console.error("Error uploading image:", error);
+        setErrors(prevErrors => ({ ...prevErrors, image: "画像のアップロード中にエラーが発生しました。" }));
       }
     }
-  };
+  }, [selectedSetId, updateCard]);
 
-  const validateForm = () => {
+  const validateForm = useCallback(() => {
     const newErrors = {};
     if (!setTitle.trim()) {
       newErrors.title = 'セットタイトルを入力してください。';
@@ -93,41 +101,103 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
     });
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
+  }, [setTitle, cards]);
 
-  const handleSave = async () => {
+  const deleteUnusedImages = useCallback(async (originalCards, updatedCards) => {
+    const storage = getStorage();
+    const auth = getAuth();
+    const user = auth.currentUser;
+
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+
+    const originalImageUrls = originalCards.map(card => card.image).filter(Boolean);
+    const updatedImageUrls = updatedCards.map(card => card.image).filter(Boolean);
+
+    for (const imageUrl of originalImageUrls) {
+      if (!updatedImageUrls.includes(imageUrl)) {
+        try {
+          const imageRef = ref(storage, imageUrl);
+          await deleteObject(imageRef);
+        } catch (error) {
+          console.error("Error deleting image:", error);
+        }
+      }
+    }
+  }, []);
+
+  const handleSave = useCallback(async () => {
     if (validateForm()) {
       try {
         const updatedSet = { 
           id: selectedSetId,
           title: setTitle, 
-          cards: cards,
+          cards: cards.map(card => ({
+            front: card.front,
+            back: card.back,
+            image: card.image
+          })),
           type: 'flashcard'
         };
+
+        // 未使用の画像を削除
+        await deleteUnusedImages(originalCards, updatedSet.cards);
+
         await updateSet(updatedSet);
         onSave(updatedSet);
+
+        // 保存後に originalCards を更新
+        setOriginalCards(updatedSet.cards);
       } catch (error) {
         console.error("Error updating set:", error);
-        setErrors({ ...errors, save: "セットの更新中にエラーが発生しました。" });
+        setErrors(prevErrors => ({ ...prevErrors, save: "セットの更新中にエラーが発生しました。" }));
       }
     }
-  };
+  }, [selectedSetId, setTitle, cards, validateForm, onSave, originalCards, deleteUnusedImages]);
 
   const togglePreview = (index) => {
     setPreviewIndex(previewIndex === index ? null : index);
   };
 
-  const handleDelete = async () => {
-    if (window.confirm('このセットを削除してもよろしいですか？この操作は取り消せません。')) {
+  const handleDelete = useCallback(async () => {
+    if (window.confirm('本当にこのセットを削除しますか？')) {
       try {
+        // Firestoreからセットを削除
         await deleteSet(selectedSetId);
-        onBack(); // 削除後に前の画面に戻る
+
+        // Storageから関連する画像を削除
+        const storage = getStorage();
+        for (const card of cards) {
+          if (card.image) {
+            const imageRef = ref(storage, card.image);
+            try {
+              await deleteObject(imageRef);
+            } catch (error) {
+              console.error("画像の削除中にエラーが発生しました:", error);
+              // 画像の削除に失敗しても、セットの削除処理は続行
+            }
+          }
+        }
+
+        // ローカルステートをリセット
+        setSelectedSetId('');
+        setSetTitle('');
+        setCards([]);
+        
+        // セットのリストを更新
+        const updatedSets = await getSets('flashcard');
+        setSets(updatedSets);
+
+        // 成功メッセージを表示
+        setErrors({});
+        alert('セットが正常に削除されました。');
       } catch (error) {
-        console.error("Error deleting set:", error);
-        setErrors({ ...errors, delete: "セットの削除中にエラーが発生しました。" });
+        console.error("セットの削除中にエラーが発生しました:", error);
+        setErrors(prevErrors => ({ ...prevErrors, delete: "セットの削除中にエラーが発生しました。" }));
       }
     }
-  };
+  }, [selectedSetId, cards]);
 
   return (
     <div className="mobile-friendly-form max-w-full overflow-x-hidden">
@@ -145,8 +215,8 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
               <SelectValue placeholder="編集するセットを選択" />
             </SelectTrigger>
             <SelectContent>
-              {sets.map(set => (
-                <SelectItem key={set.id} value={set.id.toString()}>{set.title}</SelectItem>
+              {sets.map((set, index) => (
+                <SelectItem key={`${set.id}-${index}`} value={set.id.toString()}>{set.title}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -167,7 +237,7 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
 
         {cards && cards.length > 0 ? (
           cards.map((card, index) => (
-            <Card key={index} className="mb-4">
+            <Card key={`card-${index}`} className="mb-4">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-lg font-medium">カード {index + 1}</CardTitle>
                 <div>

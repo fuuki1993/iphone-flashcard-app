@@ -10,6 +10,8 @@ import { ArrowLeft, Plus, Save, Trash2, Image, Eye, EyeOff } from 'lucide-react'
 import { saveSet } from '@/utils/firestore';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { compressImage } from '@/utils/imageCompression';
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { getAuth } from "firebase/auth";
 
 const QACreationScreen = ({ onBack, onSave }) => {
   const [setTitle, setSetTitle] = useState('');
@@ -37,14 +39,23 @@ const QACreationScreen = ({ onBack, onSave }) => {
     if (file) {
       try {
         const compressedImage = await compressImage(file);
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          updateQAItem(index, 'image', reader.result);
-        };
-        reader.readAsDataURL(compressedImage);
+        const auth = getAuth();
+        const user = auth.currentUser;
+        
+        if (!user) {
+          throw new Error("User not authenticated");
+        }
+
+        const storage = getStorage();
+        const storageRef = ref(storage, `qa_images/${user.uid}/${Date.now()}_${file.name}`);
+        
+        const snapshot = await uploadBytes(storageRef, compressedImage);
+        const downloadURL = await getDownloadURL(snapshot.ref);
+        
+        updateQAItem(index, 'image', downloadURL);
       } catch (error) {
-        console.error("Error compressing image:", error);
-        setErrors(prevErrors => ({ ...prevErrors, image: "画像の圧縮中にエラーが発生しました。" }));
+        console.error("Error uploading image:", error);
+        setErrors(prevErrors => ({ ...prevErrors, image: "画像のアップロード中にエラーが発生しました。" }));
       }
     }
   }, [updateQAItem]);

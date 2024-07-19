@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Plus, Save, Trash2, Image, Eye, EyeOff } from 'lucide-react';
 import { getSets, getSetById, updateSet, deleteSet } from '@/utils/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import { getAuth } from "firebase/auth";
 
 const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
   const [sets, setSets] = useState([]);
@@ -16,6 +18,7 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
   const [questions, setQuestions] = useState([]);
   const [errors, setErrors] = useState({});
   const [previewIndex, setPreviewIndex] = useState(null);
+  const [originalQuestions, setOriginalQuestions] = useState([]);
 
   useEffect(() => {
     const loadSets = async () => {
@@ -32,11 +35,13 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
   const handleSetChange = async (value) => {
     setSelectedSetId(value);
     try {
-      const set = await getSetById(parseInt(value));
+      const set = await getSetById(value); // parseInt を削除
       setSetTitle(set.title);
       setQuestions(set.questions);
+      setOriginalQuestions(set.questions);
     } catch (error) {
       console.error("Error loading set:", error);
+      setErrors(prevErrors => ({ ...prevErrors, load: "セットの読み込み中にエラーが発生しました。" }));
     }
   };
 
@@ -85,16 +90,31 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
     setQuestions(updatedQuestions);
   };
 
-  const handleImageUpload = (index, event) => {
+  const handleImageUpload = useCallback(async (index, event) => {
     const file = event.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        updateQuestion(index, 'image', reader.result);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressedImage = await compressImage(file);
+        const auth = getAuth();
+        const user = auth.currentUser;
+        
+        if (!user) {
+          throw new Error("User not authenticated");
+        }
+
+        const storage = getStorage();
+        const storageRef = ref(storage, `multiple_choice/${user.uid}/${Date.now()}_${file.name}`);
+        
+        const snapshot = await uploadBytes(storageRef, compressedImage);
+        const downloadURL = await getDownloadURL(snapshot.ref);
+        
+        updateQuestion(index, 'image', downloadURL);
+      } catch (error) {
+        console.error("Error uploading image:", error);
+        setErrors(prevErrors => ({ ...prevErrors, image: "画像のアップロード中にエラーが発生しました。" }));
+      }
     }
-  };
+  }, [updateQuestion]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -116,35 +136,77 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = async () => {
+// 新しい関数を追加
+const deleteUnusedImages = useCallback(async (originalQuestions, updatedQuestions) => {
+  const storage = getStorage();
+  const auth = getAuth();
+  const user = auth.currentUser;
+
+  if (!user) {
+    throw new Error("User not authenticated");
+  }
+
+  const originalImageUrls = originalQuestions.map(q => q.image).filter(Boolean);
+  const updatedImageUrls = updatedQuestions.map(q => q.image).filter(Boolean);
+
+  for (const imageUrl of originalImageUrls) {
+    if (!updatedImageUrls.includes(imageUrl)) {
+      try {
+        const imageRef = ref(storage, imageUrl);
+        await deleteObject(imageRef);
+      } catch (error) {
+        console.error("Error deleting image:", error);
+      }
+    }
+  }
+}, []);
+
+  // handleSave 関数を修正
+  const handleSave = useCallback(async () => {
     if (validateForm()) {
       try {
         const updatedSet = { 
-          id: parseInt(selectedSetId),
+          id: selectedSetId,
           title: setTitle, 
           questions,
           type: 'multiple-choice'
         };
+
+        // 未使用の画像を削除
+        await deleteUnusedImages(originalQuestions, updatedSet.questions);
+
         await updateSet(updatedSet);
         onSave(updatedSet);
+
+        // 保存後に originalQuestions を更新
+        setOriginalQuestions(updatedSet.questions);
       } catch (error) {
         console.error("Error updating set:", error);
-        // エラーハンドリングのUIを表示する
+        setErrors(prevErrors => ({ ...prevErrors, save: "セットの更新中にエラーが発生しました。" }));
       }
     }
-  };
+  }, [selectedSetId, setTitle, questions, validateForm, onSave, originalQuestions, deleteUnusedImages]);
 
-  const handleDelete = async () => {
+  // handleDelete 関数を修正
+  const handleDelete = useCallback(async () => {
     if (window.confirm('このセットを削除してもよろしいですか？この操作は取り消せません。')) {
       try {
-        await deleteSet(parseInt(selectedSetId));
-        onBack(); // 削除後に前の画面に戻る
+        // Delete all images associated with this set
+        const storage = getStorage();
+        for (const question of questions) {
+          if (question.image) {
+            const imageRef = ref(storage, question.image);
+            await deleteObject(imageRef);
+          }
+        }
+        await deleteSet(selectedSetId);
+        onBack();
       } catch (error) {
         console.error("Error deleting set:", error);
-        // エラーハンドリングのUIを表示する
+        setErrors(prevErrors => ({ ...prevErrors, delete: "セットの削除中にエラーが発生しました。" }));
       }
     }
-  };
+  }, [selectedSetId, questions, onBack]);
 
   return (
     <div className="mobile-friendly-form max-w-full overflow-x-hidden">
@@ -163,7 +225,7 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
             </SelectTrigger>
             <SelectContent>
               {sets.map(set => (
-                <SelectItem key={set.id} value={set.id.toString()}>{set.title}</SelectItem>
+                <SelectItem key={set.id} value={set.id}>{set.title}</SelectItem>
               ))}
             </SelectContent>
           </Select>

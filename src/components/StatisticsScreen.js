@@ -1,70 +1,103 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, BarChart2, Trophy, Clock, BookOpen, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Clock, BookOpen, TrendingUp } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts';
 
-const StatisticsScreen = ({ onBack, overallProgress, streak, dailyGoal, todayStudyTime, onShowStudyHistory }) => {
-  const maxStreak = 10; // この値は実際のデータから計算する必要があります
+const formatTotalStudyTime = (totalSeconds) => {
+  if (isNaN(totalSeconds) || totalSeconds === 0) return '0時間0分';
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  return `${hours}時間${minutes}分`;
+};
+
+const StatisticsScreen = ({ onBack, totalStudyTime, todayStudiedCards, weeklyStudyTime }) => {
+  const formattedTotalStudyTime = formatTotalStudyTime(totalStudyTime);
+
+  const transformedWeeklyData = ['日', '月', '火', '水', '木', '金', '土'].map((day, index) => ({
+    day,
+    time: Math.floor(weeklyStudyTime[index] / 60) // 秒から分に変換
+  }));
 
   return (
-    <div className="p-4 w-full max-w-3xl mx-auto">
+    <div className="p-4 w-full bg-gray-100 min-h-screen">
       <div className="flex items-center mb-6">
-        <Button variant="ghost" size="icon" onClick={onBack}>
-          <ArrowLeft />
+        <Button variant="ghost" size="icon" onClick={onBack} className="text-gray-800">
+          <ArrowLeft size={24} />
         </Button>
-        <h1 className="text-2xl font-bold ml-2">統計</h1>
+        <h1 className="text-2xl font-bold ml-2 text-gray-900">統計</h1>
       </div>
 
-      <Card className="mb-4">
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <BarChart2 className="mr-2 text-blue-500" size={24} />
-            全体の進捗
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Progress value={overallProgress} className="w-full" />
-          <p className="text-center mt-2 font-bold">{overallProgress.toFixed(1)}%</p>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <Card className="bg-white shadow-md rounded-lg overflow-hidden border border-gray-200">
+          <CardHeader className="bg-gray-800 text-white pb-2 pt-3">
+            <CardTitle className="flex items-center text-sm font-semibold">
+              <Clock className="mr-1" size={16} />
+              総学習時間
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-2">
+            <p className="text-lg font-bold text-gray-800">{formattedTotalStudyTime}</p>
+          </CardContent>
+        </Card>
 
-      <Card className="mb-4">
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Trophy className="mr-2 text-yellow-500" size={24} />
-            学習継続日数
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-lg font-bold">現在のストリーク: {streak}日</p>
-          <p>過去最高ストリーク: {maxStreak}日</p>
-        </CardContent>
-      </Card>
+        <Card className="bg-white shadow-md rounded-lg overflow-hidden border border-gray-200">
+          <CardHeader className="bg-gray-800 text-white pb-2 pt-3">
+            <CardTitle className="flex items-center text-sm font-semibold">
+              <BookOpen className="mr-1" size={16} />
+              今日の学習
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-2">
+            <p className="text-lg font-bold text-gray-800">{todayStudiedCards}枚</p>
+          </CardContent>
+        </Card>
+      </div>
 
-      <Card className="mb-4">
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Clock className="mr-2 text-green-500" size={24} />
-            今日の学習時間
+      <Card className="bg-white shadow-md rounded-lg overflow-hidden border border-gray-200 mb-4">
+        <CardHeader className="bg-gray-800 text-white pb-2 pt-3">
+          <CardTitle className="flex items-center text-lg font-semibold">
+            <TrendingUp className="mr-2" size={20} />
+            週間学習時間
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <Progress value={(todayStudyTime / dailyGoal) * 100} className="w-full mb-2" />
-          <p>{todayStudyTime}分 / {dailyGoal}分</p>
+        <CardContent className="pt-4">
+          <div className="w-full" style={{ height: '250px' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={transformedWeeklyData}
+                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                <XAxis 
+                  dataKey="day" 
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#4b5563', fontSize: 12 }}
+                />
+                <YAxis
+                  tickCount={5}
+                  domain={[0, 'dataMax + 10']}
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#4b5563', fontSize: 12 }}
+                />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e5e7eb' }}
+                  labelStyle={{ color: '#111827', fontWeight: 'bold' }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="time" 
+                  stroke="#4b5563" 
+                  strokeWidth={2}
+                  dot={{ fill: '#4b5563', r: 4 }}
+                  activeDot={{ r: 6, fill: '#111827' }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </CardContent>
-      </Card>
-
-      <Card className="mb-4 w-full cursor-pointer" onClick={onShowStudyHistory}>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center">
-              <BookOpen className="mr-2 text-purple-500" size={24} />
-              学習履歴
-            </div>
-            <ChevronRight size={24} />
-          </CardTitle>
-        </CardHeader>
       </Card>
     </div>
   );

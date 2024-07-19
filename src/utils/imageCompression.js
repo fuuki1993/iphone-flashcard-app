@@ -1,24 +1,18 @@
 // src/utils/imageCompression.js
 import imageCompression from 'browser-image-compression';
 
-export const compressImage = async (file, options = {}) => {
+export const compressImage = async (file) => {
+  const options = {
+    maxSizeMB: 0.3,
+    maxWidthOrHeight: 600,
+    useWebWorker: true
+  };
+  
   try {
-    const defaultOptions = {
-      maxSizeMB: 1,          // 最大ファイルサイズ（MB）
-      maxWidthOrHeight: 1920,// 最大幅または高さ（ピクセル）
-      useWebWorker: true,    // WebWorkerを使用（バックグラウンド処理）
-      ...options
-    };
-
-    console.log('圧縮前のファイルサイズ:', file.size / 1024 / 1024, 'MB');
-
-    const compressedFile = await imageCompression(file, defaultOptions);
-
-    console.log('圧縮後のファイルサイズ:', compressedFile.size / 1024 / 1024, 'MB');
-
+    const compressedFile = await imageCompression(file, options);
     return compressedFile;
   } catch (error) {
-    console.error('画像圧縮中にエラーが発生しました:', error);
+    console.error("Error compressing image:", error);
     throw error;
   }
 };

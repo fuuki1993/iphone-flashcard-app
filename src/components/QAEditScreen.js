@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, Plus, Save, Trash2, Image, Eye, EyeOff } from 'lucide-react';
 import { getSets, getSetById, updateSet, deleteSet } from '@/utils/firestore';
 import { compressImage } from '@/utils/imageCompression';
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import { getAuth } from "firebase/auth";
 
 const QAEditScreen = ({ onBack, onSave }) => {
   const [sets, setSets] = useState([]);
@@ -16,6 +18,7 @@ const QAEditScreen = ({ onBack, onSave }) => {
   const [qaItems, setQAItems] = useState([{ question: '', answer: '', image: null }]);
   const [errors, setErrors] = useState({});
   const [previewIndex, setPreviewIndex] = useState(null);
+  const [originalQAItems, setOriginalQAItems] = useState([]);
 
   useEffect(() => {
     const loadSets = async () => {
@@ -32,13 +35,21 @@ const QAEditScreen = ({ onBack, onSave }) => {
 
   const handleSetChange = useCallback(async (value) => {
     setSelectedSetId(value);
-    try {
-      const set = await getSetById(parseInt(value));
-      setSetTitle(set.title);
-      setQAItems(set.qaItems);
-    } catch (error) {
-      console.error("Error loading set:", error);
-      setErrors(prevErrors => ({ ...prevErrors, load: "セットの読み込み中にエラーが発生しました。" }));
+    if (value) {  // 追加: 値が存在する場合のみ処理を実行
+      try {
+        const set = await getSetById(value);  // parseInt を削除
+        setSetTitle(set.title);
+        setQAItems(set.qaItems);
+        setOriginalQAItems(set.qaItems);
+      } catch (error) {
+        console.error("Error loading set:", error);
+        setErrors(prevErrors => ({ ...prevErrors, load: "セットの読み込み中にエラーが発生しました。" }));
+      }
+    } else {
+      // 選択がクリアされた場合の処理
+      setSetTitle('');
+      setQAItems([{ question: '', answer: '', image: null }]);
+      setOriginalQAItems([{ question: '', answer: '', image: null }]);
     }
   }, []);
 
@@ -61,14 +72,23 @@ const QAEditScreen = ({ onBack, onSave }) => {
     if (file) {
       try {
         const compressedImage = await compressImage(file);
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          updateQAItem(index, 'image', reader.result);
-        };
-        reader.readAsDataURL(compressedImage);
+        const auth = getAuth();
+        const user = auth.currentUser;
+        
+        if (!user) {
+          throw new Error("User not authenticated");
+        }
+
+        const storage = getStorage();
+        const storageRef = ref(storage, `qa_images/${user.uid}/${Date.now()}_${file.name}`);
+        
+        const snapshot = await uploadBytes(storageRef, compressedImage);
+        const downloadURL = await getDownloadURL(snapshot.ref);
+        
+        updateQAItem(index, 'image', downloadURL);
       } catch (error) {
-        console.error("Error compressing image:", error);
-        setErrors(prevErrors => ({ ...prevErrors, image: "画像の圧縮中にエラーが発生しました。" }));
+        console.error("Error uploading image:", error);
+        setErrors(prevErrors => ({ ...prevErrors, image: "画像のアップロード中にエラーが発生しました。" }));
       }
     }
   }, [updateQAItem]);
@@ -87,35 +107,77 @@ const QAEditScreen = ({ onBack, onSave }) => {
     return Object.keys(newErrors).length === 0;
   }, [setTitle, qaItems]);
 
+  // 新しい関数を追加
+  const deleteUnusedImages = useCallback(async (originalItems, updatedItems) => {
+    const storage = getStorage();
+    const auth = getAuth();
+    const user = auth.currentUser;
+
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+
+    const originalImageUrls = originalItems.map(item => item.image).filter(Boolean);
+    const updatedImageUrls = updatedItems.map(item => item.image).filter(Boolean);
+
+    for (const imageUrl of originalImageUrls) {
+      if (!updatedImageUrls.includes(imageUrl)) {
+        try {
+          const imageRef = ref(storage, imageUrl);
+          await deleteObject(imageRef);
+        } catch (error) {
+          console.error("Error deleting image:", error);
+        }
+      }
+    }
+  }, []);
+
+  // handleSave 関数を修正
   const handleSave = useCallback(async () => {
     if (validateForm()) {
       try {
         const updatedSet = { 
-          id: parseInt(selectedSetId),
+          id: selectedSetId,
           title: setTitle, 
           qaItems,
           type: 'qa'
         };
+
+        // 未使用の画像を削除
+        await deleteUnusedImages(originalQAItems, updatedSet.qaItems);
+
         await updateSet(updatedSet);
         onSave(updatedSet);
+
+        // 保存後に originalQAItems を更新
+        setOriginalQAItems(updatedSet.qaItems);
       } catch (error) {
         console.error("Error updating set:", error);
         setErrors(prevErrors => ({ ...prevErrors, save: "セットの更新中にエラーが発生しました。" }));
       }
     }
-  }, [selectedSetId, setTitle, qaItems, validateForm, onSave]);
+  }, [selectedSetId, setTitle, qaItems, validateForm, onSave, originalQAItems, deleteUnusedImages]);
 
+  // handleDelete 関数を修正
   const handleDelete = useCallback(async () => {
     if (window.confirm('このセットを削除してもよろしいですか？この操作は取り消せません。')) {
       try {
-        await deleteSet(parseInt(selectedSetId));
+        // Delete all images associated with this set
+        const storage = getStorage();
+        for (const item of qaItems) {
+          if (item.image) {
+            const imageRef = ref(storage, item.image);
+            await deleteObject(imageRef);
+          }
+        }
+        await deleteSet(selectedSetId);
         onBack();
       } catch (error) {
         console.error("Error deleting set:", error);
         setErrors(prevErrors => ({ ...prevErrors, delete: "セットの削除中にエラーが発生しました。" }));
       }
     }
-  }, [selectedSetId, onBack]);
+  }, [selectedSetId, qaItems, onBack]);
 
   return (
     <div className="mobile-friendly-form max-w-full overflow-x-hidden">
@@ -134,7 +196,7 @@ const QAEditScreen = ({ onBack, onSave }) => {
             </SelectTrigger>
             <SelectContent>
               {sets.map(set => (
-                <SelectItem key={set.id} value={set.id.toString()}>{set.title}</SelectItem>
+                <SelectItem key={set.id} value={set.id}>{set.title}</SelectItem>
               ))}
             </SelectContent>
           </Select>
