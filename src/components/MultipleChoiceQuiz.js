@@ -45,20 +45,25 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
         let allQuestions = [];
         if (setId === null) {
           const allSets = await getSets('multiple-choice');
+          console.log('All sets:', allSets);  // デバッグ用ログ
           allQuestions = allSets.flatMap(set => set.questions);
         } else {
           const set = await getSetById(parseInt(setId));
+          console.log('Set:', set);  // デバッグ用ログ
           allQuestions = set.questions;
         }
+        console.log('All questions:', allQuestions);  // デバッグ用ログ
         if (Array.isArray(allQuestions)) {
           setQuestions(allQuestions);
           if (sessionState) {
+            console.log('Session state:', sessionState);  // デバッグ用ログ
             setShuffledQuestions(sessionState.shuffledQuestions);
             setCurrentQuestionIndex(sessionState.currentQuestionIndex);
             setResults(sessionState.results);
           } else {
             const shuffledWithChoices = allQuestions.map(shuffleQuestionAndChoices);
             const shuffled = shuffleArray(shuffledWithChoices);
+            console.log('Shuffled questions:', shuffled);  // デバッグ用ログ
             setShuffledQuestions(shuffled);
             setResults(new Array(shuffled.length).fill(null));
           }

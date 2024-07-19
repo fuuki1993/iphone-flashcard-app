@@ -24,11 +24,14 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState }) => {
         let allQuestions = [];
         if (setId === null) {
           const allSets = await getSets('qa');
+          console.log('All sets:', allSets);  // デバッグ用ログ
           allQuestions = allSets.flatMap(set => set.qaItems);
         } else {
           const set = await getSetById(parseInt(setId));
+          console.log('Set:', set);  // デバッグ用ログ
           allQuestions = set.qaItems;
         }
+        console.log('All questions:', allQuestions);  // デバッグ用ログ
         if (Array.isArray(allQuestions)) {
           setQuestions(allQuestions);
           if (sessionState) {
