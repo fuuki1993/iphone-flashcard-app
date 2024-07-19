@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowRight, RotateCw, Shuffle } from 'lucide-react';
-import { getSetById, saveStudyHistory, getSets, saveSessionState, getSessionState } from '@/utils/indexedDB';
+import { getSetById, saveStudyHistory, getSets, saveSessionState, getSessionState } from '@/utils/firestore';
 import styles from '@/app/FlashcardQuiz.module.css';
 
 const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState }) => {
@@ -15,20 +15,20 @@ const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState 
   const [error, setError] = useState(null);
   const startTimeRef = useRef(new Date());
 
-  const calculateScore = () => {
+  const calculateScore = useCallback(() => {
     const totalCards = shuffledCards.length;
     const completedCards = completed.filter(Boolean).length;
     return Math.round((completedCards / totalCards) * 100);
-  };
+  }, [shuffledCards.length, completed]);
 
-  const shuffleArray = (array) => {
+  const shuffleArray = useCallback((array) => {
     const shuffled = [...array];
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
     return shuffled;
-  };
+  }, []);
 
   useEffect(() => {
     const loadCards = async () => {
@@ -39,7 +39,7 @@ const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState 
           const allSets = await getSets('flashcard');
           allCards = allSets.flatMap(set => set.cards);
         } else {
-          const set = await getSetById(parseInt(setId));
+          const set = await getSetById(setId);
           allCards = set.cards;
         }
         if (Array.isArray(allCards)) {
@@ -63,7 +63,7 @@ const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState 
       }
     };
     loadCards();
-  }, [setId, sessionState]);
+  }, [setId, sessionState, shuffleArray]);
 
   useEffect(() => {
     const saveState = async () => {
@@ -78,46 +78,49 @@ const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState 
     saveState();
   }, [setId, shuffledCards, currentCardIndex, completed]);
 
-  const handleShuffle = () => {
-    const shuffled = shuffleArray(cards);
-    setShuffledCards(shuffled);
+  const handleShuffle = useCallback(() => {
+    setShuffledCards(prevCards => shuffleArray([...prevCards]));
     setCurrentCardIndex(0);
     setIsFlipped(false);
-    setCompleted(new Array(shuffled.length).fill(false));
-  };
+    setCompleted(prevCompleted => new Array(prevCompleted.length).fill(false));
+  }, [shuffleArray]);
 
-  const handleFlip = () => {
-    setIsFlipped(!isFlipped);
-  };
+  const handleFlip = useCallback(() => {
+    setIsFlipped(prevFlipped => !prevFlipped);
+  }, []);
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     if (currentCardIndex < shuffledCards.length - 1) {
-      setCurrentCardIndex(currentCardIndex + 1);
+      setCurrentCardIndex(prevIndex => prevIndex + 1);
       setIsFlipped(false);
     }
-  };
+  }, [currentCardIndex, shuffledCards.length]);
 
-  const handlePrevious = () => {
+  const handlePrevious = useCallback(() => {
     if (currentCardIndex > 0) {
-      setCurrentCardIndex(currentCardIndex - 1);
+      setCurrentCardIndex(prevIndex => prevIndex - 1);
       setIsFlipped(false);
     }
-  };
+  }, [currentCardIndex]);
 
-  const handleMarkCompleted = () => {
-    const newCompleted = [...completed];
-    newCompleted[currentCardIndex] = true;
-    setCompleted(newCompleted);
+  const handleMarkCompleted = useCallback(() => {
+    setCompleted(prevCompleted => {
+      const newCompleted = [...prevCompleted];
+      newCompleted[currentCardIndex] = true;
+      return newCompleted;
+    });
     handleNext();
-  };
+  }, [currentCardIndex, handleNext]);
 
-  const handleFinish = async () => {
+  const handleFinish = useCallback(async () => {
     const score = calculateScore();
     const endTime = new Date();
-    const studyDuration = Math.round((endTime - startTimeRef.current) / 1000); // 秒単位で計算
+    const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
     await saveStudyHistory(setId, title, 'flashcard', score, endTime, studyDuration);
     onFinish(score);
-  };
+  }, [calculateScore, setId, title, onFinish]);
+
+  const currentCard = useMemo(() => shuffledCards[currentCardIndex], [shuffledCards, currentCardIndex]);
 
   if (isLoading) {
     return <div>読み込み中...</div>;
@@ -130,8 +133,6 @@ const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState 
   if (shuffledCards.length === 0) {
     return <div>フラッシュカードがありません。</div>;
   }
-
-  const currentCard = shuffledCards[currentCardIndex];
 
   return (
     <div className="p-2 w-full max-w-[390px] mx-auto">

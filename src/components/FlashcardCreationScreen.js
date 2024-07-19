@@ -1,14 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ArrowLeft, Plus, Save, Trash2, Image, Eye, EyeOff } from 'lucide-react';
-import { saveSet } from '@/utils/indexedDB';
+import { saveSet } from '@/utils/firestore';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
+import { compressImage } from '@/utils/imageCompression';
 
 const FlashcardCreationScreen = ({ onBack, onSave }) => {
   const [setTitle, setSetTitle] = useState('');
@@ -17,33 +18,38 @@ const FlashcardCreationScreen = ({ onBack, onSave }) => {
   const [previewIndex, setPreviewIndex] = useState(null);
   const inputRef = useAutoScroll();
 
-  const addCard = () => {
-    setCards([...cards, { front: '', back: '', image: null }]);
-  };
+  const addCard = useCallback(() => {
+    setCards(prevCards => [...prevCards, { front: '', back: '', image: null }]);
+  }, []);
 
-  const updateCard = (index, field, value) => {
-    const updatedCards = cards.map((card, i) => 
+  const updateCard = useCallback((index, field, value) => {
+    setCards(prevCards => prevCards.map((card, i) => 
       i === index ? { ...card, [field]: value } : card
-    );
-    setCards(updatedCards);
-  };
+    ));
+  }, []);
 
-  const removeCard = (index) => {
-    setCards(cards.filter((_, i) => i !== index));
-  };
+  const removeCard = useCallback((index) => {
+    setCards(prevCards => prevCards.filter((_, i) => i !== index));
+  }, []);
 
-  const handleImageUpload = (index, event) => {
+  const handleImageUpload = useCallback(async (index, event) => {
     const file = event.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        updateCard(index, 'image', reader.result);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressedImage = await compressImage(file);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          updateCard(index, 'image', reader.result);
+        };
+        reader.readAsDataURL(compressedImage);
+      } catch (error) {
+        console.error("Error compressing image:", error);
+        setErrors(prevErrors => ({ ...prevErrors, image: "画像の圧縮中にエラーが発生しました。" }));
+      }
     }
-  };
+  }, [updateCard]);
 
-  const validateForm = () => {
+  const validateForm = useCallback(() => {
     const newErrors = {};
     if (!setTitle.trim()) {
       newErrors.title = 'セットタイトルを入力してください。';
@@ -55,28 +61,28 @@ const FlashcardCreationScreen = ({ onBack, onSave }) => {
     });
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
+  }, [setTitle, cards]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (validateForm()) {
       try {
         const newSet = { 
           title: setTitle, 
-          cards: cards,  // この行を確認
+          cards: cards,
           type: 'flashcard'
         };
         const id = await saveSet(newSet);
         onSave({ ...newSet, id });
       } catch (error) {
         console.error("Error saving set:", error);
-        // エラーハンドリングのUIを表示する
+        setErrors(prevErrors => ({ ...prevErrors, save: "セットの保存中にエラーが発生しました。" }));
       }
     }
-  };
+  }, [setTitle, cards, validateForm, onSave]);
 
-  const togglePreview = (index) => {
-    setPreviewIndex(previewIndex === index ? null : index);
-  };
+  const togglePreview = useCallback((index) => {
+    setPreviewIndex(prevIndex => prevIndex === index ? null : index);
+  }, []);
 
   return (
     <div className="mobile-friendly-form max-w-full overflow-x-hidden">

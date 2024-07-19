@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getSetById, getSessionState, getStudyHistory, deleteStudyHistoryEntry } from '@/utils/indexedDB';
+import { getSetById, getSessionState, getStudyHistory, deleteStudyHistoryEntry } from '@/utils/firestore';
 import HomeScreen from '@/components/HomeScreen';
 import CreateEditSetSelectionScreen from '@/components/CreateEditSetSelectionScreen';
 import QuizTypeSelectionScreen from '@/components/QuizTypeSelectionScreen';

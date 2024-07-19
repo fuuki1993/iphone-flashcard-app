@@ -7,8 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ArrowLeft, Plus, Save, Trash2, Image, Eye, EyeOff, Upload } from 'lucide-react';
-import { saveSet } from '@/utils/indexedDB';
+import { saveSet } from '@/utils/firestore';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
+import { compressImage } from '@/utils/imageCompression';
 
 const ClassificationCreationScreen = ({ onBack, onSave }) => {
   const [setTitle, setSetTitle] = useState('');
@@ -62,16 +63,22 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
     setCategories(updatedCategories);
   };
 
-  const handleImageUpload = (categoryIndex, event) => {
+  const handleImageUpload = async (categoryIndex, event) => {
     const file = event.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const newImages = [...categoryImages];
-        newImages[categoryIndex] = e.target.result;
-        setCategoryImages(newImages);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressedImage = await compressImage(file);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const newImages = [...categoryImages];
+          newImages[categoryIndex] = reader.result;
+          setCategoryImages(newImages);
+        };
+        reader.readAsDataURL(compressedImage);
+      } catch (error) {
+        console.error("Error compressing image:", error);
+        // エラーメッセージをユーザーに表示
+      }
     }
   };
 
@@ -107,7 +114,7 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
         onSave({ ...newSet, id });
       } catch (error) {
         console.error("Error saving set:", error);
-        // エラーハンドリングのUIを表示する
+        setErrors({ ...errors, save: "セットの保存中にエラーが発生しました。" });
       }
     }
   };

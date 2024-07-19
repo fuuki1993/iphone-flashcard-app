@@ -8,7 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Plus, Save, Trash2, Image, Eye, EyeOff } from 'lucide-react';
-import { getSets, getSetById, updateSet, deleteSet } from '@/utils/indexedDB';
+import { getSets, getSetById, updateSet, deleteSet } from '@/utils/firestore';
+import { compressImage } from '@/utils/imageCompression';
 
 const FlashcardEditScreen = ({ onBack, onSave }) => {
   const [sets, setSets] = useState([]);
@@ -25,6 +26,7 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
         setSets(loadedSets);
       } catch (error) {
         console.error("Error loading sets:", error);
+        setErrors({ ...errors, load: "セットの読み込み中にエラーが発生しました。" });
       }
     };
     loadSets();
@@ -33,18 +35,16 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
   const handleSetChange = async (value) => {
     setSelectedSetId(value);
     try {
-      const set = await getSetById(parseInt(value));
-      console.log("Retrieved set:", set); // デバッグログ
+      const set = await getSetById(value);
       setSetTitle(set.title);
       if (Array.isArray(set.cards) && set.cards.length > 0) {
         setCards(set.cards);
-        console.log("Cards set:", set.cards); // デバッグログ
       } else {
         setCards([]);
-        console.log("No cards found or invalid card data"); // デバッグログ
       }
     } catch (error) {
       console.error("Error loading set:", error);
+      setErrors({ ...errors, load: "セットの読み込み中にエラーが発生しました。" });
       setCards([]);
     }
   };
@@ -64,14 +64,20 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
     setCards(cards.filter((_, i) => i !== index));
   };
 
-  const handleImageUpload = (index, event) => {
+  const handleImageUpload = async (index, event) => {
     const file = event.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        updateCard(index, 'image', reader.result);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressedImage = await compressImage(file);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          updateCard(index, 'image', reader.result);
+        };
+        reader.readAsDataURL(compressedImage);
+      } catch (error) {
+        console.error("Error compressing image:", error);
+        setErrors({ ...errors, image: "画像の圧縮中にエラーが発生しました。" });
+      }
     }
   };
 
@@ -93,7 +99,7 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
     if (validateForm()) {
       try {
         const updatedSet = { 
-          id: parseInt(selectedSetId),
+          id: selectedSetId,
           title: setTitle, 
           cards: cards,
           type: 'flashcard'
@@ -102,7 +108,7 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
         onSave(updatedSet);
       } catch (error) {
         console.error("Error updating set:", error);
-        // エラーハンドリングのUIを表示する
+        setErrors({ ...errors, save: "セットの更新中にエラーが発生しました。" });
       }
     }
   };
@@ -114,11 +120,11 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
   const handleDelete = async () => {
     if (window.confirm('このセットを削除してもよろしいですか？この操作は取り消せません。')) {
       try {
-        await deleteSet(parseInt(selectedSetId));
+        await deleteSet(selectedSetId);
         onBack(); // 削除後に前の画面に戻る
       } catch (error) {
         console.error("Error deleting set:", error);
-        // エラーハンドリングのUIを表示する
+        setErrors({ ...errors, delete: "セットの削除中にエラーが発生しました。" });
       }
     }
   };

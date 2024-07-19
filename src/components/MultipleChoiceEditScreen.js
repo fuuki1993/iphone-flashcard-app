@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Plus, Save, Trash2, Image, Eye, EyeOff } from 'lucide-react';
-import { getSets, getSetById, updateSet, deleteSet } from '@/utils/indexedDB';
+import { getSets, getSetById, updateSet, deleteSet } from '@/utils/firestore';
 
 const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
   const [sets, setSets] = useState([]);

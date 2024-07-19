@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, BookOpen, List, CheckSquare, Layers, Play } from 'lucide-react';
-import { getSets, clearSessionState } from '@/utils/indexedDB';
+import { getSets, clearSessionState } from '@/utils/firestore';
 
 const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
   const [quizSets, setQuizSets] = useState({
@@ -25,10 +25,12 @@ const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
   useEffect(() => {
     const loadSets = async () => {
       try {
-        const flashcardSets = await getSets('flashcard');
-        const qaSets = await getSets('qa');
-        const multipleChoiceSets = await getSets('multiple-choice');
-        const classificationSets = await getSets('classification');
+        const [flashcardSets, qaSets, multipleChoiceSets, classificationSets] = await Promise.all([
+          getSets('flashcard'),
+          getSets('qa'),
+          getSets('multiple-choice'),
+          getSets('classification')
+        ]);
 
         setQuizSets({
           flashcard: flashcardSets,
@@ -51,18 +53,17 @@ const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
     { id: 'classification', title: '分類', icon: Layers, description: '項目をカテゴリーに分類' },
   ];
 
-  const handleSetSelection = (quizType, setId) => {
+  const handleSetSelection = useCallback((quizType, setId) => {
     setSelectedSets(prev => ({ ...prev, [quizType]: setId }));
-  };
+  }, []);
 
-  const handleStartQuiz = async (quizType) => {
+  const handleStartQuiz = useCallback(async (quizType) => {
     const selectedSetId = selectedSets[quizType] || quizSets[quizType]?.[0]?.id?.toString();
     if (selectedSetId) {
-      // セッション状態をクリア
       await clearSessionState(parseInt(selectedSetId, 10), quizType);
       onStartQuiz(quizType, parseInt(selectedSetId, 10));
     }
-  };
+  }, [selectedSets, quizSets, onStartQuiz]);
 
   return (
     <div className="p-4 w-full">
@@ -78,42 +79,42 @@ const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
       </p>
 
       <div className="space-y-3">
-      {quizTypes.map((type) => (
-        <Card key={type.id} className="hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center space-y-0 py-3 px-4">
-            <type.icon className="h-6 w-6 text-primary mr-3 flex-shrink-0" />
-            <CardTitle className="text-base font-medium">{type.title}</CardTitle>
-          </CardHeader>
-          <CardContent className="py-2 px-4">
-            <p className="text-xs text-gray-500 mb-3">{type.description}</p>
-            <div className="flex items-center space-x-2">
-              <Select 
-                onValueChange={(value) => handleSetSelection(type.id, value)} 
-                value={selectedSets[type.id] || (quizSets[type.id]?.[0]?.id?.toString() || '')}
-              >
-                <SelectTrigger className="text-xs flex-grow">
-                  <SelectValue placeholder="セットを選択" />
-                </SelectTrigger>
-                <SelectContent>
-                  {quizSets[type.id]?.map(set => (
-                    <SelectItem key={set.id} value={set.id.toString()}>{set.title}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button 
-                size="sm"
-                className="text-xs whitespace-nowrap"
-                onClick={() => handleStartQuiz(type.id)}
-              >
-                <Play className="mr-1 h-3 w-3" /> 学習開始
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+        {quizTypes.map((type) => (
+          <Card key={type.id} className="hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center space-y-0 py-3 px-4">
+              <type.icon className="h-6 w-6 text-primary mr-3 flex-shrink-0" />
+              <CardTitle className="text-base font-medium">{type.title}</CardTitle>
+            </CardHeader>
+            <CardContent className="py-2 px-4">
+              <p className="text-xs text-gray-500 mb-3">{type.description}</p>
+              <div className="flex items-center space-x-2">
+                <Select 
+                  onValueChange={(value) => handleSetSelection(type.id, value)} 
+                  value={selectedSets[type.id] || (quizSets[type.id]?.[0]?.id?.toString() || '')}
+                >
+                  <SelectTrigger className="text-xs flex-grow">
+                    <SelectValue placeholder="セットを選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {quizSets[type.id]?.map(set => (
+                      <SelectItem key={set.id} value={set.id.toString()}>{set.title}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button 
+                  size="sm"
+                  className="text-xs whitespace-nowrap"
+                  onClick={() => handleStartQuiz(type.id)}
+                >
+                  <Play className="mr-1 h-3 w-3" /> 学習開始
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
-  </div>
-);
+  );
 };
 
 export default QuizTypeSelectionScreen;

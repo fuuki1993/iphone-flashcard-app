@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Check, X, Shuffle } from 'lucide-react';
-import { getSetById, saveStudyHistory, getSets, saveSessionState, getSessionState } from '@/utils/indexedDB';
+import { getSetById, saveStudyHistory, getSets, saveSessionState, getSessionState } from '@/utils/firestore';
 
 const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState }) => {
   const [questions, setQuestions] = useState([]);
@@ -16,27 +16,27 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
   const [isLastQuestion, setIsLastQuestion] = useState(false);
   const startTimeRef = useRef(new Date());
 
-  const calculateScore = () => {
+  const calculateScore = useCallback(() => {
     const totalQuestions = shuffledQuestions.length;
     const correctAnswers = results.filter(Boolean).length;
     return Math.round((correctAnswers / totalQuestions) * 100);
-  };
+  }, [shuffledQuestions.length, results]);
 
-  const shuffleArray = (array) => {
+  const shuffleArray = useCallback((array) => {
     const shuffled = [...array];
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
     return shuffled;
-  };
+  }, []);
 
-  const shuffleQuestionAndChoices = (question) => {
+  const shuffleQuestionAndChoices = useCallback((question) => {
     return {
       ...question,
       choices: shuffleArray(question.choices)
     };
-  };
+  }, [shuffleArray]);
 
   useEffect(() => {
     const loadQuestions = async () => {
@@ -67,13 +67,13 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
         }
       } catch (error) {
         console.error("Error loading questions:", error);
-        setError('質問の読み込み中にエラーが発生しました。');
+        setError('問題の読み込み中にエラーが発生しました。');
       } finally {
         setIsLoading(false);
       }
     };
     loadQuestions();
-  }, [setId, sessionState]);
+  }, [setId, sessionState, shuffleArray, shuffleQuestionAndChoices]);
 
   useEffect(() => {
     const saveState = async () => {
@@ -88,7 +88,7 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
     saveState();
   }, [setId, shuffledQuestions, currentQuestionIndex, results]);
 
-  const handleShuffle = () => {
+  const handleShuffle = useCallback(() => {
     const shuffledWithChoices = questions.map(shuffleQuestionAndChoices);
     const shuffled = shuffleArray(shuffledWithChoices);
     setShuffledQuestions(shuffled);
@@ -97,15 +97,15 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
     setShowResult(false);
     setResults(new Array(shuffled.length).fill(null));
     setIsLastQuestion(false);
-  };
+  }, [questions, shuffleArray, shuffleQuestionAndChoices]);
 
-  const handleSelect = (index) => {
+  const handleSelect = useCallback((index) => {
     setSelectedAnswers(prev => 
       prev.includes(index)
         ? prev.filter(i => i !== index)
         : [...prev, index]
     );
-  };
+  }, []);
 
   const handleSubmit = useCallback(() => {
     if (selectedAnswers.length > 0 && currentQuestionIndex < shuffledQuestions.length) {
@@ -130,13 +130,13 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
     }
   }, [selectedAnswers, currentQuestionIndex, shuffledQuestions, results]);
 
-  const handleFinish = async () => {
+  const handleFinish = useCallback(async () => {
     const score = calculateScore();
     const endTime = new Date();
-    const studyDuration = Math.round((endTime - startTimeRef.current) / 1000); // 秒単位で計算
+    const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
     await saveStudyHistory(setId, title, 'multiple-choice', score, endTime, studyDuration);
     onFinish(score);
-  };
+  }, [setId, title, calculateScore, onFinish]);
 
   if (isLoading) {
     return <div className="w-full max-w-md mx-auto px-4">読み込み中...</div>;

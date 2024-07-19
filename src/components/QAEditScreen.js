@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +6,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Plus, Save, Trash2, Image, Eye, EyeOff } from 'lucide-react';
-import { getSets, getSetById, updateSet, deleteSet } from '@/utils/indexedDB';
+import { getSets, getSetById, updateSet, deleteSet } from '@/utils/firestore';
+import { compressImage } from '@/utils/imageCompression';
 
 const QAEditScreen = ({ onBack, onSave }) => {
   const [sets, setSets] = useState([]);
@@ -23,12 +24,13 @@ const QAEditScreen = ({ onBack, onSave }) => {
         setSets(loadedSets);
       } catch (error) {
         console.error("Error loading sets:", error);
+        setErrors(prevErrors => ({ ...prevErrors, load: "セットの読み込み中にエラーが発生しました。" }));
       }
     };
     loadSets();
   }, []);
 
-  const handleSetChange = async (value) => {
+  const handleSetChange = useCallback(async (value) => {
     setSelectedSetId(value);
     try {
       const set = await getSetById(parseInt(value));
@@ -36,36 +38,42 @@ const QAEditScreen = ({ onBack, onSave }) => {
       setQAItems(set.qaItems);
     } catch (error) {
       console.error("Error loading set:", error);
+      setErrors(prevErrors => ({ ...prevErrors, load: "セットの読み込み中にエラーが発生しました。" }));
     }
-  };
+  }, []);
 
-  const addQAItem = () => {
-    setQAItems([...qaItems, { question: '', answer: '', image: null }]);
-  };
+  const addQAItem = useCallback(() => {
+    setQAItems(prevItems => [...prevItems, { question: '', answer: '', image: null }]);
+  }, []);
 
-  const updateQAItem = (index, field, value) => {
-    const updatedQAItems = qaItems.map((item, i) => 
+  const updateQAItem = useCallback((index, field, value) => {
+    setQAItems(prevItems => prevItems.map((item, i) => 
       i === index ? { ...item, [field]: value } : item
-    );
-    setQAItems(updatedQAItems);
-  };
+    ));
+  }, []);
 
-  const removeQAItem = (index) => {
-    setQAItems(qaItems.filter((_, i) => i !== index));
-  };
+  const removeQAItem = useCallback((index) => {
+    setQAItems(prevItems => prevItems.filter((_, i) => i !== index));
+  }, []);
 
-  const handleImageUpload = (index, event) => {
+  const handleImageUpload = useCallback(async (index, event) => {
     const file = event.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        updateQAItem(index, 'image', reader.result);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressedImage = await compressImage(file);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          updateQAItem(index, 'image', reader.result);
+        };
+        reader.readAsDataURL(compressedImage);
+      } catch (error) {
+        console.error("Error compressing image:", error);
+        setErrors(prevErrors => ({ ...prevErrors, image: "画像の圧縮中にエラーが発生しました。" }));
+      }
     }
-  };
+  }, [updateQAItem]);
 
-  const validateForm = () => {
+  const validateForm = useCallback(() => {
     const newErrors = {};
     if (!setTitle.trim()) {
       newErrors.title = 'セットタイトルを入力してください。';
@@ -77,9 +85,9 @@ const QAEditScreen = ({ onBack, onSave }) => {
     });
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
+  }, [setTitle, qaItems]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (validateForm()) {
       try {
         const updatedSet = { 
@@ -92,22 +100,22 @@ const QAEditScreen = ({ onBack, onSave }) => {
         onSave(updatedSet);
       } catch (error) {
         console.error("Error updating set:", error);
-        // エラーハンドリングのUIを表示する
+        setErrors(prevErrors => ({ ...prevErrors, save: "セットの更新中にエラーが発生しました。" }));
       }
     }
-  };
+  }, [selectedSetId, setTitle, qaItems, validateForm, onSave]);
 
-  const handleDelete = async () => {
+  const handleDelete = useCallback(async () => {
     if (window.confirm('このセットを削除してもよろしいですか？この操作は取り消せません。')) {
       try {
         await deleteSet(parseInt(selectedSetId));
-        onBack(); // 削除後に前の画面に戻る
+        onBack();
       } catch (error) {
         console.error("Error deleting set:", error);
-        // エラーハンドリングのUIを表示する
+        setErrors(prevErrors => ({ ...prevErrors, delete: "セットの削除中にエラーが発生しました。" }));
       }
     }
-  };
+  }, [selectedSetId, onBack]);
 
   return (
     <div className="mobile-friendly-form max-w-full overflow-x-hidden">

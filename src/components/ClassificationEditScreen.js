@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Plus, Save, Trash2, Eye, EyeOff, Upload } from 'lucide-react';
-import { getSets, getSetById, updateSet, deleteSet } from '@/utils/indexedDB';
+import { getSets, getSetById, updateSet, deleteSet } from '@/utils/firestore';
+import { compressImage } from '@/utils/imageCompression';
 
 const ClassificationEditScreen = ({ onBack, onSave }) => {
   const [sets, setSets] = useState([]);
@@ -24,6 +24,7 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
         setSets(loadedSets);
       } catch (error) {
         console.error("Error loading sets:", error);
+        setErrors({ ...errors, load: "セットの読み込み中にエラーが発生しました。" });
       }
     };
     loadSets();
@@ -32,25 +33,32 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
   const handleSetChange = async (value) => {
     setSelectedSetId(value);
     try {
-      const set = await getSetById(parseInt(value));
+      const set = await getSetById(value);
       setSetTitle(set.title);
-      setCategories(set.categories);
-      setCategoryImages(set.categories.map(category => category.image || null));
+      setCategories(set.categories || [{ name: '', items: [''] }]);
+      setCategoryImages(set.categoryImages || Array(10).fill(null));
     } catch (error) {
       console.error("Error loading set:", error);
+      setErrors({ ...errors, load: "セットの読み込み中にエラーが発生しました。" });
     }
   };
 
-  const handleImageUpload = (categoryIndex, event) => {
+  const handleImageUpload = async (categoryIndex, event) => {
     const file = event.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const newImages = [...categoryImages];
-        newImages[categoryIndex] = e.target.result;
-        setCategoryImages(newImages);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressedImage = await compressImage(file);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const newImages = [...categoryImages];
+          newImages[categoryIndex] = reader.result;
+          setCategoryImages(newImages);
+        };
+        reader.readAsDataURL(compressedImage);
+      } catch (error) {
+        console.error("Error compressing image:", error);
+        setErrors({ ...errors, image: "画像の圧縮中にエラーが発生しました。" });
+      }
     }
   };
 
@@ -119,19 +127,17 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
     if (validateForm()) {
       try {
         const updatedSet = { 
-          id: parseInt(selectedSetId),
+          id: selectedSetId,
           title: setTitle, 
-          categories: categories.map((category, index) => ({
-            ...category,
-            image: categoryImages[index]
-          })),
+          categories: categories,
+          categoryImages: categoryImages,
           type: 'classification'
         };
         await updateSet(updatedSet);
         onSave(updatedSet);
       } catch (error) {
         console.error("Error updating set:", error);
-        // エラーハンドリングのUIを表示する
+        setErrors({ ...errors, save: "セットの更新中にエラーが発生しました。" });
       }
     }
   };
@@ -139,11 +145,11 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
   const handleDelete = async () => {
     if (window.confirm('このセットを削除してもよろしいですか？この操作は取り消せません。')) {
       try {
-        await deleteSet(parseInt(selectedSetId));
-        onBack(); // 削除後に前の画面に戻る
+        await deleteSet(selectedSetId);
+        onBack();
       } catch (error) {
         console.error("Error deleting set:", error);
-        // エラーハンドリングのUIを表示する
+        setErrors({ ...errors, delete: "セットの削除中にエラーが発生しました。" });
       }
     }
   };

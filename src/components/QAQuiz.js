@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, Check, X, Shuffle } from 'lucide-react';
-import { getSetById, saveStudyHistory, getSets, saveSessionState } from '@/utils/indexedDB';
+import { getSetById, saveStudyHistory, getSets, saveSessionState } from '@/utils/firestore';
 
 const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState }) => {
   const [questions, setQuestions] = useState([]);
@@ -65,22 +65,23 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState }) => {
     saveState();
   }, [setId, shuffledQuestions, currentQuestionIndex, results]);
 
-  const shuffleArray = (array) => {
-    for (let i = array.length - 1; i > 0; i--) {
+  const shuffleArray = useCallback((array) => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [array[i], array[j]] = [array[j], array[i]];
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
-    return array;
-  };
+    return shuffled;
+  }, []);
 
-  const handleShuffle = () => {
+  const handleShuffle = useCallback(() => {
     setShuffledQuestions(shuffleArray([...questions]));
     setCurrentQuestionIndex(0);
     setUserAnswer('');
     setShowAnswer(false);
     setResults(new Array(questions.length).fill(null));
     setIsLastQuestion(false);
-  };
+  }, [questions, shuffleArray]);
 
   const handleSubmit = useCallback(() => {
     const isCorrect = userAnswer.toLowerCase() === shuffledQuestions[currentQuestionIndex].answer.toLowerCase();
@@ -100,19 +101,19 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState }) => {
     }
   }, [userAnswer, shuffledQuestions, currentQuestionIndex, results]);
 
-  const handleFinish = async () => {
+  const handleFinish = useCallback(async () => {
     const score = calculateScore();
     const endTime = new Date();
-    const studyDuration = Math.round((endTime - startTimeRef.current) / 1000); // 秒単位で計算
+    const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
     await saveStudyHistory(setId, title, 'qa', score, endTime, studyDuration);
     onFinish(score);
-  };
+  }, [setId, title, onFinish]);
 
-  const calculateScore = () => {
+  const calculateScore = useCallback(() => {
     const totalQuestions = shuffledQuestions.length;
     const correctAnswers = results.filter(Boolean).length;
     return Math.round((correctAnswers / totalQuestions) * 100);
-  };
+  }, [shuffledQuestions.length, results]);
 
   if (isLoading) {
     return <div>読み込み中...</div>;
