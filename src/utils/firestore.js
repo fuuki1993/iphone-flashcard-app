@@ -60,17 +60,23 @@ export const getAllSets = async () => {
   }
 };
 
-export const getSetById = async (id) => {
+export const getSetById = async (setId) => {
   try {
-    const docRef = doc(db, SETS_COLLECTION, id);
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      return { id: docSnap.id, ...docSnap.data() };
+    console.log('Getting set with ID:', setId); // デバッグ用ログ
+    if (!setId) {
+      throw new Error('無効なsetIdです');
+    }
+    const setRef = doc(db, 'sets', setId);
+    const setSnap = await getDoc(setRef);
+    if (setSnap.exists()) {
+      console.log('Set data:', setSnap.data()); // デバッグ用ログ
+      return { id: setSnap.id, ...setSnap.data() };
     } else {
-      throw new Error("Set not found");
+      console.log('No such set!'); // デバッグ用ログ
+      throw new Error('セットが見つかりません');
     }
   } catch (error) {
-    console.error("Error getting set:", error);
+    console.error('Error getting set:', error);
     throw error;
   }
 };

@@ -1,14 +1,69 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { getSetById, saveSessionState, getSessionState } from '@/utils/firestore';
 import { ArrowLeft, Shuffle } from 'lucide-react';
-import { DndContext, DragOverlay, useSensors, useSensor, PointerSensor } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { getSetById, saveSessionState, saveStudyHistory } from '@/utils/firestore';
-import { shuffleArray } from '@/utils/arrayUtils';
+import { DndContext, DragOverlay, useSensors, useSensor, PointerSensor, useDroppable } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useWindowSize } from '@/hooks/useWindowSize';
-import {DroppableCategory} from './DroppableCategory';
-import { SortableItem } from './SortableItem';
+
+const SortableItem = memo(({ id, children, isDragging, isClassified }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id });
+
+  const style = useMemo(() => ({
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }), [transform, transition, isDragging]);
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={`inline-block p-4 m-2 rounded border text-2xl font-semibold ${
+        isClassified ? 'bg-gray-100' : 'bg-white'
+      } ${isDragging ? 'shadow-lg' : 'shadow'} transform rotate-90`}
+    >
+      {children}
+    </div>
+  );
+});
+
+SortableItem.displayName = 'SortableItem';
+
+const DroppableCategory = memo(({ category, isActive, feedbackColor, style }) => {
+  const { setNodeRef } = useDroppable({
+    id: category.name,
+    data: { category: category.name },
+  });
+
+  const className = useMemo(() => `
+    flex flex-col items-center justify-center rounded transition-all duration-300
+    ${feedbackColor ? feedbackColor : 'bg-gray-100'}
+    ${isActive ? 'border-2 border-blue-500' : ''}
+    w-full h-full
+  `, [feedbackColor, isActive]);
+
+  return (
+    <div ref={setNodeRef} className={className} style={style}>
+      {category.image && (
+        <img src={category.image} alt={category.name} className="w-full h-24 object-cover mb-2 transform rotate-90" />
+      )}
+      <h3 className="text-center transform rotate-90">{category.name}</h3>
+    </div>
+  );
+});
+
+DroppableCategory.displayName = 'DroppableCategory';
 
 const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState }) => {
   const [quizData, setQuizData] = useState({
@@ -28,6 +83,7 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
   const [tempFeedback, setTempFeedback] = useState({});
   const [shuffledItems, setShuffledItems] = useState([]);
   const [classifiedItems, setClassifiedItems] = useState({});
+  const [remainingItems, setRemainingItems] = useState([]);
   const [shuffledCategories, setShuffledCategories] = useState([]);
   const startTimeRef = useRef(new Date());
   const { width, height } = useWindowSize();
@@ -37,22 +93,18 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
     useSensor(PointerSensor, {
       activationConstraint: {
         distance: 8,
-        delay: 100,
-        tolerance: 5,
       },
     })
   );
 
   useEffect(() => {
-    const preventDefault = (e) => e.preventDefault();
-    document.addEventListener('touchmove', preventDefault, { passive: false });
-    return () => document.removeEventListener('touchmove', preventDefault);
-  }, []);
-
-  useEffect(() => {
+    console.log('setId:', setId); // デバッグ用ログ
     const loadQuestion = async () => {
       try {
         setIsLoading(true);
+        if (!setId) {
+          throw new Error('setIdが提供されていません');
+        }
         const set = await getSetById(setId);
         if (set && Array.isArray(set.categories)) {
           if (sessionState) {
@@ -90,11 +142,11 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
             setClassifiedItems({});
           }
         } else {
-          throw new Error('Invalid data structure');
+          throw new Error('無効なデータ構造です');
         }
       } catch (error) {
-        console.error("Error loading question:", error);
-        setError('質問の読み込中にエラーが発生しました。');
+        console.error("質問の読み込み中にエラーが発生しました:", error);
+        setError(`質問の読み込み中にエラーが発生しました: ${error.message}`);
       } finally {
         setIsLoading(false);
       }
@@ -117,11 +169,20 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
     saveState();
   }, [setId, quizData, shuffledItems, shuffledCategories, currentItemIndex, classifiedItems]);
 
+  const shuffleArray = useCallback((array) => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }, []);
+
   const handleShuffle = useCallback(() => {
     setShuffledItems(shuffleArray(shuffledItems));
     setShuffledCategories(shuffleArray(shuffledCategories));
     setCurrentItemIndex(0);
-  }, [shuffledItems, shuffledCategories]);
+  }, [shuffledItems, shuffledCategories, shuffleArray]);
 
   const handleDragStart = useCallback((event) => {
     const { active } = event;
@@ -144,6 +205,7 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
             : item
         );
 
+        // Update classifiedItems
         setClassifiedItems(prevClassified => ({
           ...prevClassified,
           [over.id]: [...(prevClassified[over.id] || []), active.id]
@@ -163,10 +225,11 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
           [over.id]: isCorrect ? 'bg-green-200' : 'bg-red-200'
         }));
 
+        // Move to the next item
         if (currentItemIndex < shuffledItems.length - 1) {
           setCurrentItemIndex(currentItemIndex + 1);
         } else {
-          setCurrentItemIndex(shuffledItems.length - 1);
+          setCurrentItemIndex(shuffledItems.length - 1); // All items classified
         }
 
         return {
@@ -193,10 +256,23 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
     }
   }, [tempFeedback]);
 
+  const ScoreDisplay = () => (
+    <div className="flex flex-col items-center justify-center h-32">
+      <div className="writing-vertical-rl text-lg font-bold mb-2 whitespace-nowrap">スコア</div>
+      <div className="flex items-center">
+        <span className="text-lg font-bold mr-1">:</span>
+        <span className="text-lg font-bold">{quizData.score}%</span>
+      </div>
+    </div>
+  );
+
   const handleRestart = useCallback(() => {
     const loadQuestion = async () => {
       try {
         setIsLoading(true);
+        if (!setId) {
+          throw new Error('setIdが提供されていません');
+        }
         const set = await getSetById(setId);
         if (set && Array.isArray(set.categories)) {
           const newItems = set.categories.flatMap(c => 
@@ -228,25 +304,21 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
           setTempFeedback({});
           startTimeRef.current = new Date();
         } else {
-          throw new Error('Invalid data structure');
+          throw new Error('無効なデータ構造です');
         }
       } catch (error) {
-        console.error("Error loading question:", error);
-        setError('質問の読み込中にエラーが発生しました。');
+        console.error("質問の読み込み中にエラーが発生しました:", error);
+        setError(`質問の読み込み中にエラーが発生しました: ${error.message}`);
       } finally {
         setIsLoading(false);
       }
     };
     loadQuestion();
-  }, [setId]);
+  }, [setId, shuffleArray]);
 
-  const handleFinish = useCallback(async () => {
-    const score = quizData.score;
-    const endTime = new Date();
-    const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
-    await saveStudyHistory(setId, title, 'classification', score, endTime, studyDuration);
-    onFinish(score);
-  }, [onFinish, quizData.score, setId, title]);
+  const handleFinish = useCallback(() => {
+    onFinish(quizData.score);
+  }, [onFinish, quizData.score]);
 
   const getGridSizeStyle = useCallback(() => {
     const columns = 3;
@@ -277,7 +349,8 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
   ], []);
 
   if (isLoading) return <div>読み込み中...</div>;
-  if (error) return <div>{error}</div>;
+  if (error) return <div>エラー: {error}</div>;
+  if (!quizData) return null;
   
   return (
     <div className="flex flex-col h-screen w-screen p-2">
@@ -343,16 +416,16 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
             </DndContext>
           ) : (
             <div className="flex items-center justify-center h-full">
-              <div className="flex flex-col gap-24">
-                <Button onClick={handleRestart} className="transform rotate-90 w-32 h-12">
-                  <span className="inline-block text-sm">もう一度挑戦</span>
-                </Button>
-                <Button onClick={handleFinish} className="transform rotate-90 w-32 h-12">
-                  <span className="inline-block text-sm">終了</span>
-                </Button>
-              </div>
-              <h2 className="text-2xl font-bold transform rotate-90 whitespace-nowrap">最終スコア: {quizData.score}%</h2>
+            <div className="flex flex-col gap-24">
+              <Button onClick={handleRestart} className="transform rotate-90 w-32 h-12">
+                <span className="inline-block text-sm">もう一度挑戦</span>
+              </Button>
+              <Button onClick={handleFinish} className="transform rotate-90 w-32 h-12">
+                <span className="inline-block text-sm">終了</span>
+              </Button>
             </div>
+            <h2 className="text-2xl font-bold transform rotate-90 whitespace-nowrap">最終スコア: {quizData.score}%</h2>
+          </div>
           )}
         </CardContent>
       </Card>

@@ -17,6 +17,15 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState }) => {
   const [shuffledQuestions, setShuffledQuestions] = useState([]);
   const startTimeRef = useRef(new Date());
 
+  const shuffleArray = useCallback((array) => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }, []);
+
   useEffect(() => {
     const loadQuestions = async () => {
       try {
@@ -34,8 +43,9 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState }) => {
             throw new Error('Invalid data structure: allSets is not an array');
           }
         } else {
-          const set = await getSetById(parseInt(setId));
-          console.log('Set:', set);
+          console.log('SetId:', setId); // デバッグ用ログ
+          const set = await getSetById(setId);
+          console.log('Set:', set); // デバッグ用ログ
           if (set && Array.isArray(set.qaItems)) {
             allQuestions = set.qaItems;
           } else {
@@ -51,7 +61,7 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState }) => {
             setCurrentQuestionIndex(sessionState.currentQuestionIndex);
             setResults(sessionState.results);
           } else {
-            const shuffled = shuffleArray([...allQuestions]);
+            const shuffled = shuffleArray(allQuestions);
             console.log('Shuffled questions:', shuffled);
             setShuffledQuestions(shuffled);
             setResults(new Array(shuffled.length).fill(null));
@@ -81,15 +91,6 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState }) => {
     };
     saveState();
   }, [setId, shuffledQuestions, currentQuestionIndex, results]);
-
-  const shuffleArray = useCallback((array) => {
-    const shuffled = [...array];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    return shuffled;
-  }, []);
 
   const handleShuffle = useCallback(() => {
     setShuffledQuestions(shuffleArray([...questions]));

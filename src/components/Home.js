@@ -13,10 +13,6 @@ import MultipleChoiceCreationScreen from '@/components/MultipleChoiceCreationScr
 import MultipleChoiceEditScreen from '@/components/MultipleChoiceEditScreen';
 import ClassificationCreationScreen from '@/components/ClassificationCreationScreen';
 import ClassificationEditScreen from '@/components/ClassificationEditScreen';
-import FlashcardQuiz from '@/components/FlashcardQuiz';
-import QAQuiz from '@/components/QAQuiz';
-import MultipleChoiceQuiz from '@/components/MultipleChoiceQuiz';
-import ClassificationQuiz from '@/components/ClassificationQuiz';
 import StatisticsScreen from '../components/StatisticsScreen';
 import SettingsScreen from './SettingsScreen';
 import StudyHistoryScreen from '@/components/StudyHistoryScreen';
@@ -128,22 +124,19 @@ export default function Home() {
 
   const handleStartQuiz = async (type, setId) => {
     try {
-      let numericSetId = null;
-      if (setId !== null && setId !== undefined && setId !== '') {
-        numericSetId = setId;
-      }
+      console.log('Starting quiz:', { type, setId }); // デバッグ用ログ
 
       // セッション状態を取得
-      const sessionState = await getSessionState(numericSetId, type);
+      const sessionState = await getSessionState(setId, type);
 
       setQuizType(type);
-      setQuizSetId(numericSetId);
+      setQuizSetId(setId);
       setSessionState(sessionState);
 
-      if (numericSetId === null) {
+      if (!setId) {
         setQuizSetTitle("すべてのセット");
       } else {
-        const set = await getSetById(numericSetId);
+        const set = await getSetById(setId);
         setQuizSetTitle(set.title);
       }
       navigateTo('quiz');
@@ -282,18 +275,32 @@ export default function Home() {
         );
       case 'quiz':
         console.log('Quiz type:', quizType);  // デバッグ用ログ
-        switch (quizType) {
-          case 'flashcard':
-            return <FlashcardQuiz setId={quizSetId} title={quizSetTitle} quizType={quizType} onBack={() => navigateTo('quizTypeSelection')} onFinish={handleFinishQuiz} sessionState={sessionState} />;
-          case 'qa':
-            return <QAQuiz setId={quizSetId} title={quizSetTitle} quizType={quizType} onBack={() => navigateTo('quizTypeSelection')} onFinish={handleFinishQuiz} sessionState={sessionState} />;
-          case 'multiple-choice':
-            return <MultipleChoiceQuiz setId={quizSetId} title={quizSetTitle} quizType={quizType} onBack={() => navigateTo('quizTypeSelection')} onFinish={handleFinishQuiz} sessionState={sessionState} />;
-          case 'classification':
-            return <ClassificationQuiz setId={quizSetId} title={quizSetTitle} quizType={quizType} onBack={() => navigateTo('quizTypeSelection')} onFinish={handleFinishQuiz} sessionState={sessionState} />;
-          default:
-            return <div>Unknown quiz type: {quizType}</div>;
-        }
+        const QuizComponent = React.lazy(() => {
+          switch (quizType) {
+            case 'flashcard':
+              return import('./FlashcardQuiz');
+            case 'qa':
+              return import('./QAQuiz');
+            case 'multiple-choice':
+              return import('./MultipleChoiceQuiz');
+            case 'classification':
+              return import('./ClassificationQuiz');
+            default:
+              throw new Error(`Unknown quiz type: ${quizType}`);
+          }
+        });
+        return (
+          <React.Suspense fallback={<div>Loading...</div>}>
+            <QuizComponent
+              setId={quizSetId}
+              title={quizSetTitle}
+              quizType={quizType}
+              onBack={() => navigateTo('quizTypeSelection')}
+              onFinish={handleFinishQuiz}
+              sessionState={sessionState}
+            />
+          </React.Suspense>
+        );
       case 'statistics':
         return (
           <StatisticsScreen
