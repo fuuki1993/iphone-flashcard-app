@@ -176,7 +176,7 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
   }, []);
 
   const handleSave = useCallback(async () => {
-    if (validateForm() && user) {
+    if (validateForm() && user && user.uid) {
       try {
         const updatedSet = { 
           id: selectedSetId,
@@ -194,13 +194,13 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
 
         await deleteUnusedImages(originalCategories, changedCategories);
 
-        await updateSet(user.uid, updatedSet);
+        await updateSet(updatedSet, user.uid);
         onSave(updatedSet);
 
         setOriginalCategories(updatedSet.categories);
       } catch (error) {
         console.error("Error updating set:", error);
-        setErrors({ ...errors, save: "セットの更新中にエラーが発生しました。" });
+        setErrors(prevErrors => ({ ...prevErrors, save: "セットの更新中にエラーが発生しました。" }));
       }
     }
   }, [selectedSetId, setTitle, categories, categoryImages, validateForm, onSave, originalCategories, deleteUnusedImages, user]);

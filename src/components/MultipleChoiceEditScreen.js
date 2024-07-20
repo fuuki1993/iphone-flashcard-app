@@ -167,7 +167,7 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
   }, []);
 
   const handleSave = useCallback(async () => {
-    if (validateForm() && user) {
+    if (validateForm() && user && user.uid) {
       try {
         const updatedSet = { 
           id: selectedSetId,
@@ -178,7 +178,7 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
 
         await deleteUnusedImages(originalQuestions, updatedSet.questions);
 
-        await updateSet(user.uid, updatedSet);
+        await updateSet(updatedSet, user.uid);
         onSave(updatedSet);
 
         setOriginalQuestions(updatedSet.questions);

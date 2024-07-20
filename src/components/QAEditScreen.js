@@ -145,7 +145,7 @@ const QAEditScreen = ({ onBack, onSave }) => {
 
   // handleSave 関数を修正
   const handleSave = useCallback(async () => {
-    if (validateForm() && user) {
+    if (validateForm() && user && user.uid) {
       try {
         const updatedSet = { 
           id: selectedSetId,
@@ -157,7 +157,7 @@ const QAEditScreen = ({ onBack, onSave }) => {
         // 未使用の画像を削除
         await deleteUnusedImages(originalQAItems, updatedSet.qaItems);
 
-        await updateSet(user.uid, updatedSet);
+        await updateSet(updatedSet, user.uid);
         onSave(updatedSet);
 
         // 保存後に originalQAItems を更新
