@@ -5,7 +5,8 @@ export default function Document() {
     <Html lang="en">
       <Head>
         <link rel="manifest" href={`${process.env.NEXT_PUBLIC_BASE_PATH || ''}/manifest.json`} />
-        <link rel="apple-touch-icon" href={process.env.NODE_ENV === 'production' ? '/iphone-flashcard-app/icon-192x192.png' : '/icon-192x192.png'} />
+        <link rel="apple-touch-icon" href={process.env.NODE_ENV === 'production' ? '/iphone-flashcard-app/icon-192x192-black.png' : '/icon-192x192-black.png'} />
+        <link rel="apple-touch-icon" href={process.env.NODE_ENV === 'production' ? '/iphone-flashcard-app/icon-192x192-white.png' : '/icon-192x192-white.png'} />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="iPhone Flashcard App" />
