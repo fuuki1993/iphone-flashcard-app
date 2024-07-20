@@ -34,7 +34,6 @@ const HomeScreen = ({
   const [editingEvent, setEditingEvent] = useState(null);
   const [recentActivities, setRecentActivities] = useState([]);
   const [showStatistics, setShowStatistics] = useState(false);
-  const [weeklyStudyTime, setWeeklyStudyTime] = useState(Array(7).fill(0));
 
   const convertSecondsToMinutes = useCallback((seconds) => {
     return Math.floor(seconds / 60);
@@ -253,25 +252,6 @@ const HomeScreen = ({
     );
   }, [onStartLearning, getIconForSetType, formatDate]);
 
-  const calculateWeeklyStudyTime = useCallback(() => {
-    const today = new Date();
-    const oneWeekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-    
-    const weeklyData = studyHistory
-      .filter(entry => new Date(entry.date) >= oneWeekAgo)
-      .reduce((acc, entry) => {
-        const dayOfWeek = new Date(entry.date).getDay();
-        acc[dayOfWeek] += entry.studyDuration;
-        return acc;
-      }, Array(7).fill(0));
-
-    setWeeklyStudyTime(weeklyData);
-  }, [studyHistory]);
-
-  useEffect(() => {
-    calculateWeeklyStudyTime();
-  }, [calculateWeeklyStudyTime]);
-
   const handleShowStatistics = useCallback(() => {
     setShowStatistics(true);
   }, []);
@@ -286,7 +266,6 @@ const HomeScreen = ({
         onBack={handleBackFromStatistics}
         totalStudyTime={studyHistory.reduce((total, entry) => total + entry.studyDuration, 0)}
         todayStudiedCards={todayStudyTime} // この値は適切に計算されていることを確認してください
-        weeklyStudyTime={weeklyStudyTime}
       />
     );
   }

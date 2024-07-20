@@ -147,17 +147,6 @@ export const saveStudyHistory = async (userId, setId, setTitle, setType, score, 
   }
 };
 
-export const getStudyHistory = async (userId) => {
-  try {
-    const q = query(collection(db, `users/${userId}/${HISTORY_COLLECTION}`), orderBy("createdAt", "desc"));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  } catch (error) {
-
-    throw error;
-  }
-};
-
 export const saveSessionState = async (userId, setId, setType, state) => {
   try {
     const docRef = doc(db, `users/${userId}/${SESSION_STATES_COLLECTION}`, `${setId}_${setType}`);
@@ -283,6 +272,43 @@ export const uploadImage = async (file, path) => {
     return downloadURL;
   } catch (error) {
 
+    throw error;
+  }
+};
+
+export const getUserStatistics = async (userId) => {
+  const userStatsRef = doc(db, `users/${userId}/statistics/userStatistics`);
+  const userStatsSnap = await getDoc(userStatsRef);
+  
+  if (userStatsSnap.exists()) {
+    return userStatsSnap.data();
+  } else {
+    // デフォルトの統計データを返す
+    return {
+      totalStudyTime: 0,
+      todayStudiedCards: 0,
+      totalStudyTimeComparison: 0,
+      todayStudiedCardsComparison: 0
+    };
+  }
+};
+
+export const getStudyHistory = async (userId) => {
+  try {
+    const q = query(collection(db, `users/${userId}/${HISTORY_COLLECTION}`), orderBy("createdAt", "desc"));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        date: data.date ? new Date(data.date) : null,
+        studyDuration: Number(data.studyDuration) || 0,
+        cardsStudied: Number(data.cardsStudied) || 0
+      };
+    });
+  } catch (error) {
+    console.error("Error fetching study history:", error);
     throw error;
   }
 };

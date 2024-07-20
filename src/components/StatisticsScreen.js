@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Clock, BookOpen, TrendingUp, ArrowUpRight, ArrowDownRight, ArrowRight } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts';
-import { getUserStatistics } from '@/utils/firestore';
+import { getUserStatistics, getStudyHistory } from '@/utils/firestore';
 
 const formatTotalStudyTime = (totalSeconds) => {
   if (isNaN(totalSeconds) || totalSeconds === 0) return '0時間0分';
@@ -26,7 +26,28 @@ const StatisticsScreen = ({ onBack, userId }) => {
       if (userId) {
         try {
           const userStats = await getUserStatistics(userId);
-          setStatistics(userStats);
+          const studyHistory = await getStudyHistory(userId);
+          
+          // 総学習時間の計算
+          const totalStudyTime = studyHistory.reduce((total, entry) => total + (entry.studyDuration || 0), 0);
+          
+          // 週間学習時間の計算
+          const weeklyStudyTime = calculateWeeklyStudyTime(studyHistory);
+          
+          // 今日の学習カード数の計算
+          const today = new Date().toDateString();
+          const todayStudiedCards = studyHistory
+            .filter(entry => new Date(entry.date).toDateString() === today)
+            .reduce((total, entry) => total + (entry.cardsStudied || 0), 0);
+
+          setStatistics({
+            ...userStats,
+            totalStudyTime,
+            weeklyStudyTime,
+            todayStudiedCards
+          });
+
+          console.log('Fetched statistics:', { totalStudyTime, todayStudiedCards, weeklyStudyTime }); // デバッグ用
         } catch (error) {
           console.error('Failed to fetch user statistics:', error);
           // エラー処理を追加（例：エラーメッセージを表示）
@@ -36,6 +57,19 @@ const StatisticsScreen = ({ onBack, userId }) => {
 
     fetchStatistics();
   }, [userId]);
+
+  const calculateWeeklyStudyTime = (studyHistory) => {
+    const today = new Date();
+    const oneWeekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+    
+    return studyHistory
+      .filter(entry => new Date(entry.date) >= oneWeekAgo)
+      .reduce((acc, entry) => {
+        const dayOfWeek = new Date(entry.date).getDay();
+        acc[dayOfWeek] += entry.studyDuration;
+        return acc;
+      }, Array(7).fill(0));
+  };
 
   const formattedTotalStudyTime = formatTotalStudyTime(statistics.totalStudyTime);
 

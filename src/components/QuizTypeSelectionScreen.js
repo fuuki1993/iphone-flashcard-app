@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, BookOpen, List, CheckSquare, Layers, Play } from 'lucide-react';
@@ -24,6 +24,8 @@ const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
   });
 
   const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const auth = getAuth();
@@ -36,6 +38,8 @@ const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
   useEffect(() => {
     const loadSets = async () => {
       if (!user) return;
+      setIsLoading(true);
+      setError(null);
       try {
         const [flashcardSets, qaSets, multipleChoiceSets, classificationSets] = await Promise.all([
           getSets(user.uid, 'flashcard'),
@@ -44,14 +48,34 @@ const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
           getSets(user.uid, 'classification')
         ]);
 
-        setQuizSets({
+        const newQuizSets = {
           flashcard: flashcardSets,
           qa: qaSets,
           'multiple-choice': multipleChoiceSets,
           classification: classificationSets
-        });
+        };
+
+        setQuizSets(newQuizSets);
+
+        // 各タイプの最初のセットをデフォルトで選択
+        const newSelectedSets = {
+          flashcard: flashcardSets[0]?.id || '',
+          qa: qaSets[0]?.id || '',
+          'multiple-choice': multipleChoiceSets[0]?.id || '',
+          classification: classificationSets[0]?.id || ''
+        };
+
+        setSelectedSets(newSelectedSets);
+
+        // セットが空の場合のエラーハンドリング
+        if (Object.values(newQuizSets).every(sets => sets.length === 0)) {
+          setError("セットが見つかりません。新しいセットを作成してください。");
+        }
       } catch (error) {
         console.error("Error loading sets:", error);
+        setError("セットの読み込み中にエラーが発生しました。");
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -73,15 +97,23 @@ const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
 
   const handleStartQuiz = useCallback(async (quizType) => {
     if (!user) return;
-    const selectedSetId = selectedSets[quizType] || quizSets[quizType]?.[0]?.id;
+    const selectedSetId = selectedSets[quizType];
     if (selectedSetId) {
       await clearSessionState(user.uid, selectedSetId, quizType);
-      onStartQuiz(quizType, selectedSetId.toString());
+      onStartQuiz(quizType, selectedSetId);
     }
-  }, [selectedSets, quizSets, onStartQuiz, user]);
+  }, [selectedSets, onStartQuiz, user]);
 
   if (!user) {
     return <div>ログインしてください。</div>;
+  }
+
+  if (isLoading) {
+    return <div>セットを読み込んでいます...</div>;
+  }
+
+  if (error) {
+    return <div>{error}</div>;
   }
 
   return (
@@ -93,9 +125,13 @@ const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
         <h1 className="text-lg font-bold">学習タイプを選択</h1>
       </div>
 
-      <p className="text-sm text-gray-600 mb-4">
-        クイズタイプとセットを選択:
-      </p>
+      {error ? (
+        <p className="text-red-500 text-sm mb-4">{error}</p>
+      ) : (
+        <p className="text-sm text-gray-600 mb-4">
+          クイズタイプとセットを選択:
+        </p>
+      )}
 
       <div className="space-y-3">
         {quizTypes.map((type) => (
@@ -109,10 +145,11 @@ const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
               <div className="flex items-center space-x-2">
                 <Select 
                   onValueChange={(value) => handleSetSelection(type.id, value)} 
-                  value={selectedSets[type.id] || (quizSets[type.id]?.[0]?.id || '')}
+                  value={selectedSets[type.id]}
+                  disabled={quizSets[type.id]?.length === 0}
                 >
                   <SelectTrigger className="text-xs flex-grow">
-                    <SelectValue placeholder="セットを選択" />
+                    <SelectValue placeholder={quizSets[type.id]?.length === 0 ? "セットがありません" : "セットを選択"} />
                   </SelectTrigger>
                   <SelectContent>
                     {quizSets[type.id]?.map(set => (
@@ -124,6 +161,7 @@ const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
                   size="sm"
                   className="text-xs whitespace-nowrap"
                   onClick={() => handleStartQuiz(type.id)}
+                  disabled={!selectedSets[type.id] || quizSets[type.id]?.length === 0}
                 >
                   <Play className="mr-1 h-3 w-3" /> 学習開始
                 </Button>
