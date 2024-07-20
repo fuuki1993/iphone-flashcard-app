@@ -7,6 +7,7 @@ import { DndContext, DragOverlay, useSensors, useSensor, PointerSensor, useDropp
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useWindowSize } from '@/hooks/useWindowSize';
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 const SortableItem = memo(({ id, children, isDragging, isClassified }) => {
   const {
@@ -89,6 +90,7 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
   const [unclassifiedItems, setUnclassifiedItems] = useState([]);
   const startTimeRef = useRef(new Date());
   const { width, height } = useWindowSize();
+  const [user, setUser] = useState(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -108,14 +110,22 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
   }, []);
 
   useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
     console.log('setId:', setId);
     const loadQuestion = async () => {
       try {
         setIsLoading(true);
-        if (!setId) {
-          throw new Error('setIdが提供されていません');
+        if (!setId || !user) {
+          throw new Error('setIdが提供されていないか、ユーザーが認証されていません');
         }
-        const set = await getSetById(setId);
+        const set = await getSetById(user.uid, setId);
         if (set && Array.isArray(set.categories)) {
           if (sessionState) {
             setQuizData(sessionState.quizData);
@@ -164,13 +174,15 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
         setIsLoading(false);
       }
     };
-    loadQuestion();
-  }, [setId, sessionState, shuffleArray]);
+    if (user) {
+      loadQuestion();
+    }
+  }, [setId, sessionState, shuffleArray, user]);
 
   useEffect(() => {
     const saveState = async () => {
-      if (setId) {
-        await saveSessionState(setId, 'classification', {
+      if (setId && user) {
+        await saveSessionState(user.uid, setId, 'classification', {
           quizData,
           shuffledItems,
           shuffledCategories,
@@ -181,7 +193,7 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
       }
     };
     saveState();
-  }, [setId, quizData, shuffledItems, shuffledCategories, classifiedItems, currentItemIndex, unclassifiedItems]);
+  }, [setId, quizData, shuffledItems, shuffledCategories, classifiedItems, currentItemIndex, unclassifiedItems, user]);
 
   useEffect(() => {
     if (quizData.items.length > 0) {
@@ -279,10 +291,10 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
     const loadQuestion = async () => {
       try {
         setIsLoading(true);
-        if (!setId) {
-          throw new Error('setIdが提供されていません');
+        if (!setId || !user) {
+          throw new Error('setIdが提供されていないか、ユーザーが認証されていません');
         }
-        const set = await getSetById(setId);
+        const set = await getSetById(user.uid, setId);
         if (set && Array.isArray(set.categories)) {
           const newItems = set.categories.flatMap(c => 
             c.items.map((item, index) => ({ 
@@ -325,17 +337,18 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
       }
     };
     loadQuestion();
-  }, [setId, shuffleArray]);
+  }, [setId, shuffleArray, user]);
 
   const handleFinish = useCallback(async () => {
+    if (!user) return;
     const score = quizData.score;
     const endTime = new Date();
     const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
     const cardsStudied = quizData.items.length;
-    await saveStudyHistory(setId, title, 'classification', score, endTime, studyDuration, cardsStudied);
+    await saveStudyHistory(user.uid, setId, title, 'classification', score, endTime, studyDuration, cardsStudied);
     setTodayStudyTime(prevTime => prevTime + studyDuration);
     onFinish(score, studyDuration, cardsStudied);
-  }, [setId, title, quizData, onFinish, setTodayStudyTime]);
+  }, [setId, title, quizData, onFinish, setTodayStudyTime, user]);
   
   const getGridSizeStyle = useCallback(() => {
     const columns = 3;

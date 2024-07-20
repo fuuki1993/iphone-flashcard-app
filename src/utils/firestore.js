@@ -22,9 +22,9 @@ const HISTORY_COLLECTION = 'studyHistory';
 const SESSION_STATES_COLLECTION = 'sessionStates';
 const SETTINGS_COLLECTION = 'settings';
 
-export const saveSet = async (set) => {
+export const saveSet = async (set, userId) => {
   try {
-    const docRef = await addDoc(collection(db, SETS_COLLECTION), {
+    const docRef = await addDoc(collection(db, `users/${userId}/${SETS_COLLECTION}`), {
       ...set,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
@@ -36,9 +36,9 @@ export const saveSet = async (set) => {
   }
 };
 
-export const getSets = async (type = null) => {
+export const getSets = async (userId, type = null) => {
   try {
-    let q = collection(db, SETS_COLLECTION);
+    let q = collection(db, `users/${userId}/${SETS_COLLECTION}`);
     if (type) {
       q = query(q, where("type", "==", type));
     }
@@ -51,9 +51,9 @@ export const getSets = async (type = null) => {
   }
 };
 
-export const getAllSets = async () => {
+export const getAllSets = async (userId) => {
   try {
-    const q = query(collection(db, SETS_COLLECTION), orderBy("updatedAt", "desc"));
+    const q = query(collection(db, `users/${userId}/${SETS_COLLECTION}`), orderBy("updatedAt", "desc"));
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
@@ -62,13 +62,13 @@ export const getAllSets = async () => {
   }
 };
 
-export const getSetById = async (setId) => {
+export const getSetById = async (userId, setId) => {
   try {
 
     if (!setId || typeof setId !== 'string' || setId.trim() === '') {
       throw new Error('無効なsetIdです');
     }
-    const setRef = doc(db, 'sets', setId);
+    const setRef = doc(db, `users/${userId}/${SETS_COLLECTION}`, setId);
     const setSnap = await getDoc(setRef);
     if (setSnap.exists()) {
 
@@ -83,9 +83,9 @@ export const getSetById = async (setId) => {
   }
 };
 
-export const updateSet = async (set) => {
+export const updateSet = async (set, userId) => {
   try {
-    const docRef = doc(db, SETS_COLLECTION, set.id);
+    const docRef = doc(db, `users/${userId}/${SETS_COLLECTION}`, set.id);
     const { categoryImages, ...setWithoutImages } = set;
     
     // Update main set data without images
@@ -118,16 +118,16 @@ export const updateSet = async (set) => {
   }
 };
 
-export const deleteSet = async (id) => {
+export const deleteSet = async (userId, id) => {
   try {
-    await deleteDoc(doc(db, SETS_COLLECTION, id));
+    await deleteDoc(doc(db, `users/${userId}/${SETS_COLLECTION}`, id));
   } catch (error) {
 
     throw error;
   }
 };
 
-export const saveStudyHistory = async (setId, setTitle, setType, score, endTime, studyDuration, cardsStudied) => {
+export const saveStudyHistory = async (userId, setId, setTitle, setType, score, endTime, studyDuration, cardsStudied) => {
   try {
     const newEntry = {
       setId,
@@ -139,7 +139,7 @@ export const saveStudyHistory = async (setId, setTitle, setType, score, endTime,
       cardsStudied,
       createdAt: serverTimestamp()
     };
-    const docRef = await addDoc(collection(db, HISTORY_COLLECTION), newEntry);
+    const docRef = await addDoc(collection(db, `users/${userId}/${HISTORY_COLLECTION}`), newEntry);
     return docRef.id;
   } catch (error) {
 
@@ -147,9 +147,9 @@ export const saveStudyHistory = async (setId, setTitle, setType, score, endTime,
   }
 };
 
-export const getStudyHistory = async () => {
+export const getStudyHistory = async (userId) => {
   try {
-    const q = query(collection(db, HISTORY_COLLECTION), orderBy("createdAt", "desc"));
+    const q = query(collection(db, `users/${userId}/${HISTORY_COLLECTION}`), orderBy("createdAt", "desc"));
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
@@ -158,9 +158,9 @@ export const getStudyHistory = async () => {
   }
 };
 
-export const saveSessionState = async (setId, setType, state) => {
+export const saveSessionState = async (userId, setId, setType, state) => {
   try {
-    const docRef = doc(db, SESSION_STATES_COLLECTION, `${setId}_${setType}`);
+    const docRef = doc(db, `users/${userId}/${SESSION_STATES_COLLECTION}`, `${setId}_${setType}`);
     await setDoc(docRef, { 
       setId, 
       setType, 
@@ -173,9 +173,9 @@ export const saveSessionState = async (setId, setType, state) => {
   }
 };
 
-export const getSessionState = async (setId, setType) => {
+export const getSessionState = async (userId, setId, setType) => {
   try {
-    const docRef = doc(db, SESSION_STATES_COLLECTION, `${setId}_${setType}`);
+    const docRef = doc(db, `users/${userId}/${SESSION_STATES_COLLECTION}`, `${setId}_${setType}`);
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       return docSnap.data();
@@ -188,18 +188,18 @@ export const getSessionState = async (setId, setType) => {
   }
 };
 
-export const clearSessionState = async (setId, setType) => {
+export const clearSessionState = async (userId, setId, setType) => {
   try {
-    await deleteDoc(doc(db, SESSION_STATES_COLLECTION, `${setId}_${setType}`));
+    await deleteDoc(doc(db, `users/${userId}/${SESSION_STATES_COLLECTION}`, `${setId}_${setType}`));
   } catch (error) {
 
     throw error;
   }
 };
 
-export const saveSettings = async (key, value) => {
+export const saveSettings = async (userId, key, value) => {
   try {
-    await setDoc(doc(db, SETTINGS_COLLECTION, key), { 
+    await setDoc(doc(db, `users/${userId}/${SETTINGS_COLLECTION}`, key), { 
       value, 
       updatedAt: serverTimestamp() 
     });
@@ -209,9 +209,9 @@ export const saveSettings = async (key, value) => {
   }
 };
 
-export const getSettings = async (key) => {
+export const getSettings = async (userId, key) => {
   try {
-    const docRef = doc(db, SETTINGS_COLLECTION, key);
+    const docRef = doc(db, `users/${userId}/${SETTINGS_COLLECTION}`, key);
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       return docSnap.data().value;
@@ -224,41 +224,41 @@ export const getSettings = async (key) => {
   }
 };
 
-export const getLastResetDate = async () => {
-  return getSettings('lastResetDate');
+export const getLastResetDate = async (userId) => {
+  return getSettings(userId, 'lastResetDate');
 };
 
-export const setLastResetDate = async (date) => {
-  await saveSettings('lastResetDate', date);
+export const setLastResetDate = async (userId, date) => {
+  await saveSettings(userId, 'lastResetDate', date);
 };
 
-export const getLastGoalResetDate = async () => {
-  return getSettings('lastGoalResetDate');
+export const getLastGoalResetDate = async (userId) => {
+  return getSettings(userId, 'lastGoalResetDate');
 };
 
-export const setLastGoalResetDate = async (date) => {
-  await saveSettings('lastGoalResetDate', date);
+export const setLastGoalResetDate = async (userId, date) => {
+  await saveSettings(userId, 'lastGoalResetDate', date);
 };
 
-export const getTodayStudyTime = async () => {
-  return getSettings('todayStudyTime') || 0;
+export const getTodayStudyTime = async (userId) => {
+  return getSettings(userId, 'todayStudyTime') || 0;
 };
 
-export const saveTodayStudyTime = async (time) => {
-  await saveSettings('todayStudyTime', time);
+export const saveTodayStudyTime = async (userId, time) => {
+  await saveSettings(userId, 'todayStudyTime', time);
 };
 
-export const saveOverallProgress = async (progress) => {
-  await saveSettings('overallProgress', progress);
+export const saveOverallProgress = async (userId, progress) => {
+  await saveSettings(userId, 'overallProgress', progress);
 };
 
-export const getOverallProgress = async () => {
-  return getSettings('overallProgress') || 0;
+export const getOverallProgress = async (userId) => {
+  return getSettings(userId, 'overallProgress') || 0;
 };
 
-export const getSetTitle = async (setId) => {
+export const getSetTitle = async (userId, setId) => {
   try {
-    const set = await getSetById(setId);
+    const set = await getSetById(userId, setId);
     return set.title;
   } catch (error) {
 
@@ -266,9 +266,9 @@ export const getSetTitle = async (setId) => {
   }
 };
 
-export const deleteStudyHistoryEntry = async (entryId) => {
+export const deleteStudyHistoryEntry = async (userId, entryId) => {
   try {
-    await deleteDoc(doc(db, HISTORY_COLLECTION, entryId));
+    await deleteDoc(doc(db, `users/${userId}/${HISTORY_COLLECTION}`, entryId));
   } catch (error) {
 
     throw error;

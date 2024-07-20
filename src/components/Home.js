@@ -18,8 +18,8 @@ import SettingsScreen from './SettingsScreen';
 import StudyHistoryScreen from '@/components/StudyHistoryScreen';
 import { useHashRouter } from '@/utils/hashRouter';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import AuthScreen from './AuthScreen'; // 新しく追加
-import SignOut from './SignOut';  // SignOutコンポーネントをインポート
+import AuthScreen from './AuthScreen';
+import SignOut from './SignOut';
 
 export default function Home() {
   const { hashPath, push, isReady } = useHashRouter();
@@ -44,8 +44,8 @@ export default function Home() {
 
   useEffect(() => {
     const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
       setLoading(false);
     });
 
@@ -98,7 +98,8 @@ export default function Home() {
 
   useEffect(() => {
     const loadStudyHistory = async () => {
-      const history = await getStudyHistory();
+      if (!user) return;
+      const history = await getStudyHistory(user.uid);
       setStudyHistory(history);
       
       // 総学習時間の計算
@@ -114,11 +115,14 @@ export default function Home() {
         .reduce((acc, entry) => acc + (entry.cardsStudied || 0), 0);
       setTodayStudiedCards(todayCards);
     };
-    loadStudyHistory();
-  }, []);
+    if (user) {
+      loadStudyHistory();
+    }
+  }, [user]);
 
   const handleDeleteStudyEntry = async (entryId) => {
-    await deleteStudyHistoryEntry(entryId);
+    if (!user) return;
+    await deleteStudyHistoryEntry(user.uid, entryId);
     setStudyHistory(prevHistory => prevHistory.filter(entry => entry.id !== entryId));
   };
 
@@ -131,13 +135,14 @@ export default function Home() {
   };
   
   const handleStartLearning = async (setId, setType, savedSessionState = null) => {
+    if (!user) return;
     if (savedSessionState) {
       // 保存されたセッション状態がある場合、直接クイズを開始
       setQuizType(setType);
       setQuizSetId(setId);
       setSessionState(savedSessionState);
       try {
-        const set = await getSetById(setId);
+        const set = await getSetById(user.uid, setId);
         setQuizSetTitle(set.title);
         navigateTo('quiz');
       } catch (error) {
@@ -150,6 +155,7 @@ export default function Home() {
   };
 
   const handleStartQuiz = async (type, setId) => {
+    if (!user) return;
     try {
   
       if (!setId || typeof setId !== 'string' || setId.trim() === '') {
@@ -161,10 +167,10 @@ export default function Home() {
       setQuizSetId(setId);
   
       // セッション状態を取得
-      const sessionState = await getSessionState(setId, type);
+      const sessionState = await getSessionState(user.uid, setId, type);
       setSessionState(sessionState);
   
-      const set = await getSetById(setId);
+      const set = await getSetById(user.uid, setId);
       if (!set) {
         throw new Error('Set not found');
       }
@@ -249,6 +255,7 @@ export default function Home() {
                   // 必要に応じて追加の処理を行う
                 });
               }}
+              userId={user.uid}
             />
           </>
         );
@@ -258,6 +265,7 @@ export default function Home() {
             onBack={() => navigateTo('home')}
             onSelectType={handleSelectType}
             onEditType={handleEditType}
+            userId={user.uid}
           />
         );
       case 'quizTypeSelection':
@@ -265,6 +273,7 @@ export default function Home() {
           <QuizTypeSelectionScreen 
             onBack={() => navigateTo('home')}
             onStartQuiz={handleStartQuiz}
+            userId={user.uid}
           />
         );
       case 'flashcardCreation':
@@ -272,6 +281,7 @@ export default function Home() {
           <FlashcardCreationScreen
             onBack={() => navigateTo('createEditSet')}
             onSave={handleSave}
+            userId={user.uid}
           />
         );
       case 'flashcardEdit':
@@ -279,6 +289,7 @@ export default function Home() {
           <FlashcardEditScreen
             onBack={() => navigateTo('createEditSet')}
             onSave={handleSave}
+            userId={user.uid}
           />
         );
       case 'qaCreation':
@@ -286,6 +297,7 @@ export default function Home() {
           <QACreationScreen
             onBack={() => navigateTo('createEditSet')}
             onSave={handleSave}
+            userId={user.uid}
           />
         );
       case 'qaEdit':
@@ -293,6 +305,7 @@ export default function Home() {
           <QAEditScreen
             onBack={() => navigateTo('createEditSet')}
             onSave={handleSave}
+            userId={user.uid}
           />
         );
       case 'multiple-choiceCreation':
@@ -300,6 +313,7 @@ export default function Home() {
           <MultipleChoiceCreationScreen
             onBack={() => navigateTo('createEditSet')}
             onSave={handleSave}
+            userId={user.uid}
           />
         );
       case 'multiple-choiceEdit':
@@ -307,6 +321,7 @@ export default function Home() {
           <MultipleChoiceEditScreen
             onBack={() => navigateTo('createEditSet')}
             onSave={handleSave}
+            userId={user.uid}
           />
         );
       case 'classificationCreation':
@@ -314,6 +329,7 @@ export default function Home() {
           <ClassificationCreationScreen
             onBack={() => navigateTo('createEditSet')}
             onSave={handleSave}
+            userId={user.uid}
           />
         );
       case 'classificationEdit':
@@ -321,6 +337,7 @@ export default function Home() {
           <ClassificationEditScreen
             onBack={() => navigateTo('createEditSet')}
             onSave={handleSave}
+            userId={user.uid}
           />
         );
       case 'quiz':
@@ -351,6 +368,7 @@ export default function Home() {
               onFinish={(results, studyDuration, cardsStudied) => handleFinishQuiz(results, studyDuration, cardsStudied)}
               sessionState={sessionState}
               setTodayStudyTime={setTodayStudyTime}
+              userId={user.uid}
             />
           </React.Suspense>
         );

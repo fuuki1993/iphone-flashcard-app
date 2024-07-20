@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowRight, RotateCw, Shuffle } from 'lucide-react';
 import { getSetById, saveStudyHistory, getSets, saveSessionState, getSessionState } from '@/utils/firestore';
 import styles from '@/app/FlashcardQuiz.module.css';
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTodayStudyTime }) => {
   const [cards, setCards] = useState([]);
@@ -14,6 +15,15 @@ const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState,
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const startTimeRef = useRef(new Date());
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const calculateScore = useCallback(() => {
     const totalCards = shuffledCards.length;
@@ -32,14 +42,15 @@ const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState,
 
   useEffect(() => {
     const loadCards = async () => {
+      if (!user) return;
       try {
         setIsLoading(true);
         let allCards = [];
         if (setId === null) {
-          const allSets = await getSets('flashcard');
+          const allSets = await getSets(user.uid, 'flashcard');
           allCards = allSets.flatMap(set => set.cards);
         } else {
-          const set = await getSetById(setId);
+          const set = await getSetById(user.uid, setId);
           allCards = set.cards;
         }
         if (Array.isArray(allCards)) {
@@ -62,13 +73,15 @@ const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState,
         setIsLoading(false);
       }
     };
-    loadCards();
-  }, [setId, sessionState, shuffleArray]);
+    if (user) {
+      loadCards();
+    }
+  }, [setId, sessionState, shuffleArray, user]);
 
   useEffect(() => {
     const saveState = async () => {
-      if (setId) {
-        await saveSessionState(setId, 'flashcard', {
+      if (setId && user) {
+        await saveSessionState(user.uid, setId, 'flashcard', {
           shuffledCards,
           currentCardIndex,
           completed,
@@ -76,7 +89,7 @@ const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState,
       }
     };
     saveState();
-  }, [setId, shuffledCards, currentCardIndex, completed]);
+  }, [setId, shuffledCards, currentCardIndex, completed, user]);
 
   const handleShuffle = useCallback(() => {
     setShuffledCards(prevCards => shuffleArray([...prevCards]));
@@ -113,14 +126,15 @@ const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState,
   }, [currentCardIndex, handleNext]);
 
   const handleFinish = useCallback(async () => {
+    if (!user) return;
     const score = calculateScore();
     const endTime = new Date();
     const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
     const cardsStudied = shuffledCards.length;
-    await saveStudyHistory(setId, title, 'flashcard', score, endTime, studyDuration, cardsStudied);
+    await saveStudyHistory(user.uid, setId, title, 'flashcard', score, endTime, studyDuration, cardsStudied);
     setTodayStudyTime(prevTime => prevTime + studyDuration);
     onFinish(score, studyDuration, cardsStudied);
-  }, [setId, title, calculateScore, onFinish, setTodayStudyTime, shuffledCards.length]);
+  }, [setId, title, calculateScore, onFinish, setTodayStudyTime, shuffledCards.length, user]);
 
   const currentCard = useMemo(() => shuffledCards[currentCardIndex], [shuffledCards, currentCardIndex]);
 

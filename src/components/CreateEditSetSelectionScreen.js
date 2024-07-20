@@ -1,17 +1,32 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, BookOpen, List, CheckSquare, Layers, Plus, Edit } from 'lucide-react';
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 const CreateEditSetSelectionScreen = ({ onBack, onSelectType, onEditType }) => {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const setTypes = [
     { id: 'flashcard', title: 'フラッシュカード', icon: BookOpen, description: '表と裏のある単語カードスタイル' },
     { id: 'qa', title: '一問一答', icon: List, description: '質問と回答のペアを作成' },
     { id: 'multiple-choice', title: '多肢選択', icon: CheckSquare, description: '複数の選択肢から正解を選ぶ' },
     { id: 'classification', title: '分類', icon: Layers, description: '項目をカテゴリーに分類' },
   ];
+
+  if (!user) {
+    return <div>ログインしてください。</div>;
+  }
 
   return (
     <div className="p-4 w-full">

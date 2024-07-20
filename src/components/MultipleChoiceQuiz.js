@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Check, X, Shuffle } from 'lucide-react';
 import { getSetById, saveStudyHistory, getSets, saveSessionState, getSessionState } from '@/utils/firestore';
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTodayStudyTime }) => {
   const [questions, setQuestions] = useState([]);
@@ -15,6 +16,7 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
   const [error, setError] = useState(null);
   const [isLastQuestion, setIsLastQuestion] = useState(false);
   const startTimeRef = useRef(new Date());
+  const [user, setUser] = useState(null);
 
   const calculateScore = useCallback(() => {
     const totalQuestions = shuffledQuestions.length;
@@ -38,53 +40,40 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
     };
   }, [shuffleArray]);
 
-  const loadQuestions = async () => {
+  const loadQuestions = useCallback(async () => {
+    if (!user) return;
     try {
       setIsLoading(true);
       let allQuestions = [];
       if (setId === null) {
-        const allSets = await getSets('multiple-choice');
-        console.log('All sets:', allSets);
+        const allSets = await getSets(user.uid, 'multiple-choice');
         if (Array.isArray(allSets)) {
-          allQuestions = allSets.flatMap(set => {
-            console.log('Set:', set);
-            return Array.isArray(set.questions) ? set.questions : [];
-          });
+          allQuestions = allSets.flatMap(set => Array.isArray(set.questions) ? set.questions : []);
         } else {
           throw new Error('Invalid data structure: allSets is not an array');
         }
       } else {
-        console.log('SetId:', setId); // デバッグ用ログ
-        const set = await getSetById(setId);
-        console.log('Set:', set); // デバッグ用ログ
+        const set = await getSetById(user.uid, setId);
         if (set && Array.isArray(set.questions)) {
           allQuestions = set.questions;
         } else {
           throw new Error(`Invalid set data for ID ${setId}`);
         }
       }
-      console.log('All questions:', allQuestions); // デバッグ用ログ
       if (allQuestions.length === 0) {
         throw new Error('No questions found');
       }
       if (Array.isArray(allQuestions)) {
         setQuestions(allQuestions);
         if (sessionState) {
-          console.log('Session state:', sessionState);
           setShuffledQuestions(sessionState.shuffledQuestions);
           setCurrentQuestionIndex(sessionState.currentQuestionIndex);
           setResults(sessionState.results);
         } else {
-          const shuffledWithChoices = allQuestions.map(question => {
-            if (question && Array.isArray(question.choices)) {
-              return shuffleQuestionAndChoices(question);
-            } else {
-              console.error('Invalid question structure:', question);
-              return null;
-            }
-          }).filter(q => q !== null);
+          const shuffledWithChoices = allQuestions.map(question => 
+            question && Array.isArray(question.choices) ? shuffleQuestionAndChoices(question) : null
+          ).filter(q => q !== null);
           const shuffled = shuffleArray(shuffledWithChoices);
-          console.log('Shuffled questions:', shuffled);
           setShuffledQuestions(shuffled);
           setResults(new Array(shuffled.length).fill(null));
         }
@@ -97,16 +86,26 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user, setId, sessionState, shuffleArray, shuffleQuestionAndChoices]);
 
   useEffect(() => {
-    loadQuestions();
-  }, [setId, sessionState, shuffleArray, shuffleQuestionAndChoices]);
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      loadQuestions();
+    }
+  }, [user, loadQuestions]);
 
   useEffect(() => {
     const saveState = async () => {
-      if (setId) {
-        await saveSessionState(setId, 'multiple-choice', {
+      if (setId && user) {
+        await saveSessionState(user.uid, setId, 'multiple-choice', {
           shuffledQuestions,
           currentQuestionIndex,
           results,
@@ -114,7 +113,7 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
       }
     };
     saveState();
-  }, [setId, shuffledQuestions, currentQuestionIndex, results]);
+  }, [setId, shuffledQuestions, currentQuestionIndex, results, user]);
 
   const handleShuffle = useCallback(() => {
     const shuffledWithChoices = questions.map(shuffleQuestionAndChoices);
@@ -136,14 +135,15 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
   }, []);
 
   const handleFinish = useCallback(async () => {
+    if (!user) return;
     const score = calculateScore();
     const endTime = new Date();
     const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
     const cardsStudied = shuffledQuestions.length;
-    await saveStudyHistory(setId, title, 'multiple-choice', score, endTime, studyDuration, cardsStudied);
+    await saveStudyHistory(user.uid, setId, title, 'multiple-choice', score, endTime, studyDuration, cardsStudied);
     setTodayStudyTime(prevTime => prevTime + studyDuration);
     onFinish(score, studyDuration, cardsStudied);
-  }, [setId, title, calculateScore, onFinish, setTodayStudyTime, shuffledQuestions.length]);
+  }, [user, setId, title, calculateScore, onFinish, setTodayStudyTime, shuffledQuestions.length]);
   
   const handleSubmit = useCallback(() => {
     if (selectedAnswers.length > 0 && currentQuestionIndex < shuffledQuestions.length) {

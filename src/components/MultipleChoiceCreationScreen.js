@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,7 @@ import { saveSet } from '@/utils/firestore';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { compressImage } from '@/utils/imageCompression';
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { getAuth } from "firebase/auth";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 const MultipleChoiceCreationScreen = ({ onBack, onSave }) => {
   const [setTitle, setSetTitle] = useState('');
@@ -22,6 +22,15 @@ const MultipleChoiceCreationScreen = ({ onBack, onSave }) => {
   const [errors, setErrors] = useState({});
   const [previewIndex, setPreviewIndex] = useState(null);
   const inputRef = useAutoScroll();
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const addQuestion = useCallback(() => {
     setQuestions(prevQuestions => [...prevQuestions, { 
@@ -111,24 +120,24 @@ const MultipleChoiceCreationScreen = ({ onBack, onSave }) => {
   }, [setTitle, questions]);
 
   const handleSave = useCallback(async () => {
-    if (validateForm()) {
+    if (validateForm() && user) {
       try {
         const newSet = { 
           title: setTitle, 
           questions: questions.map(q => ({
             ...q,
-            image: q.image // この時点で image は既に Firebase Storage の URL
+            image: q.image
           })),
           type: 'multiple-choice'
         };
-        const id = await saveSet(newSet);
+        const id = await saveSet(newSet, user.uid);
         onSave({ ...newSet, id });
       } catch (error) {
         console.error("Error saving set:", error);
         setErrors(prevErrors => ({ ...prevErrors, save: "セットの保存中にエラーが発生しました。" }));
       }
     }
-  }, [setTitle, questions, validateForm, onSave]);
+  }, [setTitle, questions, validateForm, onSave, user]);
 
   const togglePreview = useCallback((index) => {
     setPreviewIndex(prevIndex => prevIndex === index ? null : index);

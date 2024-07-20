@@ -84,7 +84,7 @@ const FlashcardCreationScreen = ({ onBack, onSave }) => {
   }, [setTitle, cards]);
 
   const handleSave = useCallback(async () => {
-    if (validateForm()) {
+    if (validateForm() && user) {
       try {
         const newSet = { 
           title: setTitle, 
@@ -112,7 +112,7 @@ const FlashcardCreationScreen = ({ onBack, onSave }) => {
           })),
           type: 'flashcard'
         };
-        const id = await saveSet(newSet);
+        const id = await saveSet(newSet, user.uid);
         onSave({ ...newSet, id });
       } catch (error) {
         console.error("Error saving set:", error);

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,7 @@ import { saveSet } from '@/utils/firestore';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { compressImage } from '@/utils/imageCompression';
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { getAuth } from "firebase/auth";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 const QACreationScreen = ({ onBack, onSave }) => {
   const [setTitle, setSetTitle] = useState('');
@@ -19,6 +19,15 @@ const QACreationScreen = ({ onBack, onSave }) => {
   const [errors, setErrors] = useState({});
   const [previewIndex, setPreviewIndex] = useState(null);
   const inputRef = useAutoScroll();
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const addQAItem = useCallback(() => {
     setQAItems(prevItems => [...prevItems, { question: '', answer: '', image: null }]);
@@ -75,21 +84,21 @@ const QACreationScreen = ({ onBack, onSave }) => {
   }, [setTitle, qaItems]);
 
   const handleSave = useCallback(async () => {
-    if (validateForm()) {
+    if (validateForm() && user) {
       try {
         const newSet = { 
           title: setTitle, 
           qaItems,
           type: 'qa'
         };
-        const id = await saveSet(newSet);
+        const id = await saveSet(newSet, user.uid);
         onSave({ ...newSet, id });
       } catch (error) {
         console.error("Error saving set:", error);
         setErrors(prevErrors => ({ ...prevErrors, save: "セットの保存中にエラーが発生しました。" }));
       }
     }
-  }, [setTitle, qaItems, validateForm, onSave]);
+  }, [setTitle, qaItems, validateForm, onSave, user]);
 
   const togglePreview = useCallback((index) => {
     setPreviewIndex(prevIndex => prevIndex === index ? null : index);

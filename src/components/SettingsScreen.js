@@ -4,21 +4,38 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { ArrowLeft, User, Mail, Lock } from 'lucide-react';
 import { auth, updateUserProfile, updateUserEmail, updateUserPassword } from '@/utils/auth';
+import { getUserSettings, updateUserSettings } from '@/utils/firestore';
 
-const SettingsScreen = ({ onBack, dailyGoal, setDailyGoal, darkMode, setDarkMode }) => {
-  const [localDailyGoal, setLocalDailyGoal] = useState(dailyGoal);
+const SettingsScreen = ({ onBack, userId }) => {
+  const [localDailyGoal, setLocalDailyGoal] = useState(60);
+  const [darkMode, setDarkMode] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
+    const loadUserSettings = async () => {
+      if (userId) {
+        try {
+          const settings = await getUserSettings(userId);
+          setLocalDailyGoal(settings.dailyGoal || 60);
+          setDarkMode(settings.darkMode || false);
+        } catch (error) {
+          console.error('Failed to load user settings:', error);
+          setError('設定の読み込みに失敗しました。');
+        }
+      }
+    };
+
+    loadUserSettings();
+
     const user = auth.currentUser;
     if (user) {
       setDisplayName(user.displayName || '');
       setEmail(user.email || '');
     }
-  }, []);
+  }, [userId]);
 
   const handleSave = async () => {
     setError('');
@@ -35,10 +52,16 @@ const SettingsScreen = ({ onBack, dailyGoal, setDailyGoal, darkMode, setDarkMode
           await updateUserPassword(newPassword);
         }
       }
-      setDailyGoal(localDailyGoal);
+
+      await updateUserSettings(userId, {
+        dailyGoal: localDailyGoal,
+        darkMode: darkMode
+      });
+
       onBack();
     } catch (error) {
-      setError(error.message);
+      console.error('Failed to save settings:', error);
+      setError('設定の保存に失敗しました。');
     }
   };
 

@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Clock, BookOpen, TrendingUp, ArrowUpRight, ArrowDownRight, ArrowRight } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts';
+import { getUserStatistics } from '@/utils/firestore';
 
 const formatTotalStudyTime = (totalSeconds) => {
   if (isNaN(totalSeconds) || totalSeconds === 0) return '0時間0分';
@@ -11,19 +12,36 @@ const formatTotalStudyTime = (totalSeconds) => {
   return `${hours}時間${minutes}分`;
 };
 
-const StatisticsScreen = ({ 
-  onBack, 
-  totalStudyTime, 
-  todayStudiedCards, 
-  weeklyStudyTime,
-  totalStudyTimeComparison,
-  todayStudiedCardsComparison
-}) => {
-  const formattedTotalStudyTime = formatTotalStudyTime(totalStudyTime);
+const StatisticsScreen = ({ onBack, userId }) => {
+  const [statistics, setStatistics] = useState({
+    totalStudyTime: 0,
+    todayStudiedCards: 0,
+    weeklyStudyTime: [0, 0, 0, 0, 0, 0, 0],
+    totalStudyTimeComparison: 0,
+    todayStudiedCardsComparison: 0
+  });
+
+  useEffect(() => {
+    const fetchStatistics = async () => {
+      if (userId) {
+        try {
+          const userStats = await getUserStatistics(userId);
+          setStatistics(userStats);
+        } catch (error) {
+          console.error('Failed to fetch user statistics:', error);
+          // エラー処理を追加（例：エラーメッセージを表示）
+        }
+      }
+    };
+
+    fetchStatistics();
+  }, [userId]);
+
+  const formattedTotalStudyTime = formatTotalStudyTime(statistics.totalStudyTime);
 
   const transformedWeeklyData = ['日', '月', '火', '水', '木', '金', '土'].map((day, index) => ({
     day,
-    time: Math.floor(weeklyStudyTime[index] / 60) // 秒から分に変換
+    time: Math.floor(statistics.weeklyStudyTime[index] / 60) // 秒から分に変換
   }));
 
   const renderComparison = (value) => {
@@ -77,7 +95,7 @@ const StatisticsScreen = ({
           </CardHeader>
           <CardContent className="pt-2">
             <p className="text-lg font-bold text-gray-800">{formattedTotalStudyTime}</p>
-            {renderComparison(totalStudyTimeComparison)}
+            {renderComparison(statistics.totalStudyTimeComparison)}
           </CardContent>
         </Card>
 
@@ -89,8 +107,8 @@ const StatisticsScreen = ({
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-2">
-            <p className="text-lg font-bold text-gray-800">{todayStudiedCards}枚</p>
-            {renderComparison(todayStudiedCardsComparison)}
+            <p className="text-lg font-bold text-gray-800">{statistics.todayStudiedCards}枚</p>
+            {renderComparison(statistics.todayStudiedCardsComparison)}
           </CardContent>
         </Card>
       </div>

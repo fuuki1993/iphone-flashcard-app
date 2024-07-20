@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, BookOpen, List, CheckSquare, Layers, Play } from 'lucide-react';
 import { getSets, clearSessionState } from '@/utils/firestore';
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
   const [quizSets, setQuizSets] = useState({
@@ -22,14 +23,25 @@ const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
     classification: ''
   });
 
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
   useEffect(() => {
     const loadSets = async () => {
+      if (!user) return;
       try {
         const [flashcardSets, qaSets, multipleChoiceSets, classificationSets] = await Promise.all([
-          getSets('flashcard'),
-          getSets('qa'),
-          getSets('multiple-choice'),
-          getSets('classification')
+          getSets(user.uid, 'flashcard'),
+          getSets(user.uid, 'qa'),
+          getSets(user.uid, 'multiple-choice'),
+          getSets(user.uid, 'classification')
         ]);
 
         setQuizSets({
@@ -43,8 +55,10 @@ const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
       }
     };
 
-    loadSets();
-  }, []);
+    if (user) {
+      loadSets();
+    }
+  }, [user]);
 
   const quizTypes = [
     { id: 'flashcard', title: 'フラッシュカード', icon: BookOpen, description: '表と裏のある単語カードスタイル' },
@@ -58,12 +72,17 @@ const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
   }, []);
 
   const handleStartQuiz = useCallback(async (quizType) => {
+    if (!user) return;
     const selectedSetId = selectedSets[quizType] || quizSets[quizType]?.[0]?.id;
     if (selectedSetId) {
-      await clearSessionState(selectedSetId, quizType);
+      await clearSessionState(user.uid, selectedSetId, quizType);
       onStartQuiz(quizType, selectedSetId.toString());
     }
-  }, [selectedSets, quizSets, onStartQuiz]);
+  }, [selectedSets, quizSets, onStartQuiz, user]);
+
+  if (!user) {
+    return <div>ログインしてください。</div>;
+  }
 
   return (
     <div className="p-4 w-full">

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, Check, X, Shuffle } from 'lucide-react';
 import { getSetById, saveStudyHistory, getSets, saveSessionState } from '@/utils/firestore';
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTodayStudyTime }) => {
   const [questions, setQuestions] = useState([]);
@@ -16,6 +17,7 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTod
   const [isLastQuestion, setIsLastQuestion] = useState(false);
   const [shuffledQuestions, setShuffledQuestions] = useState([]);
   const startTimeRef = useRef(new Date());
+  const [user, setUser] = useState(null);
 
   const shuffleArray = useCallback((array) => {
     const shuffled = [...array];
@@ -33,13 +35,21 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTod
   }, [shuffledQuestions.length, results]);
 
   useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
     const loadQuestions = async () => {
       try {
-        if (!setId) {
-          throw new Error('setId is not provided');
+        if (!setId || !user) {
+          throw new Error('setId is not provided or user is not authenticated');
         }
         console.log('Loading questions for setId:', setId);
-        const set = await getSetById(setId);
+        const set = await getSetById(user.uid, setId);
         console.log('Loaded set:', set); // デバッグ用ログ
         if (!set || !Array.isArray(set.qaItems)) {
           throw new Error('Invalid set data');
@@ -54,13 +64,15 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTod
       }
     };
 
-    loadQuestions();
-  }, [setId]);
+    if (user) {
+      loadQuestions();
+    }
+  }, [setId, user]);
 
   useEffect(() => {
     const saveState = async () => {
-      if (setId) {
-        await saveSessionState(setId, 'qa', {
+      if (setId && user) {
+        await saveSessionState(user.uid, setId, 'qa', {
           shuffledQuestions,
           currentQuestionIndex,
           results,
@@ -68,7 +80,7 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTod
       }
     };
     saveState();
-  }, [setId, shuffledQuestions, currentQuestionIndex, results]);
+  }, [setId, shuffledQuestions, currentQuestionIndex, results, user]);
 
   const handleShuffle = useCallback(() => {
     setShuffledQuestions(shuffleArray([...questions]));
@@ -98,15 +110,17 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTod
   }, [userAnswer, shuffledQuestions, currentQuestionIndex, results]);
 
   const handleFinish = useCallback(async () => {
-    const score = calculateScore();
-    const endTime = new Date();
-    const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
-    const cardsStudied = shuffledQuestions.length;
-    await saveStudyHistory(setId, title, 'qa', score, endTime, studyDuration, cardsStudied);
-    setTodayStudyTime(prevTime => prevTime + studyDuration);
-    onFinish(score, studyDuration, cardsStudied);
-  }, [setId, title, calculateScore, onFinish, setTodayStudyTime, shuffledQuestions.length]);
-  
+    if (user) {
+      const score = calculateScore();
+      const endTime = new Date();
+      const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
+      const cardsStudied = shuffledQuestions.length;
+      await saveStudyHistory(user.uid, setId, title, 'qa', score, endTime, studyDuration, cardsStudied);
+      setTodayStudyTime(prevTime => prevTime + studyDuration);
+      onFinish(score, studyDuration, cardsStudied);
+    }
+  }, [setId, title, calculateScore, onFinish, setTodayStudyTime, shuffledQuestions.length, user]);
+
   if (isLoading) {
     return <div>読み込み中...</div>;
   }

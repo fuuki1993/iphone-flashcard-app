@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, Plus, Save, Trash2, Image, Eye, EyeOff } from 'lucide-react';
 import { getSets, getSetById, updateSet, deleteSet } from '@/utils/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
-import { getAuth } from "firebase/auth";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
   const [sets, setSets] = useState([]);
@@ -19,29 +19,42 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
   const [errors, setErrors] = useState({});
   const [previewIndex, setPreviewIndex] = useState(null);
   const [originalQuestions, setOriginalQuestions] = useState([]);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const loadSets = async () => {
-      try {
-        const loadedSets = await getSets('multiple-choice');
-        setSets(loadedSets);
-      } catch (error) {
-        console.error("Error loading sets:", error);
+      if (user) {
+        try {
+          const loadedSets = await getSets(user.uid, 'multiple-choice');
+          setSets(loadedSets);
+        } catch (error) {
+          console.error("Error loading sets:", error);
+        }
       }
     };
     loadSets();
-  }, []);
+  }, [user]);
 
   const handleSetChange = async (value) => {
     setSelectedSetId(value);
-    try {
-      const set = await getSetById(value); // parseInt を削除
-      setSetTitle(set.title);
-      setQuestions(set.questions);
-      setOriginalQuestions(set.questions);
-    } catch (error) {
-      console.error("Error loading set:", error);
-      setErrors(prevErrors => ({ ...prevErrors, load: "セットの読み込み中にエラーが発生しました。" }));
+    if (user) {
+      try {
+        const set = await getSetById(user.uid, value);
+        setSetTitle(set.title);
+        setQuestions(set.questions);
+        setOriginalQuestions(set.questions);
+      } catch (error) {
+        console.error("Error loading set:", error);
+        setErrors(prevErrors => ({ ...prevErrors, load: "セットの読み込み中にエラーが発生しました。" }));
+      }
     }
   };
 
@@ -92,18 +105,11 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
 
   const handleImageUpload = useCallback(async (index, event) => {
     const file = event.target.files[0];
-    if (file) {
+    if (file && user) {
       try {
         const compressedImage = await compressImage(file);
-        const auth = getAuth();
-        const user = auth.currentUser;
-        
-        if (!user) {
-          throw new Error("User not authenticated");
-        }
-
         const storage = getStorage();
-        const storageRef = ref(storage, `multiple_choice/${user.uid}/${Date.now()}_${file.name}`);
+        const storageRef = ref(storage, `multiple_choice/${user.uid}/${selectedSetId}/question_${index}`);
         
         const snapshot = await uploadBytes(storageRef, compressedImage);
         const downloadURL = await getDownloadURL(snapshot.ref);
@@ -114,7 +120,7 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
         setErrors(prevErrors => ({ ...prevErrors, image: "画像のアップロード中にエラーが発生しました。" }));
       }
     }
-  }, [updateQuestion]);
+  }, [selectedSetId, updateQuestion, user]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -136,34 +142,32 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-// 新しい関数を追加
-const deleteUnusedImages = useCallback(async (originalQuestions, updatedQuestions) => {
-  const storage = getStorage();
-  const auth = getAuth();
-  const user = auth.currentUser;
+  const deleteUnusedImages = useCallback(async (originalQuestions, updatedQuestions) => {
+    const storage = getStorage();
+    const auth = getAuth();
+    const user = auth.currentUser;
 
-  if (!user) {
-    throw new Error("User not authenticated");
-  }
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
 
-  const originalImageUrls = originalQuestions.map(q => q.image).filter(Boolean);
-  const updatedImageUrls = updatedQuestions.map(q => q.image).filter(Boolean);
+    const originalImageUrls = originalQuestions.map(q => q.image).filter(Boolean);
+    const updatedImageUrls = updatedQuestions.map(q => q.image).filter(Boolean);
 
-  for (const imageUrl of originalImageUrls) {
-    if (!updatedImageUrls.includes(imageUrl)) {
-      try {
-        const imageRef = ref(storage, imageUrl);
-        await deleteObject(imageRef);
-      } catch (error) {
-        console.error("Error deleting image:", error);
+    for (const imageUrl of originalImageUrls) {
+      if (!updatedImageUrls.includes(imageUrl)) {
+        try {
+          const imageRef = ref(storage, imageUrl);
+          await deleteObject(imageRef);
+        } catch (error) {
+          console.error("Error deleting image:", error);
+        }
       }
     }
-  }
-}, []);
+  }, []);
 
-  // handleSave 関数を修正
   const handleSave = useCallback(async () => {
-    if (validateForm()) {
+    if (validateForm() && user) {
       try {
         const updatedSet = { 
           id: selectedSetId,
@@ -172,26 +176,22 @@ const deleteUnusedImages = useCallback(async (originalQuestions, updatedQuestion
           type: 'multiple-choice'
         };
 
-        // 未使用の画像を削除
         await deleteUnusedImages(originalQuestions, updatedSet.questions);
 
-        await updateSet(updatedSet);
+        await updateSet(user.uid, updatedSet);
         onSave(updatedSet);
 
-        // 保存後に originalQuestions を更新
         setOriginalQuestions(updatedSet.questions);
       } catch (error) {
         console.error("Error updating set:", error);
         setErrors(prevErrors => ({ ...prevErrors, save: "セットの更新中にエラーが発生しました。" }));
       }
     }
-  }, [selectedSetId, setTitle, questions, validateForm, onSave, originalQuestions, deleteUnusedImages]);
+  }, [selectedSetId, setTitle, questions, validateForm, onSave, originalQuestions, deleteUnusedImages, user]);
 
-  // handleDelete 関数を修正
   const handleDelete = useCallback(async () => {
-    if (window.confirm('このセットを削除してもよろしいですか？この操作は取り消せません。')) {
+    if (window.confirm('このセットを削除してもよろしいですか？この操作は取り消せません。') && user) {
       try {
-        // Delete all images associated with this set
         const storage = getStorage();
         for (const question of questions) {
           if (question.image) {
@@ -199,14 +199,14 @@ const deleteUnusedImages = useCallback(async (originalQuestions, updatedQuestion
             await deleteObject(imageRef);
           }
         }
-        await deleteSet(selectedSetId);
+        await deleteSet(user.uid, selectedSetId);
         onBack();
       } catch (error) {
         console.error("Error deleting set:", error);
         setErrors(prevErrors => ({ ...prevErrors, delete: "セットの削除中にエラーが発生しました。" }));
       }
     }
-  }, [selectedSetId, questions, onBack]);
+  }, [selectedSetId, questions, onBack, user]);
 
   return (
     <div className="mobile-friendly-form max-w-full overflow-x-hidden">

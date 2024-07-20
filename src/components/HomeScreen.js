@@ -25,7 +25,8 @@ const HomeScreen = ({
   todayStudyTime, 
   setTodayStudyTime,
   onOpenSettings,
-  onSignOut
+  onSignOut,
+  userId
 }) => {
   const [isGoalAchieved, setIsGoalAchieved] = useState(false);
   const [scheduledEvents, setScheduledEvents] = useState([]);
@@ -34,7 +35,6 @@ const HomeScreen = ({
   const [recentActivities, setRecentActivities] = useState([]);
   const [showStatistics, setShowStatistics] = useState(false);
   const [weeklyStudyTime, setWeeklyStudyTime] = useState(Array(7).fill(0));
-  const [todayStudiedCards, setTodayStudiedCards] = useState(0);
 
   const convertSecondsToMinutes = useCallback((seconds) => {
     return Math.floor(seconds / 60);
@@ -46,13 +46,13 @@ const HomeScreen = ({
 
   const loadData = useCallback(async () => {
     try {
-      const allSets = await getAllSets();
+      const allSets = await getAllSets(userId);
       // ここでoverallProgressを計算し、setOverallProgressを呼び出す
       // studyHistoryを使用してstreakを計算し、setStreakを呼び出す
     } catch (error) {
       console.error("Error loading data:", error);
     }
-  }, [setOverallProgress, setStreak]);
+  }, [userId, setOverallProgress, setStreak]);
 
   useEffect(() => {
     loadData();
@@ -205,10 +205,10 @@ const HomeScreen = ({
 
   const loadRecentActivities = useCallback(async () => {
     try {
-      const allSets = await getAllSets();
+      const allSets = await getAllSets(userId);
       const incompleteSessions = await Promise.all(
         allSets.map(async (set) => {
-          const sessionState = await getSessionState(set.id, set.type);
+          const sessionState = await getSessionState(userId, set.id, set.type);
           if (sessionState && sessionState.state) {
             return { 
               ...set, 
@@ -230,7 +230,7 @@ const HomeScreen = ({
     } catch (error) {
       console.error("Error loading recent activities:", error);
     }
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     loadRecentActivities();
@@ -280,30 +280,12 @@ const HomeScreen = ({
     setShowStatistics(false);
   }, []);
 
-  const calculateTodayStudiedCards = useCallback(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const todayCards = studyHistory
-      .filter(entry => {
-        const entryDate = new Date(entry.date);
-        return entryDate >= today;
-      })
-      .reduce((total, entry) => total + (entry.cardsStudied || 0), 0);
-
-    setTodayStudiedCards(todayCards);
-  }, [studyHistory]);
-
-  useEffect(() => {
-    calculateTodayStudiedCards();
-  }, [calculateTodayStudiedCards]);
-
   if (showStatistics) {
     return (
       <StatisticsScreen
         onBack={handleBackFromStatistics}
         totalStudyTime={studyHistory.reduce((total, entry) => total + entry.studyDuration, 0)}
-        todayStudiedCards={todayStudiedCards}
+        todayStudiedCards={todayStudyTime} // この値は適切に計算されていることを確認してください
         weeklyStudyTime={weeklyStudyTime}
       />
     );

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,7 @@ import { saveSet } from '@/utils/firestore';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { compressImage } from '@/utils/imageCompression';
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { getAuth } from "firebase/auth";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 const ClassificationCreationScreen = ({ onBack, onSave }) => {
   const [setTitle, setSetTitle] = useState('');
@@ -20,6 +20,15 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
   const [previewMode, setPreviewMode] = useState(false);
   const [categoryImages, setCategoryImages] = useState(() => Array(10).fill(null));
   const inputRef = useAutoScroll();
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const addCategory = () => {
     if (categories.length < 10) {
@@ -113,7 +122,7 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
   };
 
   const handleSave = async () => {
-    if (validateForm()) {
+    if (validateForm() && user) {
       try {
         const newSet = { 
           title: setTitle, 
@@ -123,7 +132,7 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
           })),
           type: 'classification'
         };
-        const id = await saveSet(newSet);
+        const id = await saveSet(newSet, user.uid);
         onSave({ ...newSet, id });
       } catch (error) {
         console.error("Error saving set:", error);
