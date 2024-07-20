@@ -3,10 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, Check, X, Shuffle } from 'lucide-react';
-import { getSetById, saveStudyHistory, getSets, saveSessionState } from '@/utils/firestore';
+import { getSetById, saveStudyHistory, getSets, saveSessionState, updateSessionState } from '@/utils/firestore';
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 
-const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTodayStudyTime }) => {
+const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTodayStudyTime, onFinishQuiz }) => {
   const [questions, setQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [userAnswer, setUserAnswer] = useState('');
@@ -18,7 +18,16 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTod
   const [shuffledQuestions, setShuffledQuestions] = useState([]);
   const startTimeRef = useRef(new Date());
   const [user, setUser] = useState(null);
-  const [cardsStudied, setCardsStudied] = useState(new Set([0])); // 最初の問題は表示されているとみなす
+  const [studiedQuestions, setStudiedQuestions] = useState(new Set());
+
+  useEffect(() => {
+    if (sessionState) {
+      setShuffledQuestions(sessionState.shuffledQuestions || []);
+      setCurrentQuestionIndex(sessionState.currentQuestionIndex || 0);
+      setResults(sessionState.results || []);
+      setStudiedQuestions(new Set(sessionState.studiedQuestions || []));
+    }
+  }, [sessionState]);
 
   const shuffleArray = useCallback((array) => {
     const shuffled = [...array];
@@ -43,28 +52,37 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTod
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    const loadQuestions = async () => {
-      try {
-        if (!setId || !user) {
-          throw new Error('setId is not provided or user is not authenticated');
-        }
-        console.log('Loading questions for setId:', setId);
-        const set = await getSetById(user.uid, setId);
-        console.log('Loaded set:', set); // デバッグ用ログ
-        if (!set || !Array.isArray(set.qaItems)) {
-          throw new Error('Invalid set data');
-        }
-        setQuestions(set.qaItems);
-        setShuffledQuestions(shuffleArray([...set.qaItems]));
-      } catch (error) {
-        console.error('Error loading questions:', error);
-        setError(error.message);
-      } finally {
-        setIsLoading(false);
+  const loadQuestions = async () => {
+    try {
+      if (!setId || !user) {
+        throw new Error('setId is not provided or user is not authenticated');
       }
-    };
+      console.log('Loading questions for setId:', setId);
+      const set = await getSetById(user.uid, setId);
+      console.log('Loaded set:', set); // デバッグ用ログ
+      if (!set) {
+        throw new Error('Invalid set data');
+      }
+      const qaItems = set.qaItems || [];
+      if (qaItems.length === 0) {
+        console.warn('No qaItems found in the set');
+      }
+      if (!sessionState) {
+        setQuestions(qaItems);
+        setShuffledQuestions(shuffleArray([...qaItems]));
+        setCurrentQuestionIndex(0);
+        setResults([]);
+        setStudiedQuestions(new Set());
+      }
+    } catch (error) {
+      console.error('Error loading questions:', error);
+      setError(error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     if (user) {
       loadQuestions();
     }
@@ -77,11 +95,12 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTod
           shuffledQuestions,
           currentQuestionIndex,
           results,
+          studiedQuestions: Array.from(studiedQuestions)
         });
       }
     };
     saveState();
-  }, [setId, shuffledQuestions, currentQuestionIndex, results, user]);
+  }, [setId, shuffledQuestions, currentQuestionIndex, results, user, studiedQuestions]);
 
   const handleShuffle = useCallback(() => {
     setShuffledQuestions(shuffleArray([...questions]));
@@ -99,11 +118,12 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTod
     setResults(newResults);
     setShowAnswer(true);
 
+    setStudiedQuestions(prevStudied => new Set(prevStudied).add(currentQuestionIndex));
+
     if (currentQuestionIndex < shuffledQuestions.length - 1) {
       setTimeout(() => {
         setCurrentQuestionIndex(prevIndex => {
           const newIndex = prevIndex + 1;
-          setCardsStudied(prevStudied => new Set(prevStudied).add(newIndex));
           return newIndex;
         });
         setUserAnswer('');
@@ -119,12 +139,39 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTod
       const score = calculateScore();
       const endTime = new Date();
       const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
-      const actualCardsStudied = cardsStudied.size;
-      await saveStudyHistory(user.uid, setId, title, 'qa', score, endTime, studyDuration, actualCardsStudied);
-      setTodayStudyTime(prevTime => prevTime + studyDuration);
-      onFinish(score, studyDuration, actualCardsStudied);
+      const newQuestionsStudied = studiedQuestions.size - (sessionState?.studiedQuestions?.length || 0);
+      const isNewSession = !sessionState;
+      
+      const correctQuestions = shuffledQuestions.filter((_, index) => results[index] === true);
+      const incorrectQuestions = shuffledQuestions.filter((_, index) => results[index] === false);
+      
+      const studyHistoryEntry = {
+        setId,
+        title,
+        type: 'qa',
+        score,
+        date: endTime.toISOString(),
+        studyDuration,
+        questionsStudied: newQuestionsStudied,
+        isNewSession,
+        correctQuestions,
+        incorrectQuestions
+      };
+
+      try {
+        await saveStudyHistory(user.uid, studyHistoryEntry);
+        await updateSessionState(user.uid, setId, 'qa', {
+          completedItems: studiedQuestions.size,
+          lastStudyDate: endTime
+        });
+        
+        setTodayStudyTime(prevTime => prevTime + studyDuration);
+        onFinish(score, studyDuration, newQuestionsStudied);
+      } catch (error) {
+        console.error("Error saving study history:", error);
+      }
     }
-  }, [setId, title, calculateScore, onFinish, setTodayStudyTime, cardsStudied, user]);
+  }, [setId, title, calculateScore, onFinish, setTodayStudyTime, studiedQuestions, user, sessionState, startTimeRef, shuffledQuestions, results]);
 
   if (isLoading) {
     return <div>読み込み中...</div>;
@@ -142,6 +189,8 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTod
 
   if (isLastQuestion) {
     const finalScore = calculateScore();
+    const endTime = new Date();
+    const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
     return (
       <div className="p-4 max-w-md mx-auto">
         <Card className="mb-4">
@@ -152,7 +201,7 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTod
             <p className="text-lg mb-4">最終スコア: {finalScore}%</p>
             <div className="flex justify-between">
               <Button onClick={handleShuffle}>もう一度挑戦</Button>
-              <Button onClick={() => onFinish(finalScore)}>終了</Button>
+              <Button onClick={handleFinish}>終了</Button>
             </div>
           </CardContent>
         </Card>

@@ -6,9 +6,22 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PlusCircle, BookOpen, BarChart2, Settings, Calendar, Clock, Trophy, Book, Globe, Code } from 'lucide-react';
-import { getAllSets, getSessionState } from '@/utils/firestore';
+import { getAllSets, getSessionState, getStudyHistory } from '@/utils/firestore';
 import AddEventModal from './AddEventModal';
 import StatisticsScreen from './StatisticsScreen';
+
+const formatRelativeTime = (date) => {
+  const now = new Date();
+  const diffInSeconds = Math.floor((now - date) / 1000);
+
+  if (diffInSeconds < 60) return '今さっき';
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}分前`;
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}時間前`;
+  if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}日前`;
+  if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 604800)}週間前`;
+  if (diffInSeconds < 31536000) return `${Math.floor(diffInSeconds / 2592000)}ヶ月前`;
+  return `${Math.floor(diffInSeconds / 31536000)}年前`;
+};
 
 const HomeScreen = ({ 
   onCreateSet, 
@@ -34,6 +47,7 @@ const HomeScreen = ({
   const [editingEvent, setEditingEvent] = useState(null);
   const [recentActivities, setRecentActivities] = useState([]);
   const [showStatistics, setShowStatistics] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const convertSecondsToMinutes = useCallback((seconds) => {
     return Math.floor(seconds / 60);
@@ -43,15 +57,85 @@ const HomeScreen = ({
     console.log('Current todayStudyTime:', todayStudyTime); // デバッグログ
   }, [todayStudyTime]);
 
+  const calculateTotalItems = useCallback((sets) => {
+    return sets.reduce((total, set) => {
+      switch (set.type) {
+        case 'flashcard':
+          return total + (set.cards ? set.cards.length : 0);
+        case 'qa':
+          return total + (set.qaItems ? set.qaItems.length : 0);
+        case 'multiple-choice':
+          return total + (set.questions ? set.questions.length : 0);
+        case 'classification':
+          return total + (set.categories ? set.categories.reduce((sum, category) => sum + (category.items ? category.items.length : 0), 0) : 0);
+        default:
+          return total;
+      }
+    }, 0);
+  }, []);
+
+  const calculateCompletedItems = useCallback(async (userId, sets) => {
+    let completedItems = 0;
+    for (const set of sets) {
+      const sessionState = await getSessionState(userId, set.id, set.type);
+      if (sessionState && sessionState.completedItems) {
+        completedItems += sessionState.completedItems;
+      }
+    }
+    return completedItems;
+  }, []);
+
+  const calculateStreak = useCallback(async (userId) => {
+    // ここにストリーク計算のロジックを実装
+    // 例: 
+    const studyHistory = await getStudyHistory(userId);
+    let streak = 0;
+    let currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0);
+
+    for (let i = 0; i < studyHistory.length; i++) {
+      const entryDate = new Date(studyHistory[i].date);
+      entryDate.setHours(0, 0, 0, 0);
+      
+      if (currentDate.getTime() - entryDate.getTime() > 24 * 60 * 60 * 1000) {
+        break;
+      }
+      
+      if (entryDate.getTime() === currentDate.getTime()) {
+        streak++;
+        currentDate.setDate(currentDate.getDate() - 1);
+      }
+    }
+
+    return streak;
+  }, []);
+
   const loadData = useCallback(async () => {
+    setIsLoading(true);
     try {
+      if (!userId) {
+        throw new Error('ユーザーが認証されていません');
+      }
       const allSets = await getAllSets(userId);
-      // ここでoverallProgressを計算し、setOverallProgressを呼び出す
-      // studyHistoryを使用してstreakを計算し、setStreakを呼び出す
+      if (allSets && allSets.length > 0) {
+        const totalItems = calculateTotalItems(allSets);
+        const completedItems = await calculateCompletedItems(userId, allSets);
+        const newOverallProgress = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
+        setOverallProgress(newOverallProgress);
+        
+        const newStreak = await calculateStreak(userId);
+        setStreak(newStreak);
+      } else {
+        console.log('ユーザーにはセットがありません');
+        setOverallProgress(0);
+        setStreak(0);
+      }
     } catch (error) {
       console.error("Error loading data:", error);
+    } finally {
+      setIsLoading(false);
     }
-  }, [userId, setOverallProgress, setStreak]);
+  }, [userId, calculateTotalItems, calculateCompletedItems, calculateStreak, setOverallProgress, setStreak]);
 
   useEffect(() => {
     loadData();
@@ -91,9 +175,12 @@ const HomeScreen = ({
     setIsGoalAchieved(convertSecondsToMinutes(todayStudyTime) >= dailyGoal);
   }, [todayStudyTime, dailyGoal, convertSecondsToMinutes]);
 
-  const updateStreak = useCallback(() => {
-    // ストリーク更新ロジックをここに実装
-  }, [isGoalAchieved, setStreak]);
+  const updateStreak = useCallback(async () => {
+    if (isGoalAchieved) {
+      const newStreak = await calculateStreak(userId);
+      setStreak(newStreak);
+    }
+  }, [isGoalAchieved, calculateStreak, userId, setStreak]);
 
   useEffect(() => {
     updateStreak();
@@ -205,27 +292,88 @@ const HomeScreen = ({
   const loadRecentActivities = useCallback(async () => {
     try {
       const allSets = await getAllSets(userId);
-      const incompleteSessions = await Promise.all(
+      const studyHistory = await getStudyHistory(userId);
+
+      const recentActivities = await Promise.all(
         allSets.map(async (set) => {
           const sessionState = await getSessionState(userId, set.id, set.type);
-          if (sessionState && sessionState.state) {
+          if (sessionState) {
+            // セットの学習履歴を時系列順にソート
+            const setStudyHistory = studyHistory
+              .filter(entry => entry.setId === set.id)
+              .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            let totalItemsStudied = 0;
+            let latestStartSession = null;
+            let latestActivity = null;
+
+            // 最新の学習開始セッションを見つける
+            for (const entry of setStudyHistory) {
+              if (entry.isNewSession) {
+                latestStartSession = entry;
+                totalItemsStudied = entry.cardsStudied || 0;
+              } else if (latestStartSession) {
+                // 最新の開始セッション以降の進捗を累積
+                totalItemsStudied += entry.cardsStudied || 0;
+              }
+              latestActivity = entry;
+            }
+
+            // セッション状態の進捗を加算（エラーチェックを追加）
+            if (sessionState.state && typeof sessionState.state.cardsStudied === 'number') {
+              totalItemsStudied += sessionState.state.cardsStudied;
+            }
+
+            // クイズタイプに応じて総アイテム数を取得
+            let totalItems = 0;
+            switch (set.type) {
+              case 'flashcard':
+                totalItems = set.cards ? set.cards.length : 0;
+                break;
+              case 'qa':
+                totalItems = set.qaItems ? set.qaItems.length : 0;
+                break;
+              case 'multiple-choice':
+                totalItems = set.questions ? set.questions.length : 0;
+                break;
+              case 'classification':
+                totalItems = set.categories ? set.categories.reduce((sum, category) => sum + category.items.length, 0) : 0;
+                break;
+              default:
+                totalItems = 0;
+            }
+
+            // 総アイテム数を超えないように調整
+            totalItemsStudied = Math.min(totalItemsStudied, totalItems);
+
+            const isCompleted = totalItems > 0 && totalItems === totalItemsStudied;
+            
+            const timestamp = latestActivity
+              ? new Date(latestActivity.date)
+              : (sessionState.updatedAt
+                ? sessionState.updatedAt.toDate()
+                : new Date());
+
             return { 
               ...set, 
-              sessionState: sessionState.state, 
-              timestamp: sessionState.updatedAt ? sessionState.updatedAt.toDate() : new Date(),
-              type: set.type
+              sessionState: sessionState, 
+              timestamp: timestamp,
+              type: set.type,
+              isCompleted,
+              itemsStudied: totalItemsStudied,
+              totalItems: totalItems
             };
           }
           return null;
         })
       );
-  
-      const filteredIncompleteSessions = incompleteSessions
+
+      const filteredRecentActivities = recentActivities
         .filter(Boolean)
         .sort((a, b) => b.timestamp - a.timestamp)
         .slice(0, 3);
-  
-      setRecentActivities(filteredIncompleteSessions);
+
+      setRecentActivities(filteredRecentActivities);
     } catch (error) {
       console.error("Error loading recent activities:", error);
     }
@@ -236,21 +384,40 @@ const HomeScreen = ({
   }, [loadRecentActivities]);
 
   const renderActivityItem = useCallback((activity) => {
+    const progressPercentage = activity.totalItems > 0
+      ? (activity.itemsStudied / activity.totalItems) * 100
+      : 0;
+
+    const relativeTime = formatRelativeTime(new Date(activity.date));
+
     return (
       <li 
         key={activity.id} 
         className="flex items-center p-2 rounded-md hover:bg-gray-200 cursor-pointer transition-colors duration-200"
-        onClick={() => onStartLearning(activity.id, activity.type, activity.sessionState)}
+        onClick={() => activity.isCompleted ? null : onStartLearning(activity.id, activity.type, activity.sessionState)}
       >
         {getIconForSetType(activity.type)}
         <div className="flex-1 ml-2">
           <span className="font-medium text-xs">{activity.title}</span>
-          <p className="text-[10px] text-gray-500">{formatDate(activity.timestamp)}</p>
+          <div className="flex items-center mt-1">
+            <p className="text-[10px] text-gray-500 mr-2">
+              {relativeTime}
+            </p>
+            <Progress 
+              value={progressPercentage} 
+              className="w-24 h-2 mr-2" 
+            />
+            <span className="text-[10px] text-gray-500">
+              {activity.itemsStudied}/{activity.totalItems}
+            </span>
+          </div>
         </div>
-        <span className="text-xs text-blue-500">再開</span>
+        <span className={`text-xs ${activity.isCompleted ? 'text-green-500' : 'text-blue-500'}`}>
+          {activity.isCompleted ? '完了' : '再開'}
+        </span>
       </li>
     );
-  }, [onStartLearning, getIconForSetType, formatDate]);
+  }, [onStartLearning, getIconForSetType]);
 
   const handleShowStatistics = useCallback(() => {
     setShowStatistics(true);
@@ -259,6 +426,26 @@ const HomeScreen = ({
   const handleBackFromStatistics = useCallback(() => {
     setShowStatistics(false);
   }, []);
+
+  const onFinishQuiz = useCallback((setId, score, studiedItems) => {
+    // 進捗を更新
+    const updatedRecentActivities = recentActivities.map(activity => {
+      if (activity.id === setId) {
+        return {
+          ...activity,
+          itemsStudied: Math.min(activity.itemsStudied + studiedItems, activity.totalItems),
+          isCompleted: activity.itemsStudied + studiedItems >= activity.totalItems
+        };
+      }
+      return activity;
+    });
+    setRecentActivities(updatedRecentActivities);
+
+    // その他の必要な処理（例：スコアの保存、統計の更新など）
+
+    // ホーム画面に戻る
+    // 必要に応じて、ここで他の状態をリセットしたり更新したりします
+  }, [recentActivities, setRecentActivities]);
 
   if (showStatistics) {
     return (

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { getSetById, getSessionState, getStudyHistory, deleteStudyHistoryEntry } from '@/utils/firestore';
+import { getSetById, getSessionState, getStudyHistory, deleteStudyHistoryEntry, getAllSets } from '@/utils/firestore';
 import HomeScreen from '@/components/HomeScreen';
 import CreateEditSetSelectionScreen from '@/components/CreateEditSetSelectionScreen';
 import QuizTypeSelectionScreen from '@/components/QuizTypeSelectionScreen';
@@ -41,6 +41,47 @@ export default function Home() {
   const [totalStudyTime, setTotalStudyTime] = useState(0);
   const [todayStudiedCards, setTodayStudiedCards] = useState(0);
   const [weeklyStudyTime, setWeeklyStudyTime] = useState([]);
+
+  const calculateTotalItems = useCallback((sets) => {
+    return sets.reduce((total, set) => {
+      switch (set.type) {
+        case 'flashcard':
+          return total + (set.cards ? set.cards.length : 0);
+        case 'qa':
+          return total + (set.qaItems ? set.qaItems.length : 0);
+        case 'multiple-choice':
+          return total + (set.questions ? set.questions.length : 0);
+        case 'classification':
+          return total + (set.categories ? set.categories.reduce((sum, category) => sum + (category.items ? category.items.length : 0), 0) : 0);
+        default:
+          return total;
+      }
+    }, 0);
+  }, []);
+
+  const calculateCompletedItems = useCallback(async (userId, sets) => {
+    let completedItems = 0;
+    for (const set of sets) {
+      const sessionState = await getSessionState(userId, set.id, set.type);
+      if (sessionState && sessionState.completedItems) {
+        completedItems += sessionState.completedItems;
+      }
+    }
+    return completedItems;
+  }, []);
+
+  const updateOverallProgress = useCallback(async (studiedItems, totalItems) => {
+    if (!user) return;
+    try {
+      const allSets = await getAllSets(user.uid);
+      const totalCompletedItems = await calculateCompletedItems(user.uid, allSets);
+      const totalItemsCount = calculateTotalItems(allSets);
+      const newProgress = ((totalCompletedItems + studiedItems) / (totalItemsCount + totalItems)) * 100;
+      setOverallProgress(Math.round(newProgress));
+    } catch (error) {
+      console.error("Error updating overall progress:", error);
+    }
+  }, [user, calculateCompletedItems, calculateTotalItems]);
 
   useEffect(() => {
     const auth = getAuth();
@@ -201,17 +242,20 @@ export default function Home() {
     navigateTo('home');
   };
 
-  const handleFinishQuiz = useCallback((results, studyDuration, cardsStudied) => {
-    
-    setTodayStudyTime(prevTime => {
-      const newTime = prevTime + studyDuration;
-      return newTime;
-    });
-    
+  const handleFinishQuiz = useCallback(async (results, studyDuration, cardsStudied) => {
+    setTodayStudyTime(prevTime => prevTime + studyDuration);
     setTotalStudyTime(prevTime => prevTime + studyDuration);
     setTodayStudiedCards(prevCards => prevCards + cardsStudied);
+  
+    // Update overall progress
+    if (user && quizSetId) {
+      const set = await getSetById(user.uid, quizSetId);
+      const totalItems = calculateTotalItems([set]);
+      await updateOverallProgress(cardsStudied, totalItems);
+    }
+  
     navigateTo('home');
-  }, [navigateTo]);
+  }, [navigateTo, user, quizSetId, setTodayStudyTime, setTotalStudyTime, setTodayStudiedCards, updateOverallProgress, calculateTotalItems]);
 
   const handleOpenSettings = () => {
     navigateTo('settings');
@@ -369,6 +413,11 @@ export default function Home() {
               sessionState={sessionState}
               setTodayStudyTime={setTodayStudyTime}
               userId={user.uid}
+              updateOverallProgress={updateOverallProgress}
+              onFinishQuiz={(score, studiedItems, studyDuration) => {
+                handleFinishQuiz(score, studyDuration, studiedItems);
+                navigateTo('home');
+              }}
             />
           </React.Suspense>
         );

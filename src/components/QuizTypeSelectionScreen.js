@@ -105,15 +105,36 @@ const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
   }, [selectedSets, onStartQuiz, user]);
 
   if (!user) {
-    return <div>ログインしてください。</div>;
+    return (
+      <div>
+        <Button variant="ghost" size="icon" onClick={onBack} className="mb-2">
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div>ログインしてください。</div>
+      </div>
+    );
   }
 
   if (isLoading) {
-    return <div>セットを読み込んでいます...</div>;
+    return (
+      <div>
+        <Button variant="ghost" size="icon" onClick={onBack} className="mb-2">
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div>セットを読み込んでいます...</div>
+      </div>
+    );
   }
 
   if (error) {
-    return <div>{error}</div>;
+    return (
+      <div>
+        <Button variant="ghost" size="icon" onClick={onBack} className="mb-2">
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div>{error}</div>
+      </div>
+    );
   }
 
   return (

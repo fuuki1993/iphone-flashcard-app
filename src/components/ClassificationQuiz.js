@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, memo, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { getSetById, saveSessionState, getSessionState, saveStudyHistory } from '@/utils/firestore';
+import { getSetById, saveSessionState, getSessionState, saveStudyHistory, updateSessionState } from '@/utils/firestore';
 import { ArrowLeft, Shuffle } from 'lucide-react';
 import { DndContext, DragOverlay, useSensors, useSensor, PointerSensor, useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
@@ -67,7 +67,7 @@ const DroppableCategory = memo(({ category, isActive, feedbackColor, style }) =>
 
 DroppableCategory.displayName = 'DroppableCategory';
 
-const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTodayStudyTime }) => {
+const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTodayStudyTime, updateProgress }) => {
   const [quizData, setQuizData] = useState({
     question: null,
     categories: [],
@@ -91,6 +91,9 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
   const startTimeRef = useRef(new Date());
   const { width, height } = useWindowSize();
   const [user, setUser] = useState(null);
+  const [studiedItems, setStudiedItems] = useState(new Set());
+  const [correctAnswers, setCorrectAnswers] = useState({});
+  const [incorrectAnswers, setIncorrectAnswers] = useState({});
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -118,7 +121,6 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
   }, []);
 
   useEffect(() => {
-    console.log('setId:', setId);
     const loadQuestion = async () => {
       try {
         setIsLoading(true);
@@ -134,6 +136,9 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
             setClassifiedItems(sessionState.classifiedItems);
             setCurrentItemIndex(sessionState.currentItemIndex);
             setUnclassifiedItems(sessionState.unclassifiedItems);
+            setStudiedItems(new Set(sessionState.studiedItems));
+            setCorrectAnswers(sessionState.correctAnswers);
+            setIncorrectAnswers(sessionState.incorrectAnswers);
           } else {
             const newItems = set.categories.flatMap(c => 
               c.items.map((item, index) => ({ 
@@ -189,11 +194,14 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
           classifiedItems,
           currentItemIndex,
           unclassifiedItems,
+          studiedItems: Array.from(studiedItems),
+          correctAnswers,
+          incorrectAnswers
         });
       }
     };
     saveState();
-  }, [setId, quizData, shuffledItems, shuffledCategories, classifiedItems, currentItemIndex, unclassifiedItems, user]);
+  }, [setId, quizData, shuffledItems, shuffledCategories, classifiedItems, currentItemIndex, unclassifiedItems, user, studiedItems, correctAnswers, incorrectAnswers]);
 
   useEffect(() => {
     if (quizData.items.length > 0) {
@@ -263,6 +271,21 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
           return 0;
         });
 
+        setStudiedItems(prevStudied => new Set(prevStudied).add(active.id));
+
+        // Update correct and incorrect answers
+        if (isCorrect) {
+          setCorrectAnswers(prevCorrect => ({
+            ...prevCorrect,
+            [over.id]: [...(prevCorrect[over.id] || []), active.id]
+          }));
+        } else {
+          setIncorrectAnswers(prevIncorrect => ({
+            ...prevIncorrect,
+            [over.id]: [...(prevIncorrect[over.id] || []), active.id]
+          }));
+        }
+
         return {
           ...prev,
           items: updatedItems,
@@ -326,6 +349,9 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
           setUnclassifiedItems(shuffled);
           setTempFeedback({});
           startTimeRef.current = new Date();
+          setStudiedItems(new Set());
+          setCorrectAnswers({});
+          setIncorrectAnswers({});
         } else {
           throw new Error('無効なデータ構造です');
         }
@@ -344,11 +370,37 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
     const score = quizData.score;
     const endTime = new Date();
     const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
-    const cardsStudied = quizData.items.filter(item => item.isClassified).length;
-    await saveStudyHistory(user.uid, setId, title, 'classification', score, endTime, studyDuration, cardsStudied);
-    setTodayStudyTime(prevTime => prevTime + studyDuration);
-    onFinish(score, studyDuration, cardsStudied);
-  }, [setId, title, quizData, onFinish, setTodayStudyTime, user]);
+    const newItemsStudied = studiedItems.size - (sessionState?.studiedItems?.length || 0);
+    const isNewSession = !sessionState;
+    
+    const studyHistoryEntry = {
+      setId,
+      title,
+      type: 'classification',
+      score,
+      date: endTime.toISOString(),
+      studyDuration,
+      itemsStudied: newItemsStudied,
+      isNewSession,
+      correctAnswers,
+      incorrectAnswers
+    };
+
+    try {
+      await saveStudyHistory(user.uid, studyHistoryEntry);
+      await updateSessionState(user.uid, setId, 'classification', {
+        completedItems: studiedItems.size,
+        lastStudyDate: endTime
+      });
+      setTodayStudyTime(prevTime => prevTime + studyDuration);
+      onFinish(score, studyDuration, newItemsStudied);
+      if (typeof updateProgress === 'function') {
+        updateProgress(studiedItems.size, quizData.items.length);
+      }
+    } catch (error) {
+      console.error("Error saving study history:", error);
+    }
+  }, [user, setId, title, quizData.score, onFinish, setTodayStudyTime, studiedItems, sessionState, startTimeRef, quizData.items.length, updateProgress, correctAnswers, incorrectAnswers]);
   
   const getGridSizeStyle = useCallback(() => {
     const columns = 3;

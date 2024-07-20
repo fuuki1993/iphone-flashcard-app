@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowRight, RotateCw, Shuffle } from 'lucide-react';
-import { getSetById, saveStudyHistory, getSets, saveSessionState, getSessionState } from '@/utils/firestore';
+import { getSetById, saveStudyHistory, getSets, saveSessionState, getSessionState, updateSessionState } from '@/utils/firestore';
 import styles from '@/app/FlashcardQuiz.module.css';
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 
-const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTodayStudyTime }) => {
+const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTodayStudyTime, updateOverallProgress }) => {
   const [cards, setCards] = useState([]);
   const [shuffledCards, setShuffledCards] = useState([]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
@@ -16,7 +16,7 @@ const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState,
   const [error, setError] = useState(null);
   const startTimeRef = useRef(new Date());
   const [user, setUser] = useState(null);
-  const [cardsStudied, setCardsStudied] = useState(new Set([0])); // 最初のカードは表示されているとみなす
+  const [studiedCards, setStudiedCards] = useState(new Set());
 
   useEffect(() => {
     const auth = getAuth();
@@ -25,6 +25,12 @@ const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState,
     });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (sessionState && sessionState.studiedCards) {
+      setStudiedCards(new Set(sessionState.studiedCards));
+    }
+  }, [sessionState]);
 
   const calculateScore = useCallback(() => {
     const totalCards = shuffledCards.length;
@@ -86,11 +92,12 @@ const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState,
           shuffledCards,
           currentCardIndex,
           completed,
+          studiedCards: Array.from(studiedCards)
         });
       }
     };
     saveState();
-  }, [setId, shuffledCards, currentCardIndex, completed, user]);
+  }, [setId, shuffledCards, currentCardIndex, completed, studiedCards, user]);
 
   const handleShuffle = useCallback(() => {
     setShuffledCards(prevCards => shuffleArray([...prevCards]));
@@ -100,27 +107,32 @@ const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState,
   }, [shuffleArray]);
 
   const handleFlip = useCallback(() => {
-    setIsFlipped(prevFlipped => !prevFlipped);
-  }, []);
+    setIsFlipped(prevFlipped => {
+      if (!prevFlipped) {
+        // カードを裏返すときに、まだ学習していないカードであれば studiedCards に追加
+        setStudiedCards(prevStudied => {
+          if (!prevStudied.has(currentCardIndex)) {
+            const newStudied = new Set(prevStudied);
+            newStudied.add(currentCardIndex);
+            return newStudied;
+          }
+          return prevStudied;
+        });
+      }
+      return !prevFlipped;
+    });
+  }, [currentCardIndex]);
 
   const handleNext = useCallback(() => {
     if (currentCardIndex < shuffledCards.length - 1) {
-      setCurrentCardIndex(prevIndex => {
-        const newIndex = prevIndex + 1;
-        setCardsStudied(prevStudied => new Set(prevStudied).add(newIndex));
-        return newIndex;
-      });
+      setCurrentCardIndex(prevIndex => prevIndex + 1);
       setIsFlipped(false);
     }
   }, [currentCardIndex, shuffledCards.length]);
 
   const handlePrevious = useCallback(() => {
     if (currentCardIndex > 0) {
-      setCurrentCardIndex(prevIndex => {
-        const newIndex = prevIndex - 1;
-        setCardsStudied(prevStudied => new Set(prevStudied).add(newIndex));
-        return newIndex;
-      });
+      setCurrentCardIndex(prevIndex => prevIndex - 1);
       setIsFlipped(false);
     }
   }, [currentCardIndex]);
@@ -131,20 +143,51 @@ const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState,
       newCompleted[currentCardIndex] = true;
       return newCompleted;
     });
+    setStudiedCards(prevStudied => {
+      const newStudied = new Set(prevStudied);
+      newStudied.add(currentCardIndex);
+      return newStudied;
+    });
     handleNext();
   }, [currentCardIndex, handleNext]);
 
   const handleFinish = useCallback(async () => {
-    if (!user) return;
-    const score = calculateScore();
-    const endTime = new Date();
-    const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
-    const actualCardsStudied = cardsStudied.size;
-    await saveStudyHistory(user.uid, setId, title, 'flashcard', score, endTime, studyDuration, actualCardsStudied);
-    setTodayStudyTime(prevTime => prevTime + studyDuration);
-    onFinish(score, studyDuration, actualCardsStudied);
-  }, [setId, title, calculateScore, onFinish, setTodayStudyTime, cardsStudied, user]);
-
+    if (user) {
+      const endTime = new Date();
+      const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
+      const newCardsStudied = studiedCards.size - (sessionState?.studiedCards?.length || 0);
+      const isNewSession = !sessionState;
+      
+      const studyHistoryEntry = {
+        setId,
+        type: 'flashcard',
+        date: endTime.toISOString(),
+        studyDuration,
+        cardsStudied: studiedCards.size,
+        totalCards: shuffledCards.length,
+        isNewSession
+      };
+      
+      try {
+        await saveStudyHistory(user.uid, studyHistoryEntry);
+        await updateSessionState(user.uid, setId, 'flashcard', {
+          completedItems: studiedCards.size,
+          lastStudyDate: endTime
+        });
+        
+        setTodayStudyTime(prevTime => prevTime + studyDuration);
+        onFinish(studiedCards.size, studyDuration, newCardsStudied);
+        if (typeof updateOverallProgress === 'function') {
+          updateOverallProgress(studiedCards.size, shuffledCards.length);
+        } else {
+          console.error('updateOverallProgress is not a function');
+        }
+      } catch (error) {
+        console.error("Error saving study history:", error);
+      }
+    }
+  }, [setId, onFinish, setTodayStudyTime, studiedCards, user, sessionState, startTimeRef, shuffledCards, updateOverallProgress]);
+  
   const currentCard = useMemo(() => shuffledCards[currentCardIndex], [shuffledCards, currentCardIndex]);
 
   if (isLoading) {

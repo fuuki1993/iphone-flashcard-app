@@ -2,10 +2,10 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Check, X, Shuffle } from 'lucide-react';
-import { getSetById, saveStudyHistory, getSets, saveSessionState, getSessionState } from '@/utils/firestore';
+import { getSetById, saveStudyHistory, getSets, saveSessionState, getSessionState, updateSessionState } from '@/utils/firestore';
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 
-const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTodayStudyTime }) => {
+const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTodayStudyTime, updateProgress }) => {
   const [questions, setQuestions] = useState([]);
   const [shuffledQuestions, setShuffledQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -17,13 +17,52 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
   const [isLastQuestion, setIsLastQuestion] = useState(false);
   const startTimeRef = useRef(new Date());
   const [user, setUser] = useState(null);
-  const [cardsStudied, setCardsStudied] = useState(new Set([0])); // 最初の問題は表示されているとみなす
+  const [studiedQuestions, setStudiedQuestions] = useState(new Set());
 
   const calculateScore = useCallback(() => {
     const totalQuestions = shuffledQuestions.length;
     const correctAnswers = results.filter(Boolean).length;
     return Math.round((correctAnswers / totalQuestions) * 100);
   }, [shuffledQuestions.length, results]);
+
+  const handleFinish = useCallback(async () => {
+    if (!user) return;
+    const endTime = new Date();
+    const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
+    const newQuestionsStudied = studiedQuestions.size - (sessionState?.studiedQuestions?.length || 0);
+    const isNewSession = !sessionState;
+    
+    const finalScore = calculateScore();
+    
+    const correctQuestions = shuffledQuestions.filter((_, index) => results[index] === true);
+    const incorrectQuestions = shuffledQuestions.filter((_, index) => results[index] === false);
+    
+    const studyHistoryEntry = {
+      setId,
+      title,
+      type: 'multiple-choice',
+      score: finalScore,
+      date: endTime.toISOString(),
+      studyDuration,
+      questionsStudied: newQuestionsStudied,
+      isNewSession,
+      correctQuestions,
+      incorrectQuestions
+    };
+
+    try {
+      await saveStudyHistory(user.uid, studyHistoryEntry);
+      await updateSessionState(user.uid, setId, 'multiple-choice', {
+        completedItems: studiedQuestions.size,
+        lastStudyDate: endTime
+      });
+      
+      setTodayStudyTime(prevTime => prevTime + studyDuration);
+      onFinish(finalScore, studyDuration, newQuestionsStudied);
+    } catch (error) {
+      console.error("Error saving study history:", error);
+    }
+  }, [user, setId, title, onFinish, setTodayStudyTime, sessionState, startTimeRef, calculateScore, studiedQuestions, shuffledQuestions, results]);
 
   const shuffleArray = useCallback((array) => {
     const shuffled = [...array];
@@ -104,17 +143,24 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
   }, [user, loadQuestions]);
 
   useEffect(() => {
+    if (sessionState && sessionState.studiedQuestions) {
+      setStudiedQuestions(new Set(sessionState.studiedQuestions));
+    }
+  }, [sessionState]);
+
+  useEffect(() => {
     const saveState = async () => {
       if (setId && user) {
         await saveSessionState(user.uid, setId, 'multiple-choice', {
           shuffledQuestions,
           currentQuestionIndex,
           results,
+          studiedQuestions: Array.from(studiedQuestions)
         });
       }
     };
     saveState();
-  }, [setId, shuffledQuestions, currentQuestionIndex, results, user]);
+  }, [setId, shuffledQuestions, currentQuestionIndex, results, user, studiedQuestions]);
 
   const handleShuffle = useCallback(() => {
     const shuffledWithChoices = questions.map(shuffleQuestionAndChoices);
@@ -148,12 +194,11 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
 
       if (currentQuestionIndex === shuffledQuestions.length - 1) {
         setIsLastQuestion(true);
-        handleFinish();
       } else {
         setTimeout(() => {
           setCurrentQuestionIndex(prevIndex => {
             const newIndex = prevIndex + 1;
-            setCardsStudied(prevStudied => new Set(prevStudied).add(newIndex));
+            setStudiedQuestions(prevStudied => new Set(prevStudied).add(newIndex));
             return newIndex;
           });
           setSelectedAnswers([]);
@@ -161,18 +206,7 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
         }, 1000);
       }
     }
-  }, [selectedAnswers, currentQuestionIndex, shuffledQuestions, results, handleFinish]);
-
-  const handleFinish = useCallback(async () => {
-    if (!user) return;
-    const score = calculateScore();
-    const endTime = new Date();
-    const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
-    const actualCardsStudied = cardsStudied.size;
-    await saveStudyHistory(user.uid, setId, title, 'multiple-choice', score, endTime, studyDuration, actualCardsStudied);
-    setTodayStudyTime(prevTime => prevTime + studyDuration);
-    onFinish(score, studyDuration, actualCardsStudied);
-  }, [user, setId, title, calculateScore, onFinish, setTodayStudyTime, cardsStudied]);
+  }, [selectedAnswers, currentQuestionIndex, shuffledQuestions, results]);
 
   if (isLoading) {
     return <div className="w-full max-w-md mx-auto px-4">読み込み中...</div>;
@@ -189,7 +223,6 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
   const currentQuestion = shuffledQuestions[currentQuestionIndex];
 
   if (isLastQuestion) {
-    const finalScore = calculateScore();
     return (
       <div className="w-full max-w-md mx-auto px-4">
         <Card className="mb-4">
@@ -197,10 +230,10 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
             <CardTitle className="text-xl font-bold">クイズ終了</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-lg mb-4">最終スコア: {finalScore}%</p>
+            <p className="text-lg mb-4">最終スコア: {calculateScore()}%</p>
             <div className="flex justify-between">
               <Button onClick={handleShuffle}>もう一度挑戦</Button>
-              <Button onClick={() => onFinish(finalScore)}>終了</Button>
+              <Button onClick={handleFinish}>終了</Button>
             </div>
           </CardContent>
         </Card>

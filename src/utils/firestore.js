@@ -12,7 +12,8 @@ import {
   setDoc,
   serverTimestamp,
   orderBy,
-  limit
+  limit,
+  Timestamp
 } from 'firebase/firestore';
 import { storage } from './firebase';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -64,17 +65,19 @@ export const getAllSets = async (userId) => {
 
 export const getSetById = async (userId, setId) => {
   try {
-
     if (!setId || typeof setId !== 'string' || setId.trim() === '') {
       throw new Error('無効なsetIdです');
     }
     const setRef = doc(db, `users/${userId}/${SETS_COLLECTION}`, setId);
     const setSnap = await getDoc(setRef);
     if (setSnap.exists()) {
-
-      return { id: setSnap.id, ...setSnap.data() };
+      const setData = setSnap.data();
+      if (setData.type === 'qa' && !setData.qaItems) {
+        console.warn('QAクイズセットにqaItemsフィールドがありません');
+        setData.qaItems = []; // デフォルト値を設定
+      }
+      return { id: setSnap.id, ...setData };
     } else {
-
       throw new Error('セットが見つかりません');
     }
   } catch (error) {
@@ -127,22 +130,16 @@ export const deleteSet = async (userId, id) => {
   }
 };
 
-export const saveStudyHistory = async (userId, setId, setTitle, setType, score, endTime, studyDuration, cardsStudied) => {
+export const saveStudyHistory = async (userId, studyHistoryEntry) => {
   try {
-    const newEntry = {
-      setId,
-      setTitle,
-      setType,
-      score,
-      date: new Date(endTime).toISOString(),
-      studyDuration,
-      cardsStudied,
+    const studyHistoryRef = collection(db, 'users', userId, 'studyHistory');
+    const docRef = await addDoc(studyHistoryRef, {
+      ...studyHistoryEntry,
       createdAt: serverTimestamp()
-    };
-    const docRef = await addDoc(collection(db, `users/${userId}/${HISTORY_COLLECTION}`), newEntry);
+    });
     return docRef.id;
   } catch (error) {
-
+    console.error("Error saving study history:", error);
     throw error;
   }
 };
@@ -167,12 +164,12 @@ export const getSessionState = async (userId, setId, setType) => {
     const docRef = doc(db, `users/${userId}/${SESSION_STATES_COLLECTION}`, `${setId}_${setType}`);
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
-      return docSnap.data();
+      return docSnap.data().state;
     } else {
       return null;
     }
   } catch (error) {
-
+    console.error("Error getting session state:", error);
     throw error;
   }
 };
@@ -295,20 +292,49 @@ export const getUserStatistics = async (userId) => {
 
 export const getStudyHistory = async (userId) => {
   try {
-    const q = query(collection(db, `users/${userId}/${HISTORY_COLLECTION}`), orderBy("createdAt", "desc"));
+    const studyHistoryRef = collection(db, 'users', userId, 'studyHistory');
+    const q = query(studyHistoryRef, orderBy('date', 'desc'));
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => {
       const data = doc.data();
       return {
-        id: doc.id,
         ...data,
-        date: data.date ? new Date(data.date) : null,
-        studyDuration: Number(data.studyDuration) || 0,
-        cardsStudied: Number(data.cardsStudied) || 0
+        id: doc.id,
+        date: data.date instanceof Timestamp ? data.date.toDate() : new Date(data.date)
       };
     });
   } catch (error) {
     console.error("Error fetching study history:", error);
     throw error;
   }
+};
+
+export const updateUserSettings = async (userId, settings) => {
+  try {
+    const userSettingsRef = doc(db, `users/${userId}/${SETTINGS_COLLECTION}`, 'userSettings');
+    await setDoc(userSettingsRef, settings, { merge: true });
+  } catch (error) {
+    console.error('Error updating user settings:', error);
+    throw error;
+  }
+};
+
+export const getUserSettings = async (userId) => {
+  try {
+    const userSettingsRef = doc(db, `users/${userId}/${SETTINGS_COLLECTION}`, 'userSettings');
+    const docSnap = await getDoc(userSettingsRef);
+    if (docSnap.exists()) {
+      return docSnap.data();
+    } else {
+      return {}; // デフォルトの設定を返す
+    }
+  } catch (error) {
+    console.error('Error getting user settings:', error);
+    throw error;
+  }
+};
+
+export const updateSessionState = async (userId, setId, quizType, data) => {
+  const sessionStateRef = doc(db, `users/${userId}/${SESSION_STATES_COLLECTION}`, `${setId}_${quizType}`);
+  await setDoc(sessionStateRef, data, { merge: true });
 };
