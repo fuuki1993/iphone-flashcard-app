@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Clock, BookOpen, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Clock, BookOpen, TrendingUp, ArrowUpRight, ArrowDownRight, ArrowRight } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts';
 
 const formatTotalStudyTime = (totalSeconds) => {
@@ -11,13 +11,52 @@ const formatTotalStudyTime = (totalSeconds) => {
   return `${hours}時間${minutes}分`;
 };
 
-const StatisticsScreen = ({ onBack, totalStudyTime, todayStudiedCards, weeklyStudyTime }) => {
+const StatisticsScreen = ({ 
+  onBack, 
+  totalStudyTime, 
+  todayStudiedCards, 
+  weeklyStudyTime,
+  totalStudyTimeComparison,
+  todayStudiedCardsComparison
+}) => {
   const formattedTotalStudyTime = formatTotalStudyTime(totalStudyTime);
 
   const transformedWeeklyData = ['日', '月', '火', '水', '木', '金', '土'].map((day, index) => ({
     day,
     time: Math.floor(weeklyStudyTime[index] / 60) // 秒から分に変換
   }));
+
+  const renderComparison = (value) => {
+    if (value === undefined || value === null || isNaN(value)) {
+      // 比較データが存在しない場合
+      return (
+        <div className="flex items-center text-gray-600 text-sm mt-1">
+          <ArrowRight size={16} className="mr-1" />
+          <span>0.0%</span>
+          <span className="text-xs ml-1">前週比</span>
+        </div>
+      );
+    }
+    const absValue = Math.abs(value);
+    let Icon, color;
+    if (value > 0) {
+      Icon = ArrowUpRight;
+      color = 'text-green-600';
+    } else if (value < 0) {
+      Icon = ArrowDownRight;
+      color = 'text-red-600';
+    } else {
+      Icon = ArrowRight;
+      color = 'text-gray-600';
+    }
+    return (
+      <div className={`flex items-center ${color} text-sm mt-1`}>
+        <Icon size={16} className="mr-1" />
+        <span>{absValue.toFixed(1)}%</span>
+        <span className="text-xs ml-1">前週比</span>
+      </div>
+    );
+  };
 
   return (
     <div className="p-4 w-full bg-gray-100 min-h-screen">
@@ -38,6 +77,7 @@ const StatisticsScreen = ({ onBack, totalStudyTime, todayStudiedCards, weeklyStu
           </CardHeader>
           <CardContent className="pt-2">
             <p className="text-lg font-bold text-gray-800">{formattedTotalStudyTime}</p>
+            {renderComparison(totalStudyTimeComparison)}
           </CardContent>
         </Card>
 
@@ -50,6 +90,7 @@ const StatisticsScreen = ({ onBack, totalStudyTime, todayStudiedCards, weeklyStu
           </CardHeader>
           <CardContent className="pt-2">
             <p className="text-lg font-bold text-gray-800">{todayStudiedCards}枚</p>
+            {renderComparison(todayStudiedCardsComparison)}
           </CardContent>
         </Card>
       </div>
