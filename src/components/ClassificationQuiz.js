@@ -344,7 +344,7 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
     const score = quizData.score;
     const endTime = new Date();
     const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
-    const cardsStudied = quizData.items.length;
+    const cardsStudied = quizData.items.filter(item => item.isClassified).length;
     await saveStudyHistory(user.uid, setId, title, 'classification', score, endTime, studyDuration, cardsStudied);
     setTodayStudyTime(prevTime => prevTime + studyDuration);
     onFinish(score, studyDuration, cardsStudied);

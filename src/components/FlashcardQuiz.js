@@ -16,6 +16,7 @@ const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState,
   const [error, setError] = useState(null);
   const startTimeRef = useRef(new Date());
   const [user, setUser] = useState(null);
+  const [cardsStudied, setCardsStudied] = useState(new Set([0])); // 最初のカードは表示されているとみなす
 
   useEffect(() => {
     const auth = getAuth();
@@ -104,14 +105,22 @@ const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState,
 
   const handleNext = useCallback(() => {
     if (currentCardIndex < shuffledCards.length - 1) {
-      setCurrentCardIndex(prevIndex => prevIndex + 1);
+      setCurrentCardIndex(prevIndex => {
+        const newIndex = prevIndex + 1;
+        setCardsStudied(prevStudied => new Set(prevStudied).add(newIndex));
+        return newIndex;
+      });
       setIsFlipped(false);
     }
   }, [currentCardIndex, shuffledCards.length]);
 
   const handlePrevious = useCallback(() => {
     if (currentCardIndex > 0) {
-      setCurrentCardIndex(prevIndex => prevIndex - 1);
+      setCurrentCardIndex(prevIndex => {
+        const newIndex = prevIndex - 1;
+        setCardsStudied(prevStudied => new Set(prevStudied).add(newIndex));
+        return newIndex;
+      });
       setIsFlipped(false);
     }
   }, [currentCardIndex]);
@@ -130,11 +139,11 @@ const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState,
     const score = calculateScore();
     const endTime = new Date();
     const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
-    const cardsStudied = shuffledCards.length;
-    await saveStudyHistory(user.uid, setId, title, 'flashcard', score, endTime, studyDuration, cardsStudied);
+    const actualCardsStudied = cardsStudied.size;
+    await saveStudyHistory(user.uid, setId, title, 'flashcard', score, endTime, studyDuration, actualCardsStudied);
     setTodayStudyTime(prevTime => prevTime + studyDuration);
-    onFinish(score, studyDuration, cardsStudied);
-  }, [setId, title, calculateScore, onFinish, setTodayStudyTime, shuffledCards.length, user]);
+    onFinish(score, studyDuration, actualCardsStudied);
+  }, [setId, title, calculateScore, onFinish, setTodayStudyTime, cardsStudied, user]);
 
   const currentCard = useMemo(() => shuffledCards[currentCardIndex], [shuffledCards, currentCardIndex]);
 

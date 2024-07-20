@@ -141,7 +141,7 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
   }, []);
 
   const handleSave = useCallback(async () => {
-    if (validateForm() && user) {
+    if (validateForm() && user && selectedSetId) {
       try {
         const updatedSet = { 
           id: selectedSetId,
@@ -153,12 +153,12 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
           })),
           type: 'flashcard'
         };
-
+  
         await deleteUnusedImages(originalCards, updatedSet.cards);
-
-        await updateSet(user.uid, updatedSet);
+  
+        await updateSet(updatedSet, user.uid);
         onSave(updatedSet);
-
+  
         setOriginalCards(updatedSet.cards);
       } catch (error) {
         console.error("Error updating set:", error);

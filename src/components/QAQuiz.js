@@ -18,6 +18,7 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTod
   const [shuffledQuestions, setShuffledQuestions] = useState([]);
   const startTimeRef = useRef(new Date());
   const [user, setUser] = useState(null);
+  const [cardsStudied, setCardsStudied] = useState(new Set([0])); // 最初の問題は表示されているとみなす
 
   const shuffleArray = useCallback((array) => {
     const shuffled = [...array];
@@ -100,7 +101,11 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTod
 
     if (currentQuestionIndex < shuffledQuestions.length - 1) {
       setTimeout(() => {
-        setCurrentQuestionIndex(prevIndex => prevIndex + 1);
+        setCurrentQuestionIndex(prevIndex => {
+          const newIndex = prevIndex + 1;
+          setCardsStudied(prevStudied => new Set(prevStudied).add(newIndex));
+          return newIndex;
+        });
         setUserAnswer('');
         setShowAnswer(false);
       }, 1000);
@@ -114,12 +119,12 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTod
       const score = calculateScore();
       const endTime = new Date();
       const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
-      const cardsStudied = shuffledQuestions.length;
-      await saveStudyHistory(user.uid, setId, title, 'qa', score, endTime, studyDuration, cardsStudied);
+      const actualCardsStudied = cardsStudied.size;
+      await saveStudyHistory(user.uid, setId, title, 'qa', score, endTime, studyDuration, actualCardsStudied);
       setTodayStudyTime(prevTime => prevTime + studyDuration);
-      onFinish(score, studyDuration, cardsStudied);
+      onFinish(score, studyDuration, actualCardsStudied);
     }
-  }, [setId, title, calculateScore, onFinish, setTodayStudyTime, shuffledQuestions.length, user]);
+  }, [setId, title, calculateScore, onFinish, setTodayStudyTime, cardsStudied, user]);
 
   if (isLoading) {
     return <div>読み込み中...</div>;

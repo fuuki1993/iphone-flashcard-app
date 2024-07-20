@@ -17,6 +17,7 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
   const [isLastQuestion, setIsLastQuestion] = useState(false);
   const startTimeRef = useRef(new Date());
   const [user, setUser] = useState(null);
+  const [cardsStudied, setCardsStudied] = useState(new Set([0])); // 最初の問題は表示されているとみなす
 
   const calculateScore = useCallback(() => {
     const totalQuestions = shuffledQuestions.length;
@@ -134,17 +135,6 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
     );
   }, []);
 
-  const handleFinish = useCallback(async () => {
-    if (!user) return;
-    const score = calculateScore();
-    const endTime = new Date();
-    const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
-    const cardsStudied = shuffledQuestions.length;
-    await saveStudyHistory(user.uid, setId, title, 'multiple-choice', score, endTime, studyDuration, cardsStudied);
-    setTodayStudyTime(prevTime => prevTime + studyDuration);
-    onFinish(score, studyDuration, cardsStudied);
-  }, [user, setId, title, calculateScore, onFinish, setTodayStudyTime, shuffledQuestions.length]);
-  
   const handleSubmit = useCallback(() => {
     if (selectedAnswers.length > 0 && currentQuestionIndex < shuffledQuestions.length) {
       const currentQuestion = shuffledQuestions[currentQuestionIndex];
@@ -161,13 +151,28 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
         handleFinish();
       } else {
         setTimeout(() => {
-          setCurrentQuestionIndex(prevIndex => prevIndex + 1);
+          setCurrentQuestionIndex(prevIndex => {
+            const newIndex = prevIndex + 1;
+            setCardsStudied(prevStudied => new Set(prevStudied).add(newIndex));
+            return newIndex;
+          });
           setSelectedAnswers([]);
           setShowResult(false);
         }, 1000);
       }
     }
   }, [selectedAnswers, currentQuestionIndex, shuffledQuestions, results, handleFinish]);
+
+  const handleFinish = useCallback(async () => {
+    if (!user) return;
+    const score = calculateScore();
+    const endTime = new Date();
+    const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
+    const actualCardsStudied = cardsStudied.size;
+    await saveStudyHistory(user.uid, setId, title, 'multiple-choice', score, endTime, studyDuration, actualCardsStudied);
+    setTodayStudyTime(prevTime => prevTime + studyDuration);
+    onFinish(score, studyDuration, actualCardsStudied);
+  }, [user, setId, title, calculateScore, onFinish, setTodayStudyTime, cardsStudied]);
 
   if (isLoading) {
     return <div className="w-full max-w-md mx-auto px-4">読み込み中...</div>;
