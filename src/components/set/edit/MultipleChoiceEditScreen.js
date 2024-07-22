@@ -31,61 +31,60 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
   }, []);
 
   useEffect(() => {
-    const loadSets = async () => {
+    const loadSetsAndData = async () => {
       if (user) {
         try {
           const loadedSets = await getSets(user.uid, 'multiple-choice');
           setSets(loadedSets);
-        } catch (error) {
-          console.error("Error loading sets:", error);
-        }
-      }
-    };
-    loadSets();
-  }, [user]);
 
-  useEffect(() => {
-    const loadSet = async () => {
-      if (selectedSetId && user) {
-        try {
-          const cachedSet = localStorage.getItem(`multiple-choiceSet_${selectedSetId}`);
-          if (cachedSet) {
-            const parsedSet = JSON.parse(cachedSet);
-            setSetTitle(parsedSet.title);
-            setQuestions(parsedSet.questions);
-            setOriginalQuestions(parsedSet.questions);
-          } else {
-            const set = await getSetById(user.uid, selectedSetId);
-            setSetTitle(set.title);
-            setQuestions(set.questions);
-            setOriginalQuestions(set.questions);
-            localStorage.setItem(`multiple-choiceSet_${selectedSetId}`, JSON.stringify(set));
+          // 最後に編集したセットIDをローカルストレージから取得
+          const lastEditedSetId = localStorage.getItem('lastEditedMultipleChoiceSetId');
+          if (lastEditedSetId) {
+            const cachedSet = localStorage.getItem(`multiple-choiceSet_${lastEditedSetId}`);
+            if (cachedSet) {
+              const parsedSet = JSON.parse(cachedSet);
+              setSelectedSetId(lastEditedSetId);
+              setSetTitle(parsedSet.title);
+              setQuestions(parsedSet.questions);
+              setOriginalQuestions(parsedSet.questions);
+            } else {
+              await loadSetData(lastEditedSetId);
+            }
           }
         } catch (error) {
-          console.error("Error loading set:", error);
+          console.error("Error loading sets:", error);
           setErrors(prevErrors => ({ ...prevErrors, load: "セットの読み込み中にエラーが発生しました。" }));
         }
-      } else {
-        setSetTitle('');
-        setQuestions([]);
-        setOriginalQuestions([]);
       }
     };
+    loadSetsAndData();
+  }, [user]);
 
-    loadSet();
-  }, [selectedSetId, user]);
+  const loadSetData = async (setId) => {
+    try {
+      const set = await getSetById(user.uid, setId);
+      setSetTitle(set.title);
+      setQuestions(set.questions);
+      setOriginalQuestions(set.questions);
+      localStorage.setItem(`multiple-choiceSet_${setId}`, JSON.stringify(set));
+    } catch (error) {
+      console.error("Error loading set:", error);
+      setErrors(prevErrors => ({ ...prevErrors, load: "セットの読み込み中にエラーが発生しました。" }));
+    }
+  };
 
   const handleSetChange = async (value) => {
     setSelectedSetId(value);
+    localStorage.setItem('lastEditedMultipleChoiceSetId', value);
     if (user) {
-      try {
-        const set = await getSetById(user.uid, value);
-        setSetTitle(set.title);
-        setQuestions(set.questions);
-        setOriginalQuestions(set.questions);
-      } catch (error) {
-        console.error("Error loading set:", error);
-        setErrors(prevErrors => ({ ...prevErrors, load: "セットの読み込み中にエラーが発生しました。" }));
+      const cachedSet = localStorage.getItem(`multiple-choiceSet_${value}`);
+      if (cachedSet) {
+        const parsedSet = JSON.parse(cachedSet);
+        setSetTitle(parsedSet.title);
+        setQuestions(parsedSet.questions);
+        setOriginalQuestions(parsedSet.questions);
+      } else {
+        await loadSetData(value);
       }
     }
   };

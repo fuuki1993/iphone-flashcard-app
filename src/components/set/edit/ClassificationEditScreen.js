@@ -31,33 +31,62 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
   }, []);
 
   useEffect(() => {
-    const loadSets = async () => {
+    const loadSetsAndData = async () => {
       if (user) {
         try {
           const loadedSets = await getSets(user.uid, 'classification');
           setSets(loadedSets);
+
+          // 最後に編集したセットIDをローカルストレージから取得
+          const lastEditedSetId = localStorage.getItem('lastEditedClassificationSetId');
+          if (lastEditedSetId) {
+            const cachedSet = localStorage.getItem(`classificationSet_${lastEditedSetId}`);
+            if (cachedSet) {
+              const parsedSet = JSON.parse(cachedSet);
+              setSelectedSetId(lastEditedSetId);
+              setSetTitle(parsedSet.title);
+              setCategories(parsedSet.categories || [{ name: '', items: [''] }]);
+              setOriginalCategories(parsedSet.categories || [{ name: '', items: [''] }]);
+              setCategoryImages(parsedSet.categories.map(category => category.image) || Array(10).fill(null));
+            } else {
+              await loadSetData(lastEditedSetId);
+            }
+          }
         } catch (error) {
           console.error("Error loading sets:", error);
           setErrors({ ...errors, load: "セットの読み込み中にエラーが発生しました。" });
         }
       }
     };
-    loadSets();
+    loadSetsAndData();
   }, [user]);
+
+  const loadSetData = async (setId) => {
+    try {
+      const set = await getSetById(user.uid, setId);
+      setSetTitle(set.title);
+      setCategories(set.categories || [{ name: '', items: [''] }]);
+      setOriginalCategories(set.categories || [{ name: '', items: [''] }]);
+      setCategoryImages(set.categories.map(category => category.image) || Array(10).fill(null));
+      localStorage.setItem(`classificationSet_${setId}`, JSON.stringify(set));
+    } catch (error) {
+      console.error("Error loading set:", error);
+      setErrors({ ...errors, load: "セットの読み込み中にエラーが発生しました。" });
+    }
+  };
 
   const handleSetChange = async (value) => {
     setSelectedSetId(value);
-    if (user) {
-      try {
-        const set = await getSetById(user.uid, value);
-        setSetTitle(set.title);
-        setCategories(set.categories || [{ name: '', items: [''] }]);
-        setOriginalCategories(set.categories || [{ name: '', items: [''] }]);
-        setCategoryImages(set.categories.map(category => category.image) || Array(10).fill(null));
-      } catch (error) {
-        console.error("Error loading set:", error);
-        setErrors({ ...errors, load: "セットの読み込み中にエラーが発生しました。" });
-      }
+    localStorage.setItem('lastEditedClassificationSetId', value);
+    const cachedSet = localStorage.getItem(`classificationSet_${value}`);
+    if (cachedSet) {
+      const parsedSet = JSON.parse(cachedSet);
+      setSetTitle(parsedSet.title);
+      setCategories(parsedSet.categories || [{ name: '', items: [''] }]);
+      setOriginalCategories(parsedSet.categories || [{ name: '', items: [''] }]);
+      setCategoryImages(parsedSet.categories.map(category => category.image) || Array(10).fill(null));
+    } else {
+      await loadSetData(value);
     }
   };
 

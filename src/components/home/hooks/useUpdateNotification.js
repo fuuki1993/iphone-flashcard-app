@@ -14,7 +14,7 @@ export const useUpdateNotification = (userId) => {
   // ステート定義
   // ----------------------------------------
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
-  const [updateContent, setUpdateContent] = useState('');
+  const [updateContents, setUpdateContents] = useState([]);
 
   // ----------------------------------------
   // アップデートチェック
@@ -30,16 +30,24 @@ export const useUpdateNotification = (userId) => {
       const lastCheckedUpdate = userDoc.data()?.lastCheckedUpdate || 0;
 
       const updatesRef = collection(db, 'updates');
-      const q = query(updatesRef, orderBy('createdAt', 'desc'), limit(1));
+      const q = query(updatesRef, orderBy('createdAt', 'desc'));
       const querySnapshot = await getDocs(q);
 
-      if (!querySnapshot.empty) {
-        const latestUpdate = querySnapshot.docs[0];
-        if (latestUpdate.data().createdAt > lastCheckedUpdate) {
-          setUpdateContent(latestUpdate.data().content);
-          setIsUpdateDialogOpen(true);
-          await setDoc(userRef, { lastCheckedUpdate: latestUpdate.data().createdAt }, { merge: true });
+      const newUpdates = [];
+      let latestUpdateTime = lastCheckedUpdate;
+
+      querySnapshot.forEach((doc) => {
+        const updateData = doc.data();
+        if (updateData.createdAt > lastCheckedUpdate) {
+          newUpdates.push(updateData.content);
+          latestUpdateTime = Math.max(latestUpdateTime, updateData.createdAt);
         }
+      });
+
+      if (newUpdates.length > 0) {
+        setUpdateContents(newUpdates);
+        setIsUpdateDialogOpen(true);
+        await setDoc(userRef, { lastCheckedUpdate: latestUpdateTime }, { merge: true });
       }
     };
 
@@ -61,5 +69,5 @@ export const useUpdateNotification = (userId) => {
   // ----------------------------------------
   // 返却値
   // ----------------------------------------
-  return { isUpdateDialogOpen, updateContent, closeUpdateDialog };
+  return { isUpdateDialogOpen, updateContents, closeUpdateDialog };
 };

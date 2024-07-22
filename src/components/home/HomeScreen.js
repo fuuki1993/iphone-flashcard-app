@@ -228,7 +228,7 @@ const HomeScreen = ({
     checkAdminStatus();
   }, [userId]);
 
-  const { isUpdateDialogOpen, updateContent, closeUpdateDialog } = useUpdateNotification(userId);
+  const { isUpdateDialogOpen, updateContents, closeUpdateDialog } = useUpdateNotification(userId);
 
   // 並列データ取得
   const homeScreenData = useHomeScreenData(userId, dailyGoal);
@@ -317,7 +317,11 @@ const HomeScreen = ({
             <DialogTitle>更新情報</DialogTitle>
           </DialogHeader>
           <DialogDescription>
-            {updateContent}
+            {updateContents.map((content, index) => (
+              <div key={index} className={index > 0 ? "mt-4" : ""}>
+                {content}
+              </div>
+            ))}
           </DialogDescription>
         </DialogContent>
       </Dialog>

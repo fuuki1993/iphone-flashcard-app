@@ -31,65 +31,62 @@ const QAEditScreen = ({ onBack, onSave }) => {
   }, []);
 
   useEffect(() => {
-    const loadSets = async () => {
+    const loadSetsAndData = async () => {
       if (user) {
         try {
           const loadedSets = await getSets(user.uid, 'qa');
           setSets(loadedSets);
+
+          // 最後に編集したセットIDをローカルストレージから取得
+          const lastEditedSetId = localStorage.getItem('lastEditedQASetId');
+          if (lastEditedSetId) {
+            const cachedSet = localStorage.getItem(`qaSet_${lastEditedSetId}`);
+            if (cachedSet) {
+              const parsedSet = JSON.parse(cachedSet);
+              setSelectedSetId(lastEditedSetId);
+              setSetTitle(parsedSet.title);
+              setQAItems(parsedSet.qaItems);
+              setOriginalQAItems(parsedSet.qaItems);
+            } else {
+              await loadSetData(lastEditedSetId);
+            }
+          }
         } catch (error) {
           console.error("Error loading sets:", error);
           setErrors(prevErrors => ({ ...prevErrors, load: "セットの読み込み中にエラーが発生しました。" }));
         }
       }
     };
-    loadSets();
+    loadSetsAndData();
   }, [user]);
 
-  useEffect(() => {
-    const loadSet = async () => {
-      if (selectedSetId && user) {
-        try {
-          const cachedSet = localStorage.getItem(`qaSet_${selectedSetId}`);
-          if (cachedSet) {
-            const parsedSet = JSON.parse(cachedSet);
-            setSetTitle(parsedSet.title);
-            setQAItems(parsedSet.qaItems);
-            setOriginalQAItems(parsedSet.qaItems);
-          } else {
-            const set = await getSetById(user.uid, selectedSetId);
-            setSetTitle(set.title);
-            setQAItems(set.qaItems);
-            setOriginalQAItems(set.qaItems);
-            localStorage.setItem(`qaSet_${selectedSetId}`, JSON.stringify(set));
-          }
-        } catch (error) {
-          console.error("Error loading set:", error);
-          setErrors(prevErrors => ({ ...prevErrors, load: "セットの読み込み中にエラーが発生しました。" }));
-        }
-      } else {
-        setSetTitle('');
-        setQAItems([{ question: '', answer: '', image: null }]);
-        setOriginalQAItems([{ question: '', answer: '', image: null }]);
-      }
-    };
-
-    loadSet();
-  }, [selectedSetId, user]);
+  const loadSetData = async (setId) => {
+    try {
+      const set = await getSetById(user.uid, setId);
+      setSetTitle(set.title);
+      setQAItems(set.qaItems);
+      setOriginalQAItems(set.qaItems);
+      localStorage.setItem(`qaSet_${setId}`, JSON.stringify(set));
+    } catch (error) {
+      console.error("Error loading set:", error);
+      setErrors(prevErrors => ({ ...prevErrors, load: "セットの読み込み中にエラーが発生しました。" }));
+    }
+  };
 
   const handleSetChange = useCallback(async (value) => {
     setSelectedSetId(value);
+    localStorage.setItem('lastEditedQASetId', value);
     if (value && user) {
-      try {
-        const set = await getSetById(user.uid, value);
-        setSetTitle(set.title);
-        setQAItems(set.qaItems);
-        setOriginalQAItems(set.qaItems);
-      } catch (error) {
-        console.error("Error loading set:", error);
-        setErrors(prevErrors => ({ ...prevErrors, load: "セットの読み込み中にエラーが発生しました。" }));
+      const cachedSet = localStorage.getItem(`qaSet_${value}`);
+      if (cachedSet) {
+        const parsedSet = JSON.parse(cachedSet);
+        setSetTitle(parsedSet.title);
+        setQAItems(parsedSet.qaItems);
+        setOriginalQAItems(parsedSet.qaItems);
+      } else {
+        await loadSetData(value);
       }
     } else {
-      // 選択がクリアされた場合の処理
       setSetTitle('');
       setQAItems([{ question: '', answer: '', image: null }]);
       setOriginalQAItems([{ question: '', answer: '', image: null }]);

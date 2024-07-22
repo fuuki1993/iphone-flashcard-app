@@ -34,65 +34,60 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
   }, []);
 
   useEffect(() => {
-    const loadSets = async () => {
+    const loadSetsAndData = async () => {
       if (user) {
         try {
           const loadedSets = await getSets(user.uid, 'flashcard');
           setSets(loadedSets);
+
+          // 最後に編集したセットIDをローカルストレージから取得
+          const lastEditedSetId = localStorage.getItem('lastEditedFlashcardSetId');
+          if (lastEditedSetId) {
+            const cachedSet = localStorage.getItem(`flashcardSet_${lastEditedSetId}`);
+            if (cachedSet) {
+              const parsedSet = JSON.parse(cachedSet);
+              setSelectedSetId(lastEditedSetId);
+              setSetTitle(parsedSet.title);
+              setCards(parsedSet.cards);
+              setOriginalCards(parsedSet.cards);
+            } else {
+              await loadSetData(lastEditedSetId);
+            }
+          }
         } catch (error) {
           console.error("Error loading sets:", error);
           setErrors({ ...errors, load: "セットの読み込み中にエラーが発生しました。" });
         }
       }
     };
-    loadSets();
+    loadSetsAndData();
   }, [user]);
 
-  useEffect(() => {
-    const loadSet = async () => {
-      if (selectedSetId && user) {
-        try {
-          const cachedSet = localStorage.getItem(`flashcardSet_${selectedSetId}`);
-          if (cachedSet) {
-            const parsedSet = JSON.parse(cachedSet);
-            setSetTitle(parsedSet.title);
-            setCards(parsedSet.cards);
-            setOriginalCards(parsedSet.cards);
-          } else {
-            const set = await getSetById(user.uid, selectedSetId);
-            setSetTitle(set.title);
-            setCards(set.cards || []);
-            setOriginalCards(set.cards || []);
-            localStorage.setItem(`flashcardSet_${selectedSetId}`, JSON.stringify(set));
-          }
-        } catch (error) {
-          console.error("Error loading set:", error);
-          setErrors(prevErrors => ({ ...prevErrors, load: "セットの読み込み中にエラーが発生しました。" }));
-        }
-      }
-    };
-
-    loadSet();
-  }, [selectedSetId, user]);
+  const loadSetData = async (setId) => {
+    try {
+      const set = await getSetById(user.uid, setId);
+      setSetTitle(set.title);
+      setCards(set.cards || []);
+      setOriginalCards(set.cards || []);
+      localStorage.setItem(`flashcardSet_${setId}`, JSON.stringify(set));
+    } catch (error) {
+      console.error("Error loading set:", error);
+      setErrors(prevErrors => ({ ...prevErrors, load: "セットの読み込み中にエラーが発生しました。" }));
+    }
+  };
 
   const handleSetChange = async (value) => {
     setSelectedSetId(value);
+    localStorage.setItem('lastEditedFlashcardSetId', value);
     if (user) {
-      try {
-        const set = await getSetById(user.uid, value);
-        setSetTitle(set.title);
-        if (Array.isArray(set.cards) && set.cards.length > 0) {
-          setCards(set.cards);
-          setOriginalCards(set.cards);
-        } else {
-          setCards([]);
-          setOriginalCards([]);
-        }
-      } catch (error) {
-        console.error("Error loading set:", error);
-        setErrors({ ...errors, load: "セットの読み込み中にエラーが発生しました。" });
-        setCards([]);
-        setOriginalCards([]);
+      const cachedSet = localStorage.getItem(`flashcardSet_${value}`);
+      if (cachedSet) {
+        const parsedSet = JSON.parse(cachedSet);
+        setSetTitle(parsedSet.title);
+        setCards(parsedSet.cards);
+        setOriginalCards(parsedSet.cards);
+      } else {
+        await loadSetData(value);
       }
     }
   };
