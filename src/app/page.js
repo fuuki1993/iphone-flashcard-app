@@ -1,6 +1,6 @@
 'use client';
 
-import Home from '../components/Home';
+import Home from '../components/screens/Home';
 
 export default function Page() {
   return <Home />;

@@ -1,0 +1,87 @@
+.container {
+    padding: 1rem;
+    width: 100%;
+  }
+  
+  .header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  
+  .title {
+    font-size: 1.125rem;
+    font-weight: bold;
+  }
+  
+  .description {
+    font-size: 0.875rem;
+    color: #666;
+    margin-bottom: 1rem;
+  }
+  
+  .quizTypeList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .quizTypeCard {
+    transition: box-shadow 0.3s ease;
+  }
+  
+  .quizTypeCard:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+  
+  .cardHeader {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 0.75rem 1rem;
+  }
+  
+  .cardIcon {
+    height: 1.5rem;
+    width: 1.5rem;
+    color: var(--color-primary);
+    margin-right: 0.75rem;
+    flex-shrink: 0;
+  }
+  
+  .cardTitle {
+    font-size: 1rem;
+    font-weight: 500;
+  }
+  
+  .cardContent {
+    padding: 0.5rem 1rem;
+  }
+  
+  .cardDescription {
+    font-size: 0.75rem;
+    color: #666;
+    margin-bottom: 0.75rem;
+  }
+  
+  .selectContainer {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .selectTrigger {
+    font-size: 0.75rem;
+    flex-grow: 1;
+  }
+  
+  .startButton {
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+  
+  .startButtonIcon {
+    margin-right: 0.25rem;
+    height: 0.75rem;
+    width: 0.75rem;
+  }

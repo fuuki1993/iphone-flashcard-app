@@ -1,0 +1,46 @@
+.container {
+    width: 100%;
+    max-width: 28rem;
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+  
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  
+  .title {
+    font-size: 1.25rem;
+    font-weight: bold;
+  }
+  
+  .buttonGroup {
+    display: flex;
+  }
+  
+  .choiceGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+  
+  .correctChoice {
+    background-color: #e6ffea;
+  }
+  
+  .footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .resultIcon {
+    margin-right: 0.5rem;
+  }
+  
+  .pagination {
+    text-align: center;
+  }

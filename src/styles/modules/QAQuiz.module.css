@@ -1,0 +1,41 @@
+.container {
+    width: 100%;
+    max-width: 28rem;
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+  
+  .header {
+    margin-bottom: 1rem;
+  }
+  
+  .headerContent {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .title {
+    font-size: 1.25rem;
+    font-weight: bold;
+  }
+  
+  .quizCard {
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+  
+  .questionImage {
+    width: 100%;
+    margin-bottom: 1rem;
+    max-height: 12rem;
+    object-fit: contain;
+  }
+  
+  .resultIcon {
+    margin-right: 0.5rem;
+  }
+  
+  .pagination {
+    text-align: center;
+  }

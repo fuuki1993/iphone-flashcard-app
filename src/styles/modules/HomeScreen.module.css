@@ -1,0 +1,172 @@
+.container {
+    padding: 0.75rem;
+    width: 100%;
+    max-width: 390px;
+    margin-left: auto;
+    margin-right: auto;
+    background-color: #f3f4f6;
+  }
+  
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+  }
+  
+  .title {
+    font-size: 1.125rem;
+    font-weight: bold;
+    color: #1f2937;
+  }
+  
+  .progressCard {
+    margin-bottom: 0.75rem;
+    background-color: #1f2937;
+    color: white;
+  }
+  
+  .progressCardContent {
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .streakInfo {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+  
+  .streakText {
+    display: flex;
+    align-items: center;
+  }
+  
+  .streakCount {
+    font-weight: bold;
+    font-size: 0.75rem;
+  }
+  
+  .detailsButton {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    color: #1f2937;
+    background-color: #e5e7eb;
+  }
+  
+  .detailsButton:hover {
+    background-color: #d1d5db;
+  }
+  
+  .progressLabel {
+    margin-bottom: 0.25rem;
+    font-size: 0.75rem;
+  }
+  
+  .progressPercentage {
+    text-align: center;
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+  }
+  
+  .actionButtons {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .actionButton {
+    height: 2.5rem;
+    background-color: #374151;
+    color: white;
+    font-size: 0.75rem;
+  }
+  
+  .actionButton:hover {
+    background-color: #4b5563;
+  }
+  
+  .tabs {
+    margin-bottom: 0.75rem;
+  }
+  
+  .tabsList {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  
+  .tabTrigger {
+    font-size: 0.75rem;
+  }
+  
+  .emptyMessage {
+    text-align: center;
+    color: #6b7280;
+  }
+  
+  .eventList {
+    display: flex;
+    align-items: center;
+  }
+  
+  .eventInfo {
+    flex: 1;
+    cursor: pointer;
+  }
+  
+  .eventTitle {
+    font-weight: 500;
+    font-size: 0.75rem;
+  }
+  
+  .eventDate {
+    font-size: 0.625rem;
+    color: #6b7280;
+  }
+  
+  .addEventButton {
+    width: 100%;
+    margin-top: 1rem;
+  }
+  
+  .dailyGoalCard {
+    margin-bottom: 0.75rem;
+  }
+  
+  .dailyGoalHeader {
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .dailyGoalTitle {
+    display: flex;
+    align-items: center;
+    font-size: 0.875rem;
+  }
+  
+  .dailyGoalContent {
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .dailyGoalInfo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.25rem;
+  }
+  
+  .dailyGoalText {
+    font-size: 0.75rem;
+  }
+  
+  .goalAchieved {
+    color: #374151;
+    font-weight: bold;
+    font-size: 0.75rem;
+  }
+  
+  .signOutButton {
+    margin-top: 1.5rem;
+    width: 100%;
+  }

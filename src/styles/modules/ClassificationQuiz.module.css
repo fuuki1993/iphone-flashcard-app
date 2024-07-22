@@ -1,0 +1,83 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100vw;
+    padding: 0.5rem;
+    overflow: hidden;
+  }
+  
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+  
+  .title {
+    font-size: 1.25rem;
+    font-weight: bold;
+  }
+  
+  .score {
+    font-size: 1.125rem;
+    font-weight: bold;
+  }
+  
+  .gridContainer {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+    gap: 0.5rem;
+    height: 100%;
+  }
+  
+  .itemContainer {
+    grid-column: 2;
+    grid-row: 2 / span 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .dragOverlay {
+    background-color: white;
+    padding: 1rem;
+    border-radius: 0.25rem;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    font-size: 1.5rem;
+    font-weight: 600;
+    transform: rotate(90deg);
+  }
+  
+  .resultsContainer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+  }
+  
+  .buttonContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 6rem;
+  }
+  
+  .rotatedButton {
+    transform: rotate(90deg);
+    width: 8rem;
+    height: 3rem;
+  }
+  
+  .rotatedText {
+    display: inline-block;
+    font-size: 0.875rem;
+  }
+  
+  .finalScore {
+    font-size: 1.5rem;
+    font-weight: bold;
+    transform: rotate(90deg);
+    white-space: nowrap;
+  }
