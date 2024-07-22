@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/layout/card';
+import { Card, CardContent, CardHeader, CardFooter, CardTitle } from '@/components/ui/layout/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/form/input';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
