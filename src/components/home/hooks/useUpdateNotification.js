@@ -25,29 +25,43 @@ export const useUpdateNotification = (userId) => {
      */
     const checkForUpdates = async () => {
       const db = getFirestore();
-      const userRef = doc(db, 'users', userId);
-      const userDoc = await getDoc(userRef);
-      const lastCheckedUpdate = userDoc.data()?.lastCheckedUpdate || 0;
-
-      const updatesRef = collection(db, 'updates');
-      const q = query(updatesRef, orderBy('createdAt', 'desc'));
-      const querySnapshot = await getDocs(q);
-
-      const newUpdates = [];
-      let latestUpdateTime = lastCheckedUpdate;
-
-      querySnapshot.forEach((doc) => {
-        const updateData = doc.data();
-        if (updateData.createdAt > lastCheckedUpdate) {
-          newUpdates.push(updateData.content);
-          latestUpdateTime = Math.max(latestUpdateTime, updateData.createdAt);
+      try {
+        const userRef = doc(db, 'users', userId);
+        const userDoc = await getDoc(userRef);
+        
+        if (!userDoc.exists()) {
+          console.log('User document does not exist');
+          return;
         }
-      });
 
-      if (newUpdates.length > 0) {
-        setUpdateContents(newUpdates);
-        setIsUpdateDialogOpen(true);
-        await setDoc(userRef, { lastCheckedUpdate: latestUpdateTime }, { merge: true });
+        const lastCheckedUpdate = userDoc.data()?.lastCheckedUpdate || 0;
+
+        const updatesRef = collection(db, 'updates');
+        const q = query(updatesRef, orderBy('createdAt', 'desc'), limit(10));
+        const querySnapshot = await getDocs(q);
+
+        const newUpdates = [];
+        let latestUpdateTime = lastCheckedUpdate;
+
+        querySnapshot.forEach((doc) => {
+          const updateData = doc.data();
+          if (updateData.createdAt > lastCheckedUpdate) {
+            newUpdates.push(updateData.content);
+            latestUpdateTime = Math.max(latestUpdateTime, updateData.createdAt);
+          }
+        });
+
+        if (newUpdates.length > 0) {
+          setUpdateContents(newUpdates);
+          setIsUpdateDialogOpen(true);
+          await setDoc(userRef, { lastCheckedUpdate: latestUpdateTime }, { merge: true });
+        }
+      } catch (error) {
+        if (error.code === 'permission-denied') {
+          console.log('Permission denied when checking for updates. Please check your authentication status.');
+        } else {
+          console.error('Error checking for updates:', error);
+        }
       }
     };
 

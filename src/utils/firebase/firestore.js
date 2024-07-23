@@ -37,20 +37,16 @@ const SETTINGS_COLLECTION = 'settings';
  * @returns {Promise<string>} 保存されたセットのID
  */
 export const saveSet = async (set, userId) => {
-  const batch = writeBatch(db);
-
   try {
     const newSetRef = doc(collection(db, `users/${userId}/${SETS_COLLECTION}`));
-    batch.set(newSetRef, {
+    const newSet = {
       ...set,
+      id: newSetRef.id,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
-    });
-
-    // 画像のアップロードと処理をここに追加（必要に応じて）
-
-    await batch.commit();
-    return newSetRef.id;
+    };
+    await setDoc(newSetRef, newSet);
+    return newSet;
   } catch (error) {
     console.error("Error saving set:", error);
     throw error;
@@ -66,20 +62,14 @@ export const saveSet = async (set, userId) => {
 export const getSets = async (userId, type = null) => {
   try {
     let q = collection(db, `users/${userId}/${SETS_COLLECTION}`);
-    if (type) {
-      q = query(q, where("type", "==", type));
-    }
     q = query(q, orderBy("updatedAt", "desc"));
 
-    // キャッシュからデータを取得
-    const cachedSnapshot = await getDocsFromCache(q);
-    if (!cachedSnapshot.empty) {
-      return cachedSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    }
-
-    // キャッシュにデータがない場合、サーバーからデータを取得
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const sets = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    console.log('Retrieved sets:', sets); // デバッグ用ログ
+
+    return sets;
   } catch (error) {
     console.error("Error getting sets:", error);
     throw error;
@@ -260,10 +250,18 @@ export const saveStudyHistory = async (userId, studyHistoryEntry) => {
  */
 export const getStudyHistory = async (userId) => {
   try {
+    const cachedStudyHistory = localStorage.getItem(`studyHistory_${userId}`);
+    if (cachedStudyHistory) {
+      const { data, timestamp } = JSON.parse(cachedStudyHistory);
+      if (Date.now() - timestamp < 5 * 60 * 1000) {
+        return data;
+      }
+    }
+
     const studyHistoryRef = collection(db, 'users', userId, 'studyHistory');
     const q = query(studyHistoryRef, orderBy('createdAt', 'desc'));
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => {
+    const studyHistory = querySnapshot.docs.map(doc => {
       const data = doc.data();
       return {
         ...data,
@@ -271,6 +269,9 @@ export const getStudyHistory = async (userId) => {
         createdAt: data.createdAt instanceof Timestamp ? data.createdAt : new Timestamp(data.createdAt.seconds, data.createdAt.nanoseconds)
       };
     });
+
+    localStorage.setItem(`studyHistory_${userId}`, JSON.stringify({ data: studyHistory, timestamp: Date.now() }));
+    return studyHistory;
   } catch (error) {
     console.error("Error fetching study history:", error);
     throw error;
@@ -680,19 +681,36 @@ export const recalculateProgressAfterDeletion = async (userId) => {
  * @returns {Promise<Object>} ユーザー統計
  */
 export const getUserStatistics = async (userId) => {
-  const userStatsRef = doc(db, `users/${userId}/statistics/userStatistics`);
-  const userStatsSnap = await getDoc(userStatsRef);
-  
-  if (userStatsSnap.exists()) {
-    return userStatsSnap.data();
-  } else {
-    // デフォルトの統計データを返す
-    return {
-      totalStudyTime: 0,
-      todayStudiedCards: 0,
-      totalStudyTimeComparison: 0,
-      todayStudiedCardsComparison: 0
-    };
+  try {
+    const cachedUserStats = localStorage.getItem(`userStats_${userId}`);
+    if (cachedUserStats) {
+      const { data, timestamp } = JSON.parse(cachedUserStats);
+      if (Date.now() - timestamp < 5 * 60 * 1000) {
+        return data;
+      }
+    }
+
+    const userStatsRef = doc(db, `users/${userId}/statistics/userStatistics`);
+    const userStatsSnap = await getDoc(userStatsRef);
+    
+    if (userStatsSnap.exists()) {
+      const userStats = userStatsSnap.data();
+      localStorage.setItem(`userStats_${userId}`, JSON.stringify({ data: userStats, timestamp: Date.now() }));
+      return userStats;
+    } else {
+      // デフォルトの統計データを返す
+      const defaultStats = {
+        totalStudyTime: 0,
+        todayStudiedCards: 0,
+        totalStudyTimeComparison: 0,
+        todayStudiedCardsComparison: 0
+      };
+      localStorage.setItem(`userStats_${userId}`, JSON.stringify({ data: defaultStats, timestamp: Date.now() }));
+      return defaultStats;
+    }
+  } catch (error) {
+    console.error('Error getting user statistics:', error);
+    throw error;
   }
 };
 
@@ -770,4 +788,128 @@ const calculateCompletedItems = async (userId, sets) => {
     }
   }
   return completedItems;
+};
+
+/**
+ * 同期されていないデータのみをサーバーと同期する
+ * @param {string} userId - ユーザーID
+ */
+export const syncUnsyncedData = async (userId) => {
+  try {
+    // セットの同期
+    const unsyncedSets = await getUnsyncedSets(userId);
+    for (const set of unsyncedSets) {
+      await updateSet(set, userId);
+    }
+
+    // 学習履歴の同期
+    const unsyncedHistory = await getUnsyncedStudyHistory(userId);
+    for (const entry of unsyncedHistory) {
+      await saveStudyHistory(userId, entry);
+    }
+
+    // セッション状態の同期
+    const unsyncedSessionStates = await getUnsyncedSessionStates(userId);
+    for (const state of unsyncedSessionStates) {
+      await saveSessionState(userId, state.setId, state.setType, state.state);
+    }
+
+    // ユーザー設定の同期
+    const unsyncedSettings = await getUnsyncedUserSettings(userId);
+    if (unsyncedSettings) {
+      await updateUserSettings(userId, unsyncedSettings);
+    }
+
+    // 進捗の再計算と同期（必要な場合のみ）
+    const currentProgress = await getCurrentProgress(userId);
+    const calculatedProgress = await calculateCurrentProgress(userId);
+    if (currentProgress !== calculatedProgress) {
+      await updateCurrentProgress(userId, calculatedProgress);
+    }
+
+    console.log('未同期のデータの同期が完了しました');
+  } catch (error) {
+    console.error('データの同期中にエラーが発生しました:', error);
+    throw error;
+  }
+};
+
+/**
+ * 同期されていないセットを取得する
+ * @param {string} userId - ユーザーID
+ * @returns {Promise<Array>} 未同期のセットの配列
+ */
+const getUnsyncedSets = async (userId) => {
+  const lastSyncTime = await getLastSyncTime(userId, 'sets');
+  const setsRef = collection(db, `users/${userId}/${SETS_COLLECTION}`);
+  const q = query(setsRef, where('updatedAt', '>', lastSyncTime));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+};
+
+
+/**
+ * 同期されていない学習履歴を取得する
+ * @param {string} userId - ユーザーID
+ * @returns {Promise<Array>} 未同期の学習履歴の配列
+ */
+const getUnsyncedStudyHistory = async (userId) => {
+  const lastSyncTime = await getLastSyncTime(userId, 'studyHistory');
+  const historyRef = collection(db, `users/${userId}/${HISTORY_COLLECTION}`);
+  const q = query(historyRef, where('createdAt', '>', lastSyncTime));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+};
+
+/**
+ * 同期されていないセッション状態を取得する
+ * @param {string} userId - ユーザーID
+ * @returns {Promise<Array>} 未同期のセッション状態の配列
+ */
+const getUnsyncedSessionStates = async (userId) => {
+  const lastSyncTime = await getLastSyncTime(userId, 'sessionStates');
+  const statesRef = collection(db, `users/${userId}/${SESSION_STATES_COLLECTION}`);
+  const q = query(statesRef, where('updatedAt', '>', lastSyncTime));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => doc.data());
+};
+
+/**
+ * 同期されていないユーザー設定を取得する
+ * @param {string} userId - ユーザーID
+ * @returns {Promise<Object|null>} 未同期のユーザー設定
+ */
+const getUnsyncedUserSettings = async (userId) => {
+  const lastSyncTime = await getLastSyncTime(userId, 'userSettings');
+  const settingsRef = doc(db, `users/${userId}/${SETTINGS_COLLECTION}`, 'userSettings');
+  const docSnap = await getDoc(settingsRef);
+  if (docSnap.exists() && docSnap.data().updatedAt > lastSyncTime) {
+    return docSnap.data();
+  }
+  return null;
+};
+
+/**
+ * 最後の同期時刻を取得する
+ * @param {string} userId - ユーザーID
+ * @param {string} dataType - データタイプ
+ * @returns {Promise<Timestamp>} 最後の同期時刻
+ */
+const getLastSyncTime = async (userId, dataType) => {
+  const syncTimeRef = doc(db, `users/${userId}/${SETTINGS_COLLECTION}`, `lastSyncTime_${dataType}`);
+  const docSnap = await getDoc(syncTimeRef);
+  if (docSnap.exists()) {
+    return docSnap.data().timestamp;
+  }
+  return Timestamp.fromDate(new Date(0)); // 1970年1月1日（未同期の場合）
+};
+
+/**
+ * 最後の同期時刻を更新する
+ * @param {string} userId - ユーザーID
+ * @param {string} dataType - データタイプ
+ */
+const updateLastSyncTime = async (userId, dataType) => {
+  const syncTimeRef = doc(db, `users/${userId}/${SETTINGS_COLLECTION}`, `lastSyncTime_${dataType}`);
+  await setDoc(syncTimeRef, { timestamp: serverTimestamp() });
 };

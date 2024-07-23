@@ -14,6 +14,7 @@ import useHomeScreenData from './hooks/useHomeScreenData';
 import useRecentActivities from './hooks/useRecentActivities';
 import useScheduledEvents from './hooks/useScheduledEvents';
 import { useUpdateNotification } from './hooks/useUpdateNotification';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { checkUserRole } from '@/utils/firebase/auth';
 
 import styles from '@/styles/modules/HomeScreen.module.css';
@@ -217,6 +218,10 @@ const HomeScreen = ({
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isAdminUpdateDialogOpen, setIsAdminUpdateDialogOpen] = useState(false);
+  const [cachedHomeScreenData, setCachedHomeScreenData] = useLocalStorage('homeScreenData', null);
+  const [cachedRecentActivities, setCachedRecentActivities] = useLocalStorage('recentActivities', null);
+  const [cachedScheduledEvents, setCachedScheduledEvents] = useLocalStorage('scheduledEvents', null);
+
 
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -231,9 +236,9 @@ const HomeScreen = ({
   const { isUpdateDialogOpen, updateContents, closeUpdateDialog } = useUpdateNotification(userId);
 
   // 並列データ取得
-  const homeScreenData = useHomeScreenData(userId, dailyGoal);
-  const recentActivitiesData = useRecentActivities(userId, onStartLearning);
-  const scheduledEventsData = useScheduledEvents();
+  const homeScreenData = useHomeScreenData(userId, dailyGoal, cachedHomeScreenData, setCachedHomeScreenData);
+  const recentActivitiesData = useRecentActivities(userId, onStartLearning, cachedRecentActivities, setCachedRecentActivities);
+  const scheduledEventsData = useScheduledEvents(cachedScheduledEvents, setCachedScheduledEvents);
 
   // 統計画面の表示を切り替える関数
   const handleShowStatistics = useCallback(() => {

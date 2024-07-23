@@ -1,0 +1,66 @@
+.container {
+    padding: 1rem;
+    width: 100%;
+  }
+  
+  .header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  
+  .backButton {
+    margin-right: 0.5rem;
+    padding: 0.25rem;
+  }
+  
+  .title {
+    font-size: 1.125rem;
+    font-weight: bold;
+  }
+  
+  .description {
+    font-size: 0.875rem;
+    color: #666;
+    margin-bottom: 1rem;
+  }
+  
+  .cardList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .cardIcon {
+    height: 1.5rem;
+    width: 1.5rem;
+    margin-right: 0.75rem;
+    flex-shrink: 0;
+  }
+  
+  .cardTitle {
+    font-size: 1rem;
+    font-weight: 500;
+  }
+  
+  .cardDescription {
+    font-size: 0.75rem;
+    color: #666;
+    margin-bottom: 0.75rem;
+  }
+  
+  .buttonGroup {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .button {
+    flex: 1;
+    font-size: 0.75rem;
+  }
+  
+  .buttonIcon {
+    margin-right: 0.25rem;
+    height: 0.75rem;
+    width: 0.75rem;
+  }

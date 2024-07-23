@@ -12,7 +12,8 @@ import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { compressImage } from '@/utils/helpers/imageCompression';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, writeBatch, doc } from "firebase/firestore";
+import { getFirestore, writeBatch, doc, collection, serverTimestamp } from "firebase/firestore";
+import styles from '@/styles/modules/CommonCreationScreen.module.css';
 
 const ClassificationCreationScreen = ({ onBack, onSave }) => {
   const [setTitle, setSetTitle] = useState('');
@@ -141,11 +142,8 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
   const handleSave = async () => {
     if (validateForm() && user) {
       try {
-        const db = getFirestore();
-        const batch = writeBatch(db);
-
-        const newSet = { 
-          title: setTitle, 
+        const newSet = {
+          title: setTitle,
           categories: await Promise.all(categories.map(async (category, index) => {
             if (categoryImages[index]) {
               const storage = getStorage();
@@ -156,21 +154,18 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
               await uploadBytes(newRef, oldBlob);
               const newUrl = await getDownloadURL(newRef);
               await deleteObject(oldRef);
-
+  
               return { ...category, image: newUrl };
             }
             return category;
           })),
           type: 'classification'
         };
-
-        const setRef = doc(db, `users/${user.uid}/sets`, Date.now().toString());
-        batch.set(setRef, newSet);
-
-        await batch.commit();
-
+  
+        const savedSet = await saveSet(newSet, user.uid);
+  
         localStorage.removeItem('classificationCreationData');
-        onSave({ ...newSet, id: setRef.id });
+        onSave(savedSet);
       } catch (error) {
         console.error("Error saving set:", error);
         setErrors({ ...errors, save: "セットの保存中にエラーが発生しました。" });
@@ -179,8 +174,8 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
   };
 
   return (
-    <div className="mobile-friendly-form max-w-full overflow-x-hidden">
-      <div className="scrollable-content px-4">
+    <div className={styles.mobileFriendlyForm}>
+      <div className={styles.scrollableContent}>
         <div className="flex items-center mb-6">
           <Button variant="ghost" size="icon" onClick={onBack}>
             <ArrowLeft />
@@ -194,8 +189,7 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
             placeholder="セットのタイトル"
             value={setTitle}
             onChange={(e) => setSetTitle(e.target.value)}
-            className="mobile-friendly-input mb-2 text-base"
-            style={{ fontSize: '16px' }}
+            className={`${styles.mobileFriendlyInput} mb-2`}
           />
           {errors.title && <Alert variant="destructive"><AlertDescription>{errors.title}</AlertDescription></Alert>}
         </div>
@@ -249,8 +243,7 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
                   placeholder="カテゴリー名"
                   value={category.name}
                   onChange={(e) => updateCategory(categoryIndex, 'name', e.target.value)}
-                  className="mobile-friendly-input mb-2 text-base"
-                  style={{ fontSize: '16px' }}
+                  className={`${styles.mobileFriendlyInput} mb-2`}
                 />
                 {category.items.map((item, itemIndex) => (
                   <div key={itemIndex} className="flex mb-2">
@@ -259,8 +252,7 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
                       placeholder={`項目 ${itemIndex + 1}`}
                       value={item}
                       onChange={(e) => updateItem(categoryIndex, itemIndex, e.target.value)}
-                      className="mobile-friendly-input flex-grow mr-2 text-base"
-                      style={{ fontSize: '16px' }}
+                      className={`${styles.mobileFriendlyInput} flex-grow mr-2`}
                     />
                     <Button variant="ghost" size="icon" onClick={() => removeItem(categoryIndex, itemIndex)}>
                       <Trash2 className="h-4 w-4" />
@@ -280,7 +272,7 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
         )}
       </div>
 
-      <div className="fixed-bottom">
+      <div className={styles.fixedBottom}>
         <div className="flex justify-between">
           <Button 
             onClick={addCategory} 

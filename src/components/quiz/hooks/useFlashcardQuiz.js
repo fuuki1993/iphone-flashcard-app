@@ -47,44 +47,22 @@ export const useFlashcardQuiz = (setId, sessionState, onFinish, setTodayStudyTim
         const cachedSet = localStorage.getItem(`flashcardSet_${setId}`);
         if (cachedSet) {
           const parsedSet = JSON.parse(cachedSet);
-          setCards(parsedSet.cards);
+          const cards = convertToFlashcards(parsedSet);
+          setCards(cards);
           if (sessionState) {
             setShuffledCards(sessionState.shuffledCards);
             setCurrentCardIndex(sessionState.currentCardIndex);
             setCompleted(sessionState.completed);
           } else {
-            setShuffledCards(shuffleArray([...parsedSet.cards]));
-            setCompleted(new Array(parsedSet.cards.length).fill(false));
+            setShuffledCards(shuffleArray([...cards]));
+            setCompleted(new Array(cards.length).fill(false));
           }
         } else {
-          let set;
-          if (setId === null) {
-            const allSets = await getSets(user.uid, 'flashcard');
-            set = { cards: allSets.flatMap(s => s.cards) };
-          } else {
-            set = await getSetById(user.uid, setId);
-          }
-          
-          let allCards;
-          if (set.type === 'flashcard') {
-            allCards = set.cards;
-          } else if (set.type === 'qa') {
-            allCards = set.qaItems.map(item => ({
-              front: item.question,
-              back: item.answer,
-              image: item.image
-            }));
-          } else {
-            throw new Error('Invalid set type');
-          }
-
-          if (Array.isArray(allCards)) {
-            setCards(allCards);
-            setShuffledCards(shuffleArray([...allCards]));
-            setCompleted(new Array(allCards.length).fill(false));
-          } else {
-            throw new Error('Invalid data structure');
-          }
+          const set = await getSetById(user.uid, setId);
+          const cards = convertToFlashcards(set);
+          setCards(cards);
+          setShuffledCards(shuffleArray([...cards]));
+          setCompleted(new Array(cards.length).fill(false));
           localStorage.setItem(`flashcardSet_${setId}`, JSON.stringify(set));
         }
       } catch (error) {
@@ -259,6 +237,21 @@ export const useFlashcardQuiz = (setId, sessionState, onFinish, setTodayStudyTim
       }
     }
   }, [setId, onFinish, setTodayStudyTime, studiedCards, user, sessionState, startTimeRef, shuffledCards, updateOverallProgress]);
+
+  // Helper function to convert set data to flashcards
+  const convertToFlashcards = (set) => {
+    if (set.type === 'flashcard') {
+      return set.cards;
+    } else if (set.type === 'qa') {
+      return set.qaItems.map(item => ({
+        front: item.question,
+        back: item.answer,
+        image: item.image
+      }));
+    } else {
+      throw new Error('Invalid set type');
+    }
+  };
 
   // フックから返す値
   return {

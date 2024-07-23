@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Check, X, Shuffle } from 'lucide-react';
 import { useMultipleChoiceQuiz } from './hooks/useMultipleChoiceQuiz';
-import styles from '@/styles/modules/MultipleChoiceQuiz.module.css';
+import styles from '@/styles/modules/quiz/MultipleChoiceQuiz.module.css';
 
 // 多肢選択問題クイズコンポーネント
 const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTodayStudyTime, updateProgress }) => {

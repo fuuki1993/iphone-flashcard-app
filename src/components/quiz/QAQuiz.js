@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/form/input';
 import { ArrowLeft, Check, X, Shuffle } from 'lucide-react';
 import { useQAQuiz } from './hooks/useQAQuiz';
-import styles from '@/styles/modules/QAQuiz.module.css';
+import styles from '@/styles/modules/quiz/QAQuiz.module.css';
 
 // 一問一答クイズコンポーネント
 const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTodayStudyTime }) => {

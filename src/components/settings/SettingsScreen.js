@@ -4,7 +4,8 @@ import { Input } from '@/components/ui/form/input';
 import { Switch } from '@/components/ui/form/switch';
 import { ArrowLeft, User, Mail, Lock } from 'lucide-react';
 import { auth, updateUserProfile, updateUserEmail, updateUserPassword, reauthenticateUser } from '@/utils/firebase/auth';
-import { getUserSettings, updateUserSettings } from '@/utils/firebase/firestore';
+import { getUserSettings, updateUserSettings, syncUnsyncedData } from '@/utils/firebase/firestore';
+import styles from '@/styles/modules/SettingsScreen.module.css';
 
 const SettingsScreen = ({ onBack, userId, dailyGoal, setDailyGoal, darkMode, setDarkMode, onSettingsUpdate }) => {
   const [localDailyGoal, setLocalDailyGoal] = useState(dailyGoal);
@@ -13,6 +14,8 @@ const SettingsScreen = ({ onBack, userId, dailyGoal, setDailyGoal, darkMode, set
   const [newPassword, setNewPassword] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [error, setError] = useState('');
+
+  const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
     const loadUserSettings = async () => {
@@ -83,24 +86,38 @@ const SettingsScreen = ({ onBack, userId, dailyGoal, setDailyGoal, darkMode, set
     }
   };
 
+  const handleSync = async () => {
+    setIsSyncing(true);
+    setError('');
+    try {
+      await syncUnsyncedData(userId);
+      alert('未同期のデータの同期が完了しました。');
+    } catch (error) {
+      console.error('同期中にエラーが発生しました:', error);
+      setError('データの同期に失敗しました。');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   return (
-    <div className="p-4 w-full max-w-md mx-auto">
-      <div className="flex items-center mb-6">
+    <div className={styles.container}>
+      <div className={styles.header}>
         <Button variant="ghost" size="icon" onClick={onBack}>
           <ArrowLeft />
         </Button>
-        <h1 className="text-2xl font-bold ml-2">設定</h1>
+        <h1 className={styles.title}>設定</h1>
       </div>
 
-      <div className="space-y-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+      <div className={styles.formGroup}>
+        <div className={styles.inputGroup}>
+          <label className={styles.label}>
             表示名
           </label>
-          <div className="relative">
-            <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+          <div className={styles.inputWrapper}>
+            <User className={styles.icon} size={18} />
             <Input
-              className="pl-10"
+              className={styles.input}
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="表示名"
@@ -108,14 +125,14 @@ const SettingsScreen = ({ onBack, userId, dailyGoal, setDailyGoal, darkMode, set
           </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+        <div className={styles.inputGroup}>
+          <label className={styles.label}>
             メールアドレス
           </label>
-          <div className="relative">
-            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+          <div className={styles.inputWrapper}>
+            <Mail className={styles.icon} size={18} />
             <Input
-              className="pl-10"
+              className={styles.input}
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -124,14 +141,14 @@ const SettingsScreen = ({ onBack, userId, dailyGoal, setDailyGoal, darkMode, set
           </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+        <div className={styles.inputGroup}>
+          <label className={styles.label}>
             新しいパスワード（変更する場合のみ）
           </label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+          <div className={styles.inputWrapper}>
+            <Lock className={styles.icon} size={18} />
             <Input
-              className="pl-10"
+              className={styles.input}
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
@@ -141,14 +158,14 @@ const SettingsScreen = ({ onBack, userId, dailyGoal, setDailyGoal, darkMode, set
         </div>
 
         {newPassword && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+          <div className={styles.inputGroup}>
+            <label className={styles.label}>
               現在のパスワード
             </label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+            <div className={styles.inputWrapper}>
+              <Lock className={styles.icon} size={18} />
               <Input
-                className="pl-10"
+                className={styles.input}
                 type="password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
@@ -158,8 +175,8 @@ const SettingsScreen = ({ onBack, userId, dailyGoal, setDailyGoal, darkMode, set
           </div>
         )}
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+        <div className={styles.inputGroup}>
+          <label className={styles.label}>
             1日の学習目標（分）
           </label>
           <Input
@@ -171,17 +188,27 @@ const SettingsScreen = ({ onBack, userId, dailyGoal, setDailyGoal, darkMode, set
           />
         </div>
 
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-gray-700">ダークモード</span>
+        <div className={styles.switchGroup}>
+          <span className={styles.label}>ダークモード</span>
           <Switch
             checked={darkMode}
             onCheckedChange={setDarkMode}
           />
         </div>
 
-        {error && <p className="text-red-500 text-sm">{error}</p>}
+        <div className={styles.inputGroup}>
+          <Button 
+            onClick={handleSync} 
+            disabled={isSyncing}
+            className={styles.button}
+          >
+            {isSyncing ? '未同期のデータを同期中...' : '未同期のデータをサーバーと同期'}
+          </Button>
+        </div>
 
-        <Button onClick={handleSave} className="w-full">
+        {error && <p className={styles.errorMessage}>{error}</p>}
+
+        <Button onClick={handleSave} className={styles.button}>
           保存
         </Button>
       </div>

@@ -6,7 +6,7 @@ import { DndContext, DragOverlay, useSensors, useSensor, PointerSensor } from '@
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useClassificationQuiz } from './hooks/useClassificationQuiz';
 import { SortableItem, DroppableCategory } from './ClassificationQuizComponents';
-import styles from '@/styles/modules/ClassificationQuiz.module.css';
+import styles from '@/styles/modules/quiz/ClassificationQuiz.module.css';
 
 // ... 既存のインポート文 ...
 

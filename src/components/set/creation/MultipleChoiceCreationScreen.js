@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import styles from '@/styles/modules/CommonCreationScreen.module.css';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/layout/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/form/input';
@@ -11,7 +12,7 @@ import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { compressImage } from '@/utils/helpers/imageCompression';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, writeBatch, doc } from "firebase/firestore";
+import { getFirestore, writeBatch, doc, collection, serverTimestamp } from "firebase/firestore";
 
 const MultipleChoiceCreationScreen = ({ onBack, onSave }) => {
   const [setTitle, setSetTitle] = useState('');
@@ -131,11 +132,8 @@ const MultipleChoiceCreationScreen = ({ onBack, onSave }) => {
   const handleSave = useCallback(async () => {
     if (validateForm() && user) {
       try {
-        const db = getFirestore();
-        const batch = writeBatch(db);
-
-        const newSet = { 
-          title: setTitle, 
+        const newSet = {
+          title: setTitle,
           questions: await Promise.all(questions.map(async (q, i) => {
             if (q.image) {
               const storage = getStorage();
@@ -146,35 +144,32 @@ const MultipleChoiceCreationScreen = ({ onBack, onSave }) => {
               await uploadBytes(newRef, oldBlob);
               const newUrl = await getDownloadURL(newRef);
               await deleteObject(oldRef);
-
+  
               return { ...q, image: newUrl };
             }
             return q;
           })),
           type: 'multiple-choice'
         };
-
-        const setRef = doc(db, `users/${user.uid}/sets`, Date.now().toString());
-        batch.set(setRef, newSet);
-
-        await batch.commit();
-
+  
+        const savedSet = await saveSet(newSet, user.uid);
+  
         localStorage.removeItem('multipleChoiceCreationData');
-        onSave({ ...newSet, id: setRef.id });
+        onSave(savedSet);
       } catch (error) {
         console.error("Error saving set:", error);
         setErrors(prevErrors => ({ ...prevErrors, save: "セットの保存中にエラーが発生しました。" }));
       }
     }
   }, [setTitle, questions, validateForm, onSave, user]);
-
+  
   const togglePreview = useCallback((index) => {
     setPreviewIndex(prevIndex => prevIndex === index ? null : index);
   }, []);
 
   return (
-    <div className="mobile-friendly-form max-w-full overflow-x-hidden">
-      <div className="scrollable-content px-4">
+    <div className={styles.mobileFriendlyForm}>
+      <div className={styles.scrollableContent}>
         <div className="flex items-center mb-6">
           <Button variant="ghost" size="icon" onClick={onBack}>
             <ArrowLeft />
@@ -187,7 +182,7 @@ const MultipleChoiceCreationScreen = ({ onBack, onSave }) => {
             placeholder="セットのタイトル"
             value={setTitle}
             onChange={(e) => setSetTitle(e.target.value)}
-            className="mobile-friendly-input mb-2 text-base"
+            className={`${styles.mobileFriendlyInput} mb-2`}
             style={{ fontSize: '16px' }}
           />
           {errors.title && <Alert variant="destructive"><AlertDescription>{errors.title}</AlertDescription></Alert>}
@@ -228,7 +223,7 @@ const MultipleChoiceCreationScreen = ({ onBack, onSave }) => {
                     placeholder="問題文"
                     value={q.question}
                     onChange={(e) => updateQuestion(qIndex, 'question', e.target.value)}
-                    className="mobile-friendly-input mb-2 text-base"
+                    className={`${styles.mobileFriendlyInput} mb-2`}
                     style={{ fontSize: '16px' }}
                   />
                   <Input
@@ -236,7 +231,7 @@ const MultipleChoiceCreationScreen = ({ onBack, onSave }) => {
                     type="file"
                     accept="image/*"
                     onChange={(e) => handleImageUpload(qIndex, e)}
-                    className="mobile-friendly-input mb-2"
+                    className={styles.mobileFriendlyInput}
                   />
                   {q.image && <img src={q.image} alt="Uploaded" className="mt-2 max-w-full h-auto" />}
                   <h4 className="font-medium mt-4 mb-2">選択肢:</h4>
@@ -253,7 +248,7 @@ const MultipleChoiceCreationScreen = ({ onBack, onSave }) => {
                         placeholder={`選択肢 ${cIndex + 1}`}
                         value={choice.text}
                         onChange={(e) => updateChoice(qIndex, cIndex, 'text', e.target.value)}
-                        className="mobile-friendly-input flex-grow mr-2 text-base"
+                        className={`${styles.mobileFriendlyInput} flex-grow mr-2`}
                         style={{ fontSize: '16px' }}
                       />
                       <Button variant="ghost" size="icon" onClick={() => removeChoice(qIndex, cIndex)} >
@@ -275,7 +270,7 @@ const MultipleChoiceCreationScreen = ({ onBack, onSave }) => {
           </Card>
         ))}
 
-        <div className="fixed-bottom">
+        <div className={styles.fixedBottom}>
           <div className="flex justify-between">
             <Button onClick={addQuestion}>
               <Plus className="mr-2 h-4 w-4" /> 問題を追加

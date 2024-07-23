@@ -11,6 +11,7 @@ import { compressImage } from '@/utils/helpers/imageCompression';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { getFirestore, writeBatch, doc } from "firebase/firestore";
+import styles from '@/styles/modules/CommonEditScreen.module.css';
 
 const QAEditScreen = ({ onBack, onSave }) => {
   const [sets, setSets] = useState([]);
@@ -236,8 +237,8 @@ const QAEditScreen = ({ onBack, onSave }) => {
   }, [selectedSetId, qaItems, onBack, user]);
 
   return (
-    <div className="mobile-friendly-form max-w-full overflow-x-hidden">
-      <div className="scrollable-content px-4">
+    <div className={styles.mobileFriendlyForm}>
+      <div className={styles.scrollableContent}>
         <div className="flex items-center mb-6">
           <Button variant="ghost" size="icon" onClick={onBack}>
             <ArrowLeft />
@@ -260,7 +261,7 @@ const QAEditScreen = ({ onBack, onSave }) => {
             placeholder="セットのタイトル"
             value={setTitle}
             onChange={(e) => setSetTitle(e.target.value)}
-            className="mobile-friendly-input mb-2 text-base"
+            className={`${styles.mobileFriendlyInput} mb-2`}
             style={{ fontSize: '16px' }}
           />
           {errors.title && <Alert variant="destructive"><AlertDescription>{errors.title}</AlertDescription></Alert>}
@@ -323,7 +324,7 @@ const QAEditScreen = ({ onBack, onSave }) => {
           </Card>
         ))}
 
-        <div className="fixed-bottom">
+        <div className={styles.fixedBottom}>
           <div className="flex justify-between">
             <Button onClick={addQAItem}>
               <Plus className="mr-2 h-4 w-4" /> 問題を追加

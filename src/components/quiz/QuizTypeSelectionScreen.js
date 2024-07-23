@@ -15,15 +15,6 @@ const LazyQAQuiz = lazy(() => import('./QAQuiz'));
 const LazyMultipleChoiceQuiz = lazy(() => import('./MultipleChoiceQuiz'));
 const LazyClassificationQuiz = lazy(() => import('./ClassificationQuiz'));
 
-// 新しい関数を追加
-const combineAndFilterSets = (flashcardSets, qaSets) => {
-  const combinedSets = [...flashcardSets, ...qaSets];
-  const uniqueSets = combinedSets.filter((set, index, self) =>
-    index === self.findIndex((t) => t.title === set.title)
-  );
-  return uniqueSets;
-};
-
 const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
   const [quizSets, setQuizSets] = useState({
     flashcard: [],
@@ -57,30 +48,26 @@ const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
       setIsLoading(true);
       setError(null);
       try {
-        const [flashcardSets, qaSets, multipleChoiceSets, classificationSets] = await Promise.all([
-          getSets(user.uid, 'flashcard'),
-          getSets(user.uid, 'qa'),
-          getSets(user.uid, 'multiple-choice'),
-          getSets(user.uid, 'classification')
-        ]);
-
-        const combinedFlashcardAndQASets = combineAndFilterSets(flashcardSets, qaSets);
-
+        const allSets = await getSets(user.uid);
+        
+        const flashcardAndQASets = allSets.filter(set => set.type === 'flashcard' || set.type === 'qa');
         const newQuizSets = {
-          flashcard: combinedFlashcardAndQASets,
-          qa: combinedFlashcardAndQASets,
-          'multiple-choice': multipleChoiceSets,
-          classification: classificationSets
+          flashcard: flashcardAndQASets,
+          qa: flashcardAndQASets,
+          'multiple-choice': allSets.filter(set => set.type === 'multiple-choice'),
+          classification: allSets.filter(set => set.type === 'classification')
         };
+
+        console.log('Loaded quiz sets:', newQuizSets); // デバッグ用ログ
 
         setQuizSets(newQuizSets);
 
         // 各タイプの最初のセットをデフォルトで選択
         const newSelectedSets = {
-          flashcard: combinedFlashcardAndQASets[0]?.id || '',
-          qa: combinedFlashcardAndQASets[0]?.id || '',
-          'multiple-choice': multipleChoiceSets[0]?.id || '',
-          classification: classificationSets[0]?.id || ''
+          flashcard: newQuizSets.flashcard[0]?.id || '',
+          qa: newQuizSets.qa[0]?.id || '',
+          'multiple-choice': newQuizSets['multiple-choice'][0]?.id || '',
+          classification: newQuizSets.classification[0]?.id || ''
         };
 
         setSelectedSets(newSelectedSets);
@@ -234,7 +221,7 @@ const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
                   </SelectTrigger>
                   <SelectContent>
                     {quizSets[type.id]?.map(set => (
-                      <SelectItem key={set.id} value={set.id}>{set.title}</SelectItem>
+                      <SelectItem key={set.id} value={set.id}>{set.title} ({set.type})</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

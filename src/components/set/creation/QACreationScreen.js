@@ -12,7 +12,8 @@ import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { compressImage } from '@/utils/helpers/imageCompression';
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, writeBatch, doc } from "firebase/firestore";
+import { getFirestore, writeBatch, doc, collection, serverTimestamp } from "firebase/firestore";
+import styles from '@/styles/modules/CommonCreationScreen.module.css';
 
 const QACreationScreen = ({ onBack, onSave }) => {
   const [setTitle, setSetTitle] = useState('');
@@ -95,11 +96,8 @@ const QACreationScreen = ({ onBack, onSave }) => {
   const handleSave = useCallback(async () => {
     if (validateForm() && user) {
       try {
-        const db = getFirestore();
-        const batch = writeBatch(db);
-
-        const newSet = { 
-          title: setTitle, 
+        const newSet = {
+          title: setTitle,
           qaItems: await Promise.all(qaItems.map(async (item, i) => {
             if (item.image) {
               const storage = getStorage();
@@ -110,21 +108,18 @@ const QACreationScreen = ({ onBack, onSave }) => {
               await uploadBytes(newRef, oldBlob);
               const newUrl = await getDownloadURL(newRef);
               await deleteObject(oldRef);
-
+  
               return { ...item, image: newUrl };
             }
             return item;
           })),
           type: 'qa'
         };
-
-        const setRef = doc(db, `users/${user.uid}/sets`, Date.now().toString());
-        batch.set(setRef, newSet);
-
-        await batch.commit();
-
+  
+        const savedSet = await saveSet(newSet, user.uid);
+  
         localStorage.removeItem('qaCreationData');
-        onSave({ ...newSet, id: setRef.id });
+        onSave(savedSet);
       } catch (error) {
         console.error("Error saving set:", error);
         setErrors(prevErrors => ({ ...prevErrors, save: "セットの保存中にエラーが発生しました。" }));
@@ -137,8 +132,8 @@ const QACreationScreen = ({ onBack, onSave }) => {
   }, []);
 
   return (
-    <div className="mobile-friendly-form max-w-full overflow-x-hidden">
-      <div className="scrollable-content px-4">
+    <div className={styles.mobileFriendlyForm}>
+      <div className={styles.scrollableContent}>
         <div className="flex items-center mb-6">
           <Button variant="ghost" size="icon" onClick={onBack}>
             <ArrowLeft />
@@ -152,7 +147,7 @@ const QACreationScreen = ({ onBack, onSave }) => {
             placeholder="セットのタイトル"
             value={setTitle}
             onChange={(e) => setSetTitle(e.target.value)}
-            className="mobile-friendly-input mb-2 text-base"
+            className={`${styles.mobileFriendlyInput} mb-2`}
             style={{ fontSize: '16px' }}
           />
           {errors.title && <Alert variant="destructive"><AlertDescription>{errors.title}</AlertDescription></Alert>}
@@ -187,7 +182,7 @@ const QACreationScreen = ({ onBack, onSave }) => {
                     placeholder="質問"
                     value={item.question}
                     onChange={(e) => updateQAItem(index, 'question', e.target.value)}
-                    className="mobile-friendly-input mb-2 text-base"
+                    className={`${styles.mobileFriendlyInput} mb-2`}
                     style={{ fontSize: '16px' }}
                   />
                   <Textarea
@@ -195,7 +190,7 @@ const QACreationScreen = ({ onBack, onSave }) => {
                     placeholder="回答"
                     value={item.answer}
                     onChange={(e) => updateQAItem(index, 'answer', e.target.value)}
-                    className="mobile-friendly-input mb-2 text-base"
+                    className={`${styles.mobileFriendlyInput} mb-2`}
                     style={{ fontSize: '16px' }}
                   />
                   <Input
@@ -203,7 +198,7 @@ const QACreationScreen = ({ onBack, onSave }) => {
                     type="file"
                     accept="image/*"
                     onChange={(e) => handleImageUpload(index, e)}
-                    className="mobile-friendly-input mb-2"
+                    className={styles.mobileFriendlyInput}
                   />
                   {item.image && <img src={item.image} alt="Uploaded" className="mt-2 max-w-full h-auto" />}
                 </>
@@ -216,12 +211,12 @@ const QACreationScreen = ({ onBack, onSave }) => {
         ))}
       </div>
 
-      <div className="fixed-bottom">
+      <div className={styles.fixedBottom}>
         <div className="flex justify-between">
           <Button onClick={addQAItem}>
             <Plus className="mr-2 h-4 w-4" /> 問題を追加
           </Button>
-          <Button onClick={handleSave} >
+          <Button onClick={handleSave}>
             <Save className="mr-2 h-4 w-4" /> 保存
           </Button>
         </div>

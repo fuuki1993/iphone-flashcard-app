@@ -10,6 +10,7 @@ import { compressImage } from '@/utils/helpers/imageCompression';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { getFirestore, writeBatch, doc } from "firebase/firestore";
+import styles from '@/styles/modules/CommonEditScreen.module.css';
 
 const ClassificationEditScreen = ({ onBack, onSave }) => {
   const [sets, setSets] = useState([]);
@@ -293,8 +294,8 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
   }, [categoryImages]);
 
   return (
-    <div className="mobile-friendly-form max-w-full overflow-x-hidden">
-      <div className="scrollable-content px-4">
+    <div className={styles.mobileFriendlyForm}>
+      <div className={styles.scrollableContent}>
         <div className="flex items-center mb-6">
           <Button variant="ghost" size="icon" onClick={onBack}>
             <ArrowLeft />
@@ -317,8 +318,7 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
             placeholder="セットのタイトル"
             value={setTitle}
             onChange={(e) => setSetTitle(e.target.value)}
-            className="mobile-friendly-input mb-2 text-base"
-            style={{ fontSize: '16px' }}
+            className={`${styles.mobileFriendlyInput} mb-2`}
           />
           {errors.title && <Alert variant="destructive"><AlertDescription>{errors.title}</AlertDescription></Alert>}
           {selectedSetId && (
@@ -384,8 +384,7 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
                   placeholder="カテゴリー名"
                   value={category.name}
                   onChange={(e) => updateCategory(categoryIndex, 'name', e.target.value)}
-                  className="mobile-friendly-input mb-2 text-base"
-                  style={{ fontSize: '16px' }}
+                  className={`${styles.mobileFriendlyInput} mb-2`}
                 />
                 {category.items.map((item, itemIndex) => (
                   <div key={itemIndex} className="flex mb-2">
@@ -393,8 +392,7 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
                       placeholder={`項目 ${itemIndex + 1}`}
                       value={item}
                       onChange={(e) => updateItem(categoryIndex, itemIndex, e.target.value)}
-                      className="mobile-friendly-input flex-grow mr-2 text-base"
-                      style={{ fontSize: '16px' }}
+                      className={`${styles.mobileFriendlyInput} flex-grow mr-2`}
                     />
                     <Button variant="ghost" size="icon" onClick={() => removeItem(categoryIndex, itemIndex)}>
                       <Trash2 className="h-4 w-4" />
@@ -413,7 +411,7 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
           ))
         )}
 
-        <div className="fixed-bottom">
+        <div className={styles.fixedBottom}>
           <div className="flex justify-between">
             <Button 
               onClick={addCategory} 

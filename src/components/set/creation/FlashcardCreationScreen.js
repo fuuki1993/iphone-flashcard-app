@@ -12,7 +12,8 @@ import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { compressImage } from '@/utils/helpers/imageCompression';
 import { getStorage, ref, uploadBytes, getDownloadURL, getBlob, deleteObject } from "firebase/storage";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, writeBatch, doc } from "firebase/firestore";
+import { getFirestore, writeBatch, doc, collection, serverTimestamp } from "firebase/firestore";
+import styles from '@/styles/modules/CommonCreationScreen.module.css';
 
 const FlashcardCreationScreen = ({ onBack, onSave }) => {
   const [setTitle, setSetTitle] = useState('');
@@ -101,11 +102,8 @@ const FlashcardCreationScreen = ({ onBack, onSave }) => {
   const handleSave = useCallback(async () => {
     if (validateForm() && user) {
       try {
-        const db = getFirestore();
-        const batch = writeBatch(db);
-
-        const newSet = { 
-          title: setTitle, 
+        const newSet = {
+          title: setTitle,
           cards: await Promise.all(cards.map(async (card, i) => {
             if (card.image) {
               const storage = getStorage();
@@ -116,21 +114,18 @@ const FlashcardCreationScreen = ({ onBack, onSave }) => {
               await uploadBytes(newRef, oldBlob);
               const newUrl = await getDownloadURL(newRef);
               await deleteObject(oldRef);
-
+  
               return { ...card, image: newUrl };
             }
             return card;
           })),
           type: 'flashcard'
         };
-
-        const setRef = doc(db, `users/${user.uid}/sets`, Date.now().toString());
-        batch.set(setRef, newSet);
-
-        await batch.commit();
-
+  
+        const savedSet = await saveSet(newSet, user.uid);
+  
         localStorage.removeItem('flashcardCreationData');
-        onSave({ ...newSet, id: setRef.id });
+        onSave(savedSet);
       } catch (error) {
         console.error("Error saving set:", error);
         setErrors(prevErrors => ({ ...prevErrors, save: "セットの保存中にエラーが発生しました。" }));
@@ -143,8 +138,8 @@ const FlashcardCreationScreen = ({ onBack, onSave }) => {
   }, []);
 
   return (
-    <div className="mobile-friendly-form max-w-full overflow-x-hidden">
-      <div className="scrollable-content px-4">
+    <div className={styles.mobileFriendlyForm}>
+      <div className={styles.scrollableContent}>
         <div className="flex items-center mb-6">
           <Button variant="ghost" size="icon" onClick={onBack}>
             <ArrowLeft />
@@ -158,8 +153,7 @@ const FlashcardCreationScreen = ({ onBack, onSave }) => {
             placeholder="セットのタイトル"
             value={setTitle}
             onChange={(e) => setSetTitle(e.target.value)}
-            className="mobile-friendly-input mb-2 text-base"
-            style={{ fontSize: '16px' }}
+            className={`${styles.mobileFriendlyInput} mb-2`}
           />
           {errors.title && <Alert variant="destructive"><AlertDescription>{errors.title}</AlertDescription></Alert>}
         </div>
@@ -193,23 +187,21 @@ const FlashcardCreationScreen = ({ onBack, onSave }) => {
                     placeholder="表面"
                     value={card.front}
                     onChange={(e) => updateCard(index, 'front', e.target.value)}
-                    className="mobile-friendly-input mb-2 text-base"
-                    style={{ fontSize: '16px' }}
+                    className={`${styles.mobileFriendlyInput} mb-2`}
                   />
                   <Textarea
                     ref={inputRef}
                     placeholder="裏面"
                     value={card.back}
                     onChange={(e) => updateCard(index, 'back', e.target.value)}
-                    className="mobile-friendly-input mb-2 text-base"
-                    style={{ fontSize: '16px' }}
+                    className={`${styles.mobileFriendlyInput} mb-2`}
                   />
                   <Input
                     ref={inputRef}
                     type="file"
                     accept="image/*"
                     onChange={(e) => handleImageUpload(index, e)}
-                    className="mobile-friendly-input mb-2"
+                    className={`${styles.mobileFriendlyInput} mb-2`}
                   />
                   {card.image && <img src={card.image} alt="Uploaded" className="mt-2 max-w-full h-auto" />}
                 </>
@@ -222,7 +214,7 @@ const FlashcardCreationScreen = ({ onBack, onSave }) => {
         ))}
       </div>
 
-      <div className="fixed-bottom">
+      <div className={styles.fixedBottom}>
         <div className="flex justify-between">
           <Button onClick={addCard}>
             <Plus className="mr-2 h-4 w-4" /> カードを追加

@@ -52,25 +52,15 @@ export const useQAQuiz = (setId, title, quizType, sessionState, setTodayStudyTim
         const cachedSet = localStorage.getItem(`qaSet_${setId}`);
         if (cachedSet) {
           const parsedSet = JSON.parse(cachedSet);
-          setQuestions(parsedSet.qaItems || parsedSet.cards);
-          setShuffledQuestions(shuffleArray([...parsedSet.qaItems || parsedSet.cards]));
+          const qaItems = convertToQAItems(parsedSet);
+          setQuestions(qaItems);
+          setShuffledQuestions(shuffleArray([...qaItems]));
         } else {
           const set = await getSetById(user.uid, setId);
           if (!set) {
             throw new Error('Invalid set data');
           }
-          let qaItems;
-          if (set.type === 'qa') {
-            qaItems = set.qaItems;
-          } else if (set.type === 'flashcard') {
-            qaItems = set.cards.map(card => ({
-              question: card.front,
-              answer: card.back,
-              image: card.image
-            }));
-          } else {
-            throw new Error('Invalid set type');
-          }
+          const qaItems = convertToQAItems(set);
           setQuestions(qaItems);
           setShuffledQuestions(shuffleArray([...qaItems]));
           localStorage.setItem(`qaSet_${setId}`, JSON.stringify(set));
@@ -221,6 +211,21 @@ export const useQAQuiz = (setId, title, quizType, sessionState, setTodayStudyTim
       }
     }
   }, [setId, title, calculateScore, onFinish, setTodayStudyTime, studiedQuestions, user, sessionState, startTimeRef, shuffledQuestions, results]);
+
+  // Helper function to convert set data to QA items
+  const convertToQAItems = (set) => {
+    if (set.type === 'qa') {
+      return set.qaItems;
+    } else if (set.type === 'flashcard') {
+      return set.cards.map(card => ({
+        question: card.front,
+        answer: card.back,
+        image: card.image
+      }));
+    } else {
+      throw new Error('Invalid set type');
+    }
+  };
 
   // フックから返す値
   return {

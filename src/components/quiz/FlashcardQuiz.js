@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/layout/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowRight, RotateCw, Shuffle } from 'lucide-react';
-import styles from '@/styles/modules/FlashcardQuiz.module.css';
+import styles from '@/styles/modules/quiz/FlashcardQuiz.module.css';
 import { useFlashcardQuiz } from './hooks/useFlashcardQuiz';
 
 // フラッシュカードクイズコンポーネント
