@@ -38,7 +38,6 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
           const loadedSets = await getSets(user.uid, 'classification');
           setSets(loadedSets);
 
-          // 最後に編集したセットIDをローカルストレージから取得
           const lastEditedSetId = localStorage.getItem('lastEditedClassificationSetId');
           if (lastEditedSetId) {
             const cachedSet = localStorage.getItem(`classificationSet_${lastEditedSetId}`);
@@ -55,7 +54,7 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
           }
         } catch (error) {
           console.error("Error loading sets:", error);
-          setErrors({ ...errors, load: "セットの読み込み中にエラーが発生しました。" });
+          setErrors(prevErrors => ({ ...prevErrors, load: "セットの読み込み中にエラーが発生しました。" }));
         }
       }
     };
@@ -72,7 +71,7 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
       localStorage.setItem(`classificationSet_${setId}`, JSON.stringify(set));
     } catch (error) {
       console.error("Error loading set:", error);
-      setErrors({ ...errors, load: "セットの読み込み中にエラーが発生しました。" });
+      setErrors(prevErrors => ({ ...prevErrors, load: "セットの読み込み中にエラーが発生しました。" }));
     }
   };
 
@@ -222,17 +221,13 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
         const db = getFirestore();
         const batch = writeBatch(db);
 
-        // セットの更新
-        const setRef = doc(db, `users/${user.uid}/${SETS_COLLECTION}`, selectedSetId);
+        const setRef = doc(db, `users/${user.uid}/sets`, selectedSetId);
         batch.set(setRef, updatedSet);
 
-        // 未使用の画像を削除
         await deleteUnusedImages(originalCategories, updatedSet.categories);
 
-        // バッチ処理を実行
         await batch.commit();
 
-        // ローカルストレージにキャッシュを保存
         localStorage.setItem(`classificationSet_${selectedSetId}`, JSON.stringify(updatedSet));
 
         onSave(updatedSet);
@@ -253,7 +248,6 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
   const handleDelete = useCallback(async () => {
     if (window.confirm('このセットを削除してもよろしいですか？この操作は取り消せません。') && user) {
       try {
-        // 画像の削除処理
         const storage = getStorage();
         for (const category of categories) {
           if (category.image) {
@@ -262,17 +256,11 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
           }
         }
 
-        // セットとその関連データの削除
-        const newProgress = await deleteSet(user.uid, selectedSetId);
+        await deleteSet(user.uid, selectedSetId);
         
-        // 進捗の更新（必要に応じて）
-        // 例: setProgress(newProgress);
-
-        // セットリストの更新
         const updatedSets = await getSets(user.uid, 'classification');
         setSets(updatedSets);
 
-        // 選択されたセットとタイトルをリセット
         setSelectedSetId('');
         setSetTitle('');
         setCategories([{ name: '', items: [''] }]);
