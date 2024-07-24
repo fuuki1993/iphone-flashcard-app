@@ -23,6 +23,7 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
   const [categoryImages, setCategoryImages] = useState(() => Array(10).fill(null));
   const inputRef = useAutoScroll();
   const [user, setUser] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const auth = getAuth();
@@ -139,39 +140,50 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = async () => {
-    if (validateForm() && user) {
-      try {
-        const newSet = {
-          title: setTitle,
-          categories: await Promise.all(categories.map(async (category, index) => {
-            if (categoryImages[index]) {
-              const storage = getStorage();
-              const oldRef = ref(storage, categoryImages[index]);
-              const newRef = ref(storage, `classification/${user.uid}/category_${Date.now()}_${index}`);
-              
-              const oldBlob = await getBlob(oldRef);
-              await uploadBytes(newRef, oldBlob);
-              const newUrl = await getDownloadURL(newRef);
-              await deleteObject(oldRef);
-  
-              return { ...category, image: newUrl };
-            }
-            return category;
-          })),
-          type: 'classification'
-        };
-  
-        const savedSet = await saveSet(newSet, user.uid);
-  
-        localStorage.removeItem('classificationCreationData');
-        onSave(savedSet);
-      } catch (error) {
-        console.error("Error saving set:", error);
-        setErrors({ ...errors, save: "セットの保存中にエラーが発生しました。" });
-      }
+  const handleSave = useCallback(async () => {
+    if (isSaving) return;
+    if (!validateForm()) {
+      console.error("Form validation failed");
+      return;
     }
-  };
+    if (!user) {
+      console.error("User not authenticated");
+      setErrors(prevErrors => ({ ...prevErrors, save: "ユーザー認証が必要です。再度ログインしてください。" }));
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const newSet = {
+        title: setTitle,
+        categories: await Promise.all(categories.map(async (category, index) => {
+          if (categoryImages[index]) {
+            const storage = getStorage();
+            const oldRef = ref(storage, categoryImages[index]);
+            const newRef = ref(storage, `classification/${user.uid}/category_${Date.now()}_${index}`);
+            
+            const oldBlob = await getBlob(oldRef);
+            await uploadBytes(newRef, oldBlob);
+            const newUrl = await getDownloadURL(newRef);
+            await deleteObject(oldRef);
+  
+            return { ...category, image: newUrl };
+          }
+          return category;
+        })),
+        type: 'classification'
+      };
+  
+      const savedSet = await saveSet(newSet, user.uid);
+  
+      localStorage.removeItem('classificationCreationData');
+      onSave(savedSet);
+    } catch (error) {
+      console.error("Error saving set:", error);
+      setErrors(prevErrors => ({ ...prevErrors, save: `セットの保存中にエラーが発生しました: ${error.message}` }));
+    } finally {
+      setIsSaving(false);
+    }
+  }, [setTitle, categories, categoryImages, validateForm, onSave, user, isSaving]);
 
   return (
     <div className={styles.mobileFriendlyForm}>
@@ -280,8 +292,8 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
           >
             <Plus className="mr-2 h-4 w-4" /> カテゴリーを追加
           </Button>
-          <Button onClick={handleSave}>
-            <Save className="mr-2 h-4 w-4" /> 保存
+          <Button onClick={handleSave} disabled={isSaving}>
+            <Save className="mr-2 h-4 w-4" /> {isSaving ? '保存中...' : '保存'}
           </Button>
         </div>
       </div>

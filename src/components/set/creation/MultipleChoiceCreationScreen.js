@@ -25,6 +25,7 @@ const MultipleChoiceCreationScreen = ({ onBack, onSave }) => {
   const [previewIndex, setPreviewIndex] = useState(null);
   const inputRef = useAutoScroll();
   const [user, setUser] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const auth = getAuth();
@@ -130,38 +131,49 @@ const MultipleChoiceCreationScreen = ({ onBack, onSave }) => {
   }, [setTitle, questions]);
 
   const handleSave = useCallback(async () => {
-    if (validateForm() && user) {
-      try {
-        const newSet = {
-          title: setTitle,
-          questions: await Promise.all(questions.map(async (q, i) => {
-            if (q.image) {
-              const storage = getStorage();
-              const oldRef = ref(storage, q.image);
-              const newRef = ref(storage, `multiple_choice/${user.uid}/question_${Date.now()}_${i}`);
-              
-              const oldBlob = await getBlob(oldRef);
-              await uploadBytes(newRef, oldBlob);
-              const newUrl = await getDownloadURL(newRef);
-              await deleteObject(oldRef);
-  
-              return { ...q, image: newUrl };
-            }
-            return q;
-          })),
-          type: 'multiple-choice'
-        };
-  
-        const savedSet = await saveSet(newSet, user.uid);
-  
-        localStorage.removeItem('multipleChoiceCreationData');
-        onSave(savedSet);
-      } catch (error) {
-        console.error("Error saving set:", error);
-        setErrors(prevErrors => ({ ...prevErrors, save: "セットの保存中にエラーが発生しました。" }));
-      }
+    if (isSaving) return;
+    if (!validateForm()) {
+      console.error("Form validation failed");
+      return;
     }
-  }, [setTitle, questions, validateForm, onSave, user]);
+    if (!user) {
+      console.error("User not authenticated");
+      setErrors(prevErrors => ({ ...prevErrors, save: "ユーザー認証が必要です。再度ログインしてください。" }));
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const newSet = {
+        title: setTitle,
+        questions: await Promise.all(questions.map(async (q, i) => {
+          if (q.image) {
+            const storage = getStorage();
+            const oldRef = ref(storage, q.image);
+            const newRef = ref(storage, `multiple_choice/${user.uid}/question_${Date.now()}_${i}`);
+            
+            const oldBlob = await getBlob(oldRef);
+            await uploadBytes(newRef, oldBlob);
+            const newUrl = await getDownloadURL(newRef);
+            await deleteObject(oldRef);
+  
+            return { ...q, image: newUrl };
+          }
+          return q;
+        })),
+        type: 'multiple-choice'
+      };
+  
+      const savedSet = await saveSet(newSet, user.uid);
+  
+      localStorage.removeItem('multipleChoiceCreationData');
+      onSave(savedSet);
+    } catch (error) {
+      console.error("Error saving set:", error);
+      setErrors(prevErrors => ({ ...prevErrors, save: `セットの保存中にエラーが発生しました: ${error.message}` }));
+    } finally {
+      setIsSaving(false);
+    }
+  }, [setTitle, questions, validateForm, onSave, user, isSaving]);
   
   const togglePreview = useCallback((index) => {
     setPreviewIndex(prevIndex => prevIndex === index ? null : index);
@@ -275,8 +287,8 @@ const MultipleChoiceCreationScreen = ({ onBack, onSave }) => {
             <Button onClick={addQuestion}>
               <Plus className="mr-2 h-4 w-4" /> 問題を追加
             </Button>
-            <Button onClick={handleSave}>
-              <Save className="mr-2 h-4 w-4" /> 保存
+              <Button onClick={handleSave} disabled={isSaving}>
+              <Save className="mr-2 h-4 w-4" /> {isSaving ? '保存中...' : '保存'}
             </Button>
           </div>
         </div>
