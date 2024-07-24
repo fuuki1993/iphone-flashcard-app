@@ -9,7 +9,7 @@ import { getSets, getSetById, updateSet, deleteSet } from '@/utils/firebase/fire
 import { compressImage } from '@/utils/helpers/imageCompression';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, writeBatch, doc } from "firebase/firestore";
+import { getFirestore, writeBatch, doc, getDoc, serverTimestamp } from "firebase/firestore";
 import styles from '@/styles/modules/CommonEditScreen.module.css';
 
 const ClassificationEditScreen = ({ onBack, onSave }) => {
@@ -208,6 +208,13 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
   const handleSave = useCallback(async () => {
     if (validateForm() && user && user.uid) {
       try {
+        const db = getFirestore();
+        const setRef = doc(db, `users/${user.uid}/sets`, selectedSetId);
+        
+        // 既存のセットデータを取得
+        const existingSetDoc = await getDoc(setRef);
+        const existingSetData = existingSetDoc.data();
+
         const updatedSet = { 
           id: selectedSetId,
           title: setTitle, 
@@ -215,14 +222,14 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
             ...category,
             image: categoryImages[index] || null
           })),
-          type: 'classification'
+          type: 'classification',
+          // 既存のcreatedAtを保持し、updatedAtを更新
+          createdAt: existingSetData.createdAt || serverTimestamp(),
+          updatedAt: serverTimestamp()
         };
 
-        const db = getFirestore();
         const batch = writeBatch(db);
-
-        const setRef = doc(db, `users/${user.uid}/sets`, selectedSetId);
-        batch.set(setRef, updatedSet);
+        batch.set(setRef, updatedSet, { merge: true });
 
         await deleteUnusedImages(originalCategories, updatedSet.categories);
 
