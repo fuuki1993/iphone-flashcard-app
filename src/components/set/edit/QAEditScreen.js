@@ -12,7 +12,7 @@ import { getSets, getSetById, updateSet, deleteSet } from '@/utils/firebase/fire
 import { compressImage } from '@/utils/helpers/imageCompression';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, writeBatch, doc } from "firebase/firestore";
+import { getFirestore, writeBatch, doc, getDoc, serverTimestamp } from "firebase/firestore";
 import styles from '@/styles/modules/CommonEditScreen.module.css';
 
 const QAEditScreen = ({ onBack, onSave }) => {
@@ -164,31 +164,39 @@ const QAEditScreen = ({ onBack, onSave }) => {
   }, []);
 
   const handleSave = useCallback(async () => {
-    if (validateForm() && user && selectedSetId) {
+    if (validateForm() && user && user.uid) {
       try {
+        const db = getFirestore();
+        const setRef = doc(db, `users/${user.uid}/sets`, selectedSetId);
+        
+        // 既存のセットデータを取得
+        const existingSetDoc = await getDoc(setRef);
+        const existingSetData = existingSetDoc.data() || {};
+  
         const updatedSet = { 
           id: selectedSetId,
           title: setTitle, 
-          qaItems: qaItems.map(item => ({
-            question: item.question,
-            answer: item.answer,
-            image: item.image
-          })),
-          type: 'qa'
+          qaItems: qaItems,
+          type: 'qa',
         };
-
-        const db = getFirestore();
+  
+        // createdAtとupdatedAtの処理
+        if (!existingSetData.createdAt) {
+          updatedSet.createdAt = serverTimestamp();
+        } else {
+          updatedSet.createdAt = existingSetData.createdAt;
+        }
+        updatedSet.updatedAt = serverTimestamp();
+  
         const batch = writeBatch(db);
-
-        const setRef = doc(db, `users/${user.uid}/sets`, selectedSetId);
-        batch.set(setRef, updatedSet);
-
+        batch.set(setRef, updatedSet, { merge: true });
+  
         await deleteUnusedImages(originalQAItems, updatedSet.qaItems);
-
+  
         await batch.commit();
-
+  
         localStorage.setItem(`qaSet_${selectedSetId}`, JSON.stringify(updatedSet));
-
+  
         onSave(updatedSet);
         setOriginalQAItems(updatedSet.qaItems);
         setErrors({});

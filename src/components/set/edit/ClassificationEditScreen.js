@@ -213,8 +213,8 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
         
         // 既存のセットデータを取得
         const existingSetDoc = await getDoc(setRef);
-        const existingSetData = existingSetDoc.data();
-
+        const existingSetData = existingSetDoc.data() || {};
+  
         const updatedSet = { 
           id: selectedSetId,
           title: setTitle, 
@@ -223,20 +223,25 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
             image: categoryImages[index] || null
           })),
           type: 'classification',
-          // 既存のcreatedAtを保持し、updatedAtを更新
-          createdAt: existingSetData.createdAt || serverTimestamp(),
-          updatedAt: serverTimestamp()
         };
-
+  
+        // createdAtとupdatedAtの処理
+        if (!existingSetData.createdAt) {
+          updatedSet.createdAt = serverTimestamp();
+        } else {
+          updatedSet.createdAt = existingSetData.createdAt;
+        }
+        updatedSet.updatedAt = serverTimestamp();
+  
         const batch = writeBatch(db);
         batch.set(setRef, updatedSet, { merge: true });
-
+  
         await deleteUnusedImages(originalCategories, updatedSet.categories);
-
+  
         await batch.commit();
-
+  
         localStorage.setItem(`classificationSet_${selectedSetId}`, JSON.stringify(updatedSet));
-
+  
         onSave(updatedSet);
         setOriginalCategories(updatedSet.categories);
         setErrors({});

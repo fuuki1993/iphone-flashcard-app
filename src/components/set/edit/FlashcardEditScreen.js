@@ -12,7 +12,7 @@ import { getSets, getSetById, updateSet, deleteSet } from '@/utils/firebase/fire
 import { compressImage } from '@/utils/helpers/imageCompression';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, writeBatch, doc } from "firebase/firestore";
+import { getFirestore, writeBatch, doc, getDoc, serverTimestamp } from "firebase/firestore";
 import styles from '@/styles/modules/CommonEditScreen.module.css';
 
 const FlashcardEditScreen = ({ onBack, onSave }) => {
@@ -165,35 +165,39 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
   }, []);
 
   const handleSave = useCallback(async () => {
-    if (validateForm() && user && selectedSetId) {
+    if (validateForm() && user && user.uid) {
       try {
+        const db = getFirestore();
+        const setRef = doc(db, `users/${user.uid}/sets`, selectedSetId);
+        
+        // 既存のセットデータを取得
+        const existingSetDoc = await getDoc(setRef);
+        const existingSetData = existingSetDoc.data() || {};
+  
         const updatedSet = { 
           id: selectedSetId,
           title: setTitle, 
-          cards: cards.map(card => ({
-            front: card.front,
-            back: card.back,
-            image: card.image
-          })),
-          type: 'flashcard'
+          cards: cards,
+          type: 'flashcard',
         };
-
-        const db = getFirestore();
+  
+        // createdAtとupdatedAtの処理
+        if (!existingSetData.createdAt) {
+          updatedSet.createdAt = serverTimestamp();
+        } else {
+          updatedSet.createdAt = existingSetData.createdAt;
+        }
+        updatedSet.updatedAt = serverTimestamp();
+  
         const batch = writeBatch(db);
-
-        // セットの更新
-        const setRef = doc(db, `users/${user.uid}/sets`, selectedSetId);
-        batch.set(setRef, updatedSet);
-
-        // 未使用の画像を削除
+        batch.set(setRef, updatedSet, { merge: true });
+  
         await deleteUnusedImages(originalCards, updatedSet.cards);
-
-        // バッチ処理を実行
+  
         await batch.commit();
-
-        // ローカルストレージにキャッシュを保存
+  
         localStorage.setItem(`flashcardSet_${selectedSetId}`, JSON.stringify(updatedSet));
-
+  
         onSave(updatedSet);
         setOriginalCards(updatedSet.cards);
         setErrors({});

@@ -10,7 +10,7 @@ import { ArrowLeft, Plus, Save, Trash2, Image, Eye, EyeOff } from 'lucide-react'
 import { getSets, getSetById, updateSet, deleteSet } from '@/utils/firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, writeBatch, doc } from "firebase/firestore";
+import { getFirestore, writeBatch, doc, getDoc, serverTimestamp } from "firebase/firestore";
 import styles from '@/styles/modules/CommonEditScreen.module.css';
 
 const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
@@ -201,34 +201,46 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
   const handleSave = useCallback(async () => {
     if (validateForm() && user && user.uid) {
       try {
+        const db = getFirestore();
+        const setRef = doc(db, `users/${user.uid}/sets`, selectedSetId);
+        
+        // 既存のセットデータを取得
+        const existingSetDoc = await getDoc(setRef);
+        const existingSetData = existingSetDoc.data() || {};
+  
         const updatedSet = { 
           id: selectedSetId,
           title: setTitle, 
-          questions,
-          type: 'multiple-choice'
+          questions: questions,
+          type: 'multiple-choice',
         };
-
-        const db = getFirestore();
+  
+        // createdAtとupdatedAtの処理
+        if (!existingSetData.createdAt) {
+          updatedSet.createdAt = serverTimestamp();
+        } else {
+          updatedSet.createdAt = existingSetData.createdAt;
+        }
+        updatedSet.updatedAt = serverTimestamp();
+  
         const batch = writeBatch(db);
-
-        const setRef = doc(db, `users/${user.uid}/multiple-choice`, selectedSetId);
-        batch.set(setRef, updatedSet);
-
+        batch.set(setRef, updatedSet, { merge: true });
+  
         await deleteUnusedImages(originalQuestions, updatedSet.questions);
-
+  
         await batch.commit();
-
+  
         localStorage.setItem(`multiple-choiceSet_${selectedSetId}`, JSON.stringify(updatedSet));
-
+  
         onSave(updatedSet);
         setOriginalQuestions(updatedSet.questions);
         setErrors({});
       } catch (error) {
         console.error("Error updating set:", error);
-        setErrors(prevErrors => ({
-          ...prevErrors,
-          save: error.code === 'permission-denied'
-            ? "権限がありません。再度ログインしてください。"
+        setErrors(prevErrors => ({ 
+          ...prevErrors, 
+          save: error.code === 'permission-denied' 
+            ? "権限がありません。再度ログインしてください。" 
             : "セットの更新中にエラーが発生しました。"
         }));
       }
