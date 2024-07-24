@@ -101,7 +101,7 @@ const useRecentActivities = (userId, onStartLearning) => {
   const createActivityItem = async (set, type, sessionState, studyHistory) => {
     const setStudyHistory = studyHistory
       .filter(entry => entry.setId === set.id && entry.type === type)
-      .sort((a, b) => b.createdAt - a.createdAt);
+      .sort((a, b) => b.lastStudyDate - a.lastStudyDate);
 
     let totalItemsStudied = 0;
     let totalItems = 0;
@@ -137,12 +137,15 @@ const useRecentActivities = (userId, onStartLearning) => {
   
     let latestActivity = setStudyHistory[0] || null;
   
+    // lastStudyDateを使用して最新の学習時間を取得
+    const lastStudyDate = sessionState.lastStudyDate || (latestActivity ? latestActivity.lastStudyDate : new Date());
+
     const isCompleted = totalItems > 0 && totalItems === totalItemsStudied;
     
     return { 
       ...set, 
       sessionState: sessionState, 
-      timestamp: latestActivity ? latestActivity.createdAt : new Date(),
+      timestamp: lastStudyDate, // lastStudyDateを使用
       type: type,
       isCompleted,
       itemsStudied: totalItemsStudied,
@@ -175,7 +178,7 @@ const useRecentActivities = (userId, onStartLearning) => {
           <span className="font-medium text-xs">{activity.title}</span>
           <div className="flex items-center mt-1">
             <p className="text-[10px] text-gray-500 mr-2">
-              {relativeTime}
+              {relativeTime} 
             </p>
             <Progress 
               value={progressPercentage} 
