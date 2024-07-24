@@ -20,6 +20,7 @@ import { useHashRouter } from '@/utils/hooks/hashRouter';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import AuthScreen from '../auth/AuthScreen';
 import SignOut from '../auth/SignOut';
+import styles from '@/styles/modules/Home.module.css';
 
 export default function Home() {
   const { hashPath, push, isReady } = useHashRouter();
@@ -484,8 +485,8 @@ export default function Home() {
   }
 
   return (
-    <div className="bg-gray-100 min-h-screen w-full">
-      <main className="flex flex-col items-center justify-between max-w-4xl mx-auto">
+    <div className={styles.container}>
+      <main className={styles.main}>
         {renderScreen()}
       </main>
     </div>

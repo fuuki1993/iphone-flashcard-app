@@ -38,10 +38,10 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
     const loadSetsAndData = async () => {
       if (user) {
         try {
-          const loadedSets = await getSets(user.uid, 'flashcard');
-          setSets(loadedSets);
-
-          // 最後に編集したセットIDをローカルストレージから取得
+          const loadedSets = await getSets(user.uid);
+          const flashcardSets = loadedSets.filter(set => set.type === 'flashcard');
+          setSets(flashcardSets);
+  
           const lastEditedSetId = localStorage.getItem('lastEditedFlashcardSetId');
           if (lastEditedSetId) {
             const cachedSet = localStorage.getItem(`flashcardSet_${lastEditedSetId}`);
@@ -182,7 +182,7 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
         const batch = writeBatch(db);
 
         // セットの更新
-        const setRef = doc(db, `users/${user.uid}/${SETS_COLLECTION}`, selectedSetId);
+        const setRef = doc(db, `users/${user.uid}/sets`, selectedSetId);
         batch.set(setRef, updatedSet);
 
         // 未使用の画像を削除

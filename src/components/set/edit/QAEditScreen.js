@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/layout/card';
 import { Button } from '@/components/ui/button';
@@ -17,7 +19,7 @@ const QAEditScreen = ({ onBack, onSave }) => {
   const [sets, setSets] = useState([]);
   const [selectedSetId, setSelectedSetId] = useState('');
   const [setTitle, setSetTitle] = useState('');
-  const [qaItems, setQAItems] = useState([{ question: '', answer: '', image: null }]);
+  const [qaItems, setQAItems] = useState([]);
   const [errors, setErrors] = useState({});
   const [previewIndex, setPreviewIndex] = useState(null);
   const [originalQAItems, setOriginalQAItems] = useState([]);
@@ -35,10 +37,10 @@ const QAEditScreen = ({ onBack, onSave }) => {
     const loadSetsAndData = async () => {
       if (user) {
         try {
-          const loadedSets = await getSets(user.uid, 'qa');
-          setSets(loadedSets);
-
-          // 最後に編集したセットIDをローカルストレージから取得
+          const loadedSets = await getSets(user.uid);
+          const qaSets = loadedSets.filter(set => set.type === 'qa');
+          setSets(qaSets);
+  
           const lastEditedSetId = localStorage.getItem('lastEditedQASetId');
           if (lastEditedSetId) {
             const cachedSet = localStorage.getItem(`qaSet_${lastEditedSetId}`);
@@ -54,7 +56,7 @@ const QAEditScreen = ({ onBack, onSave }) => {
           }
         } catch (error) {
           console.error("Error loading sets:", error);
-          setErrors(prevErrors => ({ ...prevErrors, load: "セットの読み込み中にエラーが発生しました。" }));
+          setErrors({ ...errors, load: "セットの読み込み中にエラーが発生しました。" });
         }
       }
     };
@@ -65,8 +67,8 @@ const QAEditScreen = ({ onBack, onSave }) => {
     try {
       const set = await getSetById(user.uid, setId);
       setSetTitle(set.title);
-      setQAItems(set.qaItems);
-      setOriginalQAItems(set.qaItems);
+      setQAItems(set.qaItems || []);
+      setOriginalQAItems(set.qaItems || []);
       localStorage.setItem(`qaSet_${setId}`, JSON.stringify(set));
     } catch (error) {
       console.error("Error loading set:", error);
@@ -74,10 +76,10 @@ const QAEditScreen = ({ onBack, onSave }) => {
     }
   };
 
-  const handleSetChange = useCallback(async (value) => {
+  const handleSetChange = async (value) => {
     setSelectedSetId(value);
     localStorage.setItem('lastEditedQASetId', value);
-    if (value && user) {
+    if (user) {
       const cachedSet = localStorage.getItem(`qaSet_${value}`);
       if (cachedSet) {
         const parsedSet = JSON.parse(cachedSet);
@@ -87,16 +89,12 @@ const QAEditScreen = ({ onBack, onSave }) => {
       } else {
         await loadSetData(value);
       }
-    } else {
-      setSetTitle('');
-      setQAItems([{ question: '', answer: '', image: null }]);
-      setOriginalQAItems([{ question: '', answer: '', image: null }]);
     }
-  }, [user]);
+  };
 
-  const addQAItem = useCallback(() => {
-    setQAItems(prevItems => [...prevItems, { question: '', answer: '', image: null }]);
-  }, []);
+  const addQAItem = () => {
+    setQAItems([...qaItems, { question: '', answer: '', image: null }]);
+  };
 
   const updateQAItem = useCallback((index, field, value) => {
     setQAItems(prevItems => prevItems.map((item, i) => 
@@ -104,24 +102,17 @@ const QAEditScreen = ({ onBack, onSave }) => {
     ));
   }, []);
 
-  const removeQAItem = useCallback((index) => {
-    setQAItems(prevItems => prevItems.filter((_, i) => i !== index));
-  }, []);
+  const removeQAItem = (index) => {
+    setQAItems(qaItems.filter((_, i) => i !== index));
+  };
 
   const handleImageUpload = useCallback(async (index, event) => {
     const file = event.target.files[0];
-    if (file) {
+    if (file && user) {
       try {
         const compressedImage = await compressImage(file);
-        const auth = getAuth();
-        const user = auth.currentUser;
-        
-        if (!user) {
-          throw new Error("User not authenticated");
-        }
-
         const storage = getStorage();
-        const storageRef = ref(storage, `qa_images/${user.uid}/${Date.now()}_${file.name}`);
+        const storageRef = ref(storage, `qa_images/${user.uid}/${selectedSetId}/item_${index}`);
         
         const snapshot = await uploadBytes(storageRef, compressedImage);
         const downloadURL = await getDownloadURL(snapshot.ref);
@@ -132,7 +123,7 @@ const QAEditScreen = ({ onBack, onSave }) => {
         setErrors(prevErrors => ({ ...prevErrors, image: "画像のアップロード中にエラーが発生しました。" }));
       }
     }
-  }, [updateQAItem]);
+  }, [selectedSetId, updateQAItem, user]);
 
   const validateForm = useCallback(() => {
     const newErrors = {};
@@ -148,7 +139,6 @@ const QAEditScreen = ({ onBack, onSave }) => {
     return Object.keys(newErrors).length === 0;
   }, [setTitle, qaItems]);
 
-  // 新しい関数を追加
   const deleteUnusedImages = useCallback(async (originalItems, updatedItems) => {
     const storage = getStorage();
     const auth = getAuth();
@@ -173,31 +163,30 @@ const QAEditScreen = ({ onBack, onSave }) => {
     }
   }, []);
 
-  // handleSave 関数を修正
   const handleSave = useCallback(async () => {
-    if (validateForm() && user && user.uid) {
+    if (validateForm() && user && selectedSetId) {
       try {
-        const updatedSet = {
+        const updatedSet = { 
           id: selectedSetId,
-          title: setTitle,
-          qaItems,
+          title: setTitle, 
+          qaItems: qaItems.map(item => ({
+            question: item.question,
+            answer: item.answer,
+            image: item.image
+          })),
           type: 'qa'
         };
 
         const db = getFirestore();
         const batch = writeBatch(db);
 
-        // セットの更新
-        const setRef = doc(db, `users/${user.uid}/${SETS_COLLECTION}`, selectedSetId);
+        const setRef = doc(db, `users/${user.uid}/sets`, selectedSetId);
         batch.set(setRef, updatedSet);
 
-        // 未使用の画像を削除
         await deleteUnusedImages(originalQAItems, updatedSet.qaItems);
 
-        // バッチ処理を実行
         await batch.commit();
 
-        // ローカルストレージにキャッシュを保存
         localStorage.setItem(`qaSet_${selectedSetId}`, JSON.stringify(updatedSet));
 
         onSave(updatedSet);
@@ -205,21 +194,23 @@ const QAEditScreen = ({ onBack, onSave }) => {
         setErrors({});
       } catch (error) {
         console.error("Error updating set:", error);
-        setErrors(prevErrors => ({
-          ...prevErrors,
-          save: error.code === 'permission-denied'
-            ? "権限がありません。再度ログインしてください。"
+        setErrors(prevErrors => ({ 
+          ...prevErrors, 
+          save: error.code === 'permission-denied' 
+            ? "権限がありません。再度ログインしてください。" 
             : "セットの更新中にエラーが発生しました。"
         }));
       }
     }
   }, [selectedSetId, setTitle, qaItems, validateForm, onSave, originalQAItems, deleteUnusedImages, user]);
 
-  // handleDelete 関数を修正
+  const togglePreview = (index) => {
+    setPreviewIndex(previewIndex === index ? null : index);
+  };
+
   const handleDelete = useCallback(async () => {
     if (window.confirm('このセットを削除してもよろしいですか？この操作は取り消せません。') && user) {
       try {
-        // Delete all images associated with this set
         const storage = getStorage();
         for (const item of qaItems) {
           if (item.image) {
@@ -227,14 +218,24 @@ const QAEditScreen = ({ onBack, onSave }) => {
             await deleteObject(imageRef);
           }
         }
+
         await deleteSet(user.uid, selectedSetId);
-        onBack();
+        
+        const updatedSets = await getSets(user.uid, 'qa');
+        setSets(updatedSets);
+
+        setSelectedSetId('');
+        setSetTitle('');
+        setQAItems([]);
+        
+        setErrors({});
+        alert('セットが正常に削除されました。');
       } catch (error) {
         console.error("Error deleting set:", error);
         setErrors(prevErrors => ({ ...prevErrors, delete: "セットの削除中にエラーが発生しました。" }));
       }
     }
-  }, [selectedSetId, qaItems, onBack, user]);
+  }, [selectedSetId, qaItems, user]);
 
   return (
     <div className={styles.mobileFriendlyForm}>
@@ -252,8 +253,8 @@ const QAEditScreen = ({ onBack, onSave }) => {
               <SelectValue placeholder="編集するセットを選択" />
             </SelectTrigger>
             <SelectContent>
-              {sets.map(set => (
-                <SelectItem key={set.id} value={set.id}>{set.title}</SelectItem>
+              {sets.map((set, index) => (
+                <SelectItem key={`${set.id}-${index}`} value={set.id.toString()}>{set.title}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -272,64 +273,72 @@ const QAEditScreen = ({ onBack, onSave }) => {
           )}
         </div>
 
-        {qaItems.map((item, index) => (
-          <Card key={index} className="mb-4">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-lg font-medium">問題 {index + 1}</CardTitle>
-              <div>
-                <Button variant="ghost" size="icon" onClick={() => setPreviewIndex(previewIndex === index ? null : index)}>
-                  {previewIndex === index ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-                <Button variant="ghost" size="icon" onClick={() => removeQAItem(index)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {previewIndex === index ? (
-                <div className="bg-gray-100 p-4 rounded-md">
-                  <h3 className="font-bold mb-2">質問:</h3>
-                  <p>{item.question}</p>
-                  {item.image && <img src={item.image} alt="Question" className="mt-2 max-w-full h-auto" />}
-                  <h3 className="font-bold mt-4 mb-2">回答:</h3>
-                  <p>{item.answer}</p>
+        {qaItems && qaItems.length > 0 ? (
+          qaItems.map((item, index) => (
+            <Card key={`item-${index}`} className="mb-4">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-lg font-medium">問題 {index + 1}</CardTitle>
+                <div>
+                  <Button variant="ghost" size="icon" onClick={() => togglePreview(index)}>
+                    {previewIndex === index ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => removeQAItem(index)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
-              ) : (
-                <>
-                  <Textarea
-                    placeholder="質問"
-                    value={item.question}
-                    onChange={(e) => updateQAItem(index, 'question', e.target.value)}
-                    className="mb-2"
-                  />
-                  <Textarea
-                    placeholder="回答"
-                    value={item.answer}
-                    onChange={(e) => updateQAItem(index, 'answer', e.target.value)}
-                    className="mb-2"
-                  />
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleImageUpload(index, e)}
-                    className="mb-2"
-                  />
-                  {item.image && <img src={item.image} alt="Uploaded" className="mt-2 max-w-full h-auto" />}
-                </>
-              )}
-            </CardContent>
-            <CardFooter>
-              {errors[`item${index}`] && <Alert variant="destructive"><AlertDescription>{errors[`item${index}`]}</AlertDescription></Alert>}
-            </CardFooter>
-          </Card>
-        ))}
+              </CardHeader>
+              <CardContent>
+                {previewIndex === index ? (
+                  <div className="bg-gray-100 p-4 rounded-md">
+                    <h3 className="font-bold mb-2">質問:</h3>
+                    <p>{item.question}</p>
+                    {item.image && <img src={item.image} alt="Question image" className="mt-2 max-w-full h-auto" />}
+                    <h3 className="font-bold mt-4 mb-2">回答:</h3>
+                    <p>{item.answer}</p>
+                  </div>
+                ) : (
+                  <>
+                    <Textarea
+                      placeholder="質問"
+                      value={item.question}
+                      onChange={(e) => updateQAItem(index, 'question', e.target.value)}
+                      className="mb-2"
+                    />
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleImageUpload(index, e)}
+                      className="mb-2"
+                    />
+                    {item.image && <img src={item.image} alt="Uploaded image" className="mt-2 max-w-full h-auto" />}
+                    <Textarea
+                      placeholder="回答"
+                      value={item.answer}
+                      onChange={(e) => updateQAItem(index, 'answer', e.target.value)}
+                      className="mt-4 mb-2"
+                    />
+                  </>
+                )}
+              </CardContent>
+              <CardFooter>
+                {errors[`item${index}`] && <Alert variant="destructive"><AlertDescription>{errors[`item${index}`]}</AlertDescription></Alert>}
+              </CardFooter>
+            </Card>
+          ))
+        ) : (
+          <p>
+            {selectedSetId 
+              ? "このセットには問題がありません。新しい問題を追加してください。" 
+              : "セットを選択するか、新しい問題を追加してください。"}
+          </p>
+        )}
 
         <div className={styles.fixedBottom}>
           <div className="flex justify-between">
             <Button onClick={addQAItem}>
               <Plus className="mr-2 h-4 w-4" /> 問題を追加
             </Button>
-            <Button onClick={handleSave} >
+            <Button onClick={handleSave}>
               <Save className="mr-2 h-4 w-4" /> 保存
             </Button>
           </div>

@@ -69,6 +69,9 @@ export const getSets = async (userId, type = null) => {
 
     console.log('Retrieved sets:', sets); // デバッグ用ログ
 
+    if (type) {
+      return sets.filter(set => set.type === type);
+    }
     return sets;
   } catch (error) {
     console.error("Error getting sets:", error);

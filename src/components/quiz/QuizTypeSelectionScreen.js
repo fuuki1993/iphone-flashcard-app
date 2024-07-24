@@ -50,18 +50,17 @@ const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
       try {
         const allSets = await getSets(user.uid);
         
-        const flashcardAndQASets = allSets.filter(set => set.type === 'flashcard' || set.type === 'qa');
         const newQuizSets = {
-          flashcard: flashcardAndQASets,
-          qa: flashcardAndQASets,
+          flashcard: allSets.filter(set => set.type === 'flashcard'),
+          qa: allSets.filter(set => set.type === 'qa'),
           'multiple-choice': allSets.filter(set => set.type === 'multiple-choice'),
           classification: allSets.filter(set => set.type === 'classification')
         };
-
+  
         console.log('Loaded quiz sets:', newQuizSets); // デバッグ用ログ
-
+  
         setQuizSets(newQuizSets);
-
+  
         // 各タイプの最初のセットをデフォルトで選択
         const newSelectedSets = {
           flashcard: newQuizSets.flashcard[0]?.id || '',
@@ -69,9 +68,9 @@ const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
           'multiple-choice': newQuizSets['multiple-choice'][0]?.id || '',
           classification: newQuizSets.classification[0]?.id || ''
         };
-
+  
         setSelectedSets(newSelectedSets);
-
+  
         // セットが空の場合のエラーハンドリング
         if (Object.values(newQuizSets).every(sets => sets.length === 0)) {
           setError("セットが見つかりません。新しいセットを作成してください。");
@@ -83,7 +82,7 @@ const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
         setIsLoading(false);
       }
     };
-
+  
     if (user) {
       loadSets();
     }

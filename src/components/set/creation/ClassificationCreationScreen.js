@@ -153,20 +153,29 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
     }
     setIsSaving(true);
     try {
+      const storage = getStorage();
       const newSet = {
         title: setTitle,
         categories: await Promise.all(categories.map(async (category, index) => {
           if (categoryImages[index]) {
-            const storage = getStorage();
-            const oldRef = ref(storage, categoryImages[index]);
-            const newRef = ref(storage, `classification/${user.uid}/category_${Date.now()}_${index}`);
-            
-            const oldBlob = await getBlob(oldRef);
-            await uploadBytes(newRef, oldBlob);
-            const newUrl = await getDownloadURL(newRef);
-            await deleteObject(oldRef);
+            try {
+              const newRef = ref(storage, `classification/${user.uid}/category_${Date.now()}_${index}`);
+              await uploadBytes(newRef, await (await fetch(categoryImages[index])).blob());
+              const newUrl = await getDownloadURL(newRef);
+              
+              // 古い画像の参照を取得し、削除を試みる
+              const oldRef = ref(storage, categoryImages[index]);
+              try {
+                await deleteObject(oldRef);
+              } catch (deleteError) {
+                console.warn("古い画像の削除に失敗しました:", deleteError);
+              }
   
-            return { ...category, image: newUrl };
+              return { ...category, image: newUrl };
+            } catch (imageError) {
+              console.error("画像の処理中にエラーが発生しました:", imageError);
+              return category; // エラーが発生した場合は画像なしでカテゴリーを返す
+            }
           }
           return category;
         })),

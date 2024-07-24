@@ -35,10 +35,10 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
     const loadSetsAndData = async () => {
       if (user) {
         try {
-          const loadedSets = await getSets(user.uid, 'multiple-choice');
-          setSets(loadedSets);
-
-          // 最後に編集したセットIDをローカルストレージから取得
+          const loadedSets = await getSets(user.uid);
+          const multipleChoiceSets = loadedSets.filter(set => set.type === 'multiple-choice');
+          setSets(multipleChoiceSets);
+  
           const lastEditedSetId = localStorage.getItem('lastEditedMultipleChoiceSetId');
           if (lastEditedSetId) {
             const cachedSet = localStorage.getItem(`multiple-choiceSet_${lastEditedSetId}`);
