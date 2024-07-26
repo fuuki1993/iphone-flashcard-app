@@ -9,6 +9,7 @@ import { signIn } from '../../utils/firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/form/input';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
+import styles from '@/styles/modules/AuthScreen.module.css';
 
 /**
  * @component SignIn
@@ -53,29 +54,33 @@ const SignIn = ({ onSignIn, onSwitchToSignUp }) => {
   // レンダリング
   // ----------------------------------------
   return (
-    <div className="space-y-4">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <Input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="メールアドレス"
-          required
-        />
-        <Input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="パスワード"
-          required
-        />
-        <Button type="submit">サインイン</Button>
-        {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
-      </form>
-      <p className="text-center">
-        アカウントをお持ちでない方は
-        <Button variant="link" onClick={onSwitchToSignUp}>サインアップ</Button>
-      </p>
+    <div className={styles.container}>
+      <div className={styles.card}>
+        <h2 className={styles.cardTitle}>サインイン</h2>
+        <p className={styles.cardDescription}>アカウントにサインインしてください</p>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="メールアドレス"
+            required
+          />
+          <Input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="パスワード"
+            required
+          />
+          <Button type="submit" className={styles.signInButton}>サインイン</Button>
+          {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+        </form>
+        <p className="text-center">
+          アカウントをお持ちでない方は
+          <Button variant="link" onClick={onSwitchToSignUp}>サインアップ</Button>
+        </p>
+      </div>
     </div>
   );
 };

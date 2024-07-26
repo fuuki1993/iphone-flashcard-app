@@ -88,17 +88,43 @@
   }
   
   .tabs {
-    margin-bottom: 0.75rem;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid #e5e7eb;
   }
   
   .tabsList {
-    display: grid;
+    display: flex;
     width: 100%;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-content: space-around;
+    background-color: #f3f4f6;
+    border-radius: 0.5rem 0.5rem 0 0;
+    overflow: hidden;
   }
   
   .tabTrigger {
-    font-size: 0.75rem;
+    flex: 1;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-align: center;
+    color: #6b7280;
+    background-color: transparent;
+    transition: all 0.3s ease;
+    border-bottom: 2px solid transparent;
+  }
+
+  .tabTrigger:hover {
+    color: #4b5563;
+    background-color: #e5e7eb;
+  }
+
+  .tabTrigger[data-state="active"] {
+    color: #3b82f6;
+    border-bottom-color: #3b82f6;
+  }
+
+  .tabTrigger[data-state="active"]:hover {
+    background-color: transparent;
   }
   
   .emptyMessage {
@@ -364,7 +390,7 @@
   }
 
 /* レスポンシブデザイン */
-@media (max-width: 480px) {
+@media (max-width: 600px) {
   .container {
     padding: 0.5rem;
     max-width: 100%;
@@ -375,16 +401,35 @@
   }
 
   .actionButtons {
-    grid-template-columns: (2, 1fr);
+    grid-template-columns: repeat(2, 1fr);
   }
 
-  .eventDialog,
-  .adminUpdateDialog {
-    width: 95%;
+  .progressCardContent,
+  .dailyGoalHeader,
+  .dailyGoalContent {
+    padding: 0.375rem 0.5rem;
+  }
+
+  .streakCount,
+  .detailsButton,
+  .progressLabel,
+  .progressPercentage,
+  .actionButton,
+  .eventTitle,
+  .eventDate,
+  .dailyGoalTitle,
+  .dailyGoalText,
+  .goalAchieved {
+    font-size: 0.7rem;
+  }
+
+  .tabTrigger {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
   }
 }
 
-@media (min-width: 481px) and (max-width: 768px) {
+@media (min-width: 601px) {
   .container {
     max-width: 600px;
   }
@@ -393,13 +438,27 @@
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .eventDialog,
-  .adminUpdateDialog {
-    width: 500px;
+  .progressCardContent,
+  .dailyGoalHeader,
+  .dailyGoalContent {
+    padding: 0.5rem 0.625rem;
+  }
+
+  .streakCount,
+  .detailsButton,
+  .progressLabel,
+  .progressPercentage,
+  .actionButton,
+  .eventTitle,
+  .eventDate,
+  .dailyGoalTitle,
+  .dailyGoalText,
+  .goalAchieved {
+    font-size: 0.8125rem;
   }
 }
 
-@media (min-width: 769px) {
+@media (min-width: 1024px) {
   .container {
     max-width: 800px;
     padding: 1rem;
@@ -409,13 +468,40 @@
     font-size: 1.25rem;
   }
 
-  .actionButtons {
-    grid-template-columns: repeat(2, 1fr);
+  .actionButton {
+    height: 3rem;
+    font-size: 1rem;
+    padding: 0.75rem 1.5rem;
   }
 
-  .eventDialog,
-  .adminUpdateDialog {
-    width: 600px;
+  .addEventButton,
+  .signOutButton,
+  .adminUpdateButton {
+    height: 3rem;
+    font-size: 1rem;
+    padding: 0.75rem 1.5rem;
+  }
+
+  .progressCardContent,
+  .dailyGoalHeader,
+  .dailyGoalContent {
+    padding: 0.625rem 0.875rem;
+  }
+
+  .streakCount,
+  .detailsButton,
+  .progressLabel,
+  .progressPercentage,
+  .actionButton,
+  .eventTitle,
+  .dailyGoalTitle,
+  .dailyGoalText,
+  .goalAchieved {
+    font-size: 1rem;
+  }
+
+  .eventDate {
+    font-size: 0.875rem;
   }
 }
 

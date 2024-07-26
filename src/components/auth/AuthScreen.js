@@ -3,7 +3,7 @@ import SignIn from './SignIn';
 import SignUp from './SignUp';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/layout/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/layout/tabs';
-import { Button } from '@/components/ui/button';
+import styles from '@/styles/modules/AuthScreen.module.css';
 
 /**
  * =============================================
@@ -22,14 +22,14 @@ const AuthScreen = ({ onSignIn, onSignUp }) => {
   const [activeTab, setActiveTab] = useState('signin');
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-r">
-      <Card className="w-full max-w-md shadow-lg">
+    <div className={styles.container}>
+      <Card className={styles.card}>
         {/* カードヘッダー */}
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">
+          <CardTitle className={styles.cardTitle}>
             ようこそ
           </CardTitle>
-          <p className="text-center text-sm text-gray-500">
+          <p className={styles.cardDescription}>
             アカウントを作成するか、既存のアカウントでサインインしてください
           </p>
         </CardHeader>
@@ -37,9 +37,9 @@ const AuthScreen = ({ onSignIn, onSignUp }) => {
         <CardContent>
           {/* タブコンポーネント */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">サインイン</TabsTrigger>
-              <TabsTrigger value="signup">サインアップ</TabsTrigger>
+            <TabsList className={`grid w-full grid-cols-2 ${styles.tabsList}`}>
+              <TabsTrigger value="signin" className={styles.tabsTrigger}>サインイン</TabsTrigger>
+              <TabsTrigger value="signup" className={styles.tabsTrigger}>サインアップ</TabsTrigger>
             </TabsList>
             {/* サインインタブ */}
             <TabsContent value="signin">

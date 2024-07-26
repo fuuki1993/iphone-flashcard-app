@@ -7,6 +7,7 @@
 import React from 'react';
 import { logOut } from '../../utils/firebase/auth';
 import { Button } from '@/components/ui/button';
+import styles from '@/styles/modules/AuthScreen.module.css';
 
 /**
  * @component SignOut
@@ -33,7 +34,7 @@ const SignOut = ({ onSignOut }) => {
   // レンダリング
   // ----------------------------------------
   return (
-    <Button onClick={handleSignOut}>サインアウト</Button>
+    <Button onClick={handleSignOut} className={styles.signOutButton}>サインアウト</Button>
   );
 };
 

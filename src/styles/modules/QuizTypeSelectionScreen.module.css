@@ -37,6 +37,8 @@
   border-radius: 0.5rem;
   overflow: hidden;
   transition: box-shadow 0.3s ease;
+  display: flex;
+  flex-direction: column;
 }
 
 .quizTypeCard:hover {
@@ -67,6 +69,10 @@
 
 .cardContent {
   padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex-grow: 1;
 }
 
 .cardDescription {
@@ -79,6 +85,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  margin-top: auto;
 }
 
 .selectTrigger {
@@ -137,8 +144,11 @@
   .quizTypeList {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    height: 400px;
     gap: 1rem;
+  }
+  
+  .selectContainer {
+    height: auto;
   }
 }
 
@@ -148,19 +158,22 @@
     padding: 1rem;
   }
 
-  .quizTypeList {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    height: 400px;
-    gap: 1.5rem;
-  }
-
   .title {
     font-size: 1.25rem;
   }
 
   .description {
     font-size: 1rem;
+  }
+
+  .quizTypeList {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+
+  .selectContainer {
+    height: auto;
   }
 }
 

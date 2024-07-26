@@ -9,6 +9,7 @@ import { signUp } from '../../utils/firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/form/input';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
+import styles from '@/styles/modules/AuthScreen.module.css';  // CSSモジュールをインポート
 
 /**
  * @component SignUp
@@ -53,29 +54,33 @@ const SignUp = ({ onSignUp, onSwitchToSignIn }) => {
   // レンダリング
   // ----------------------------------------
   return (
-    <div className="space-y-4">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <Input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="メールアドレス"
-          required
-        />
-        <Input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="パスワード"
-          required
-        />
-        <Button type="submit">サインアップ</Button>
-        {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
-      </form>
-      <p className="text-center">
-        既にアカウントをお持ちの方は
-        <Button variant="link" onClick={onSwitchToSignIn}>サインイン</Button>
-      </p>
+    <div className={styles.container}>
+      <div className={styles.card}>
+        <h2 className={styles.cardTitle}>サインアップ</h2>
+        <p className={styles.cardDescription}>新しいアカウントを作成してください</p>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="メールアドレス"
+            required
+          />
+          <Input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="パスワード"
+            required
+          />
+          <Button type="submit" className={styles.signUpButton}>サインアップ</Button>
+          {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+        </form>
+        <p className="text-center">
+          既にアカウントをお持ちの方は
+          <Button variant="link" onClick={onSwitchToSignIn}>サインイン</Button>
+        </p>
+      </div>
     </div>
   );
 };
