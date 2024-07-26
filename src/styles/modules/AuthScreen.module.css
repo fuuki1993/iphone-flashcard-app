@@ -31,24 +31,6 @@
   line-height: 1.5; /* 行間を広げる */
 }
 
-.signOutButton {
-  width: 100%;
-  margin-top: 1rem;
-  background-color: #3b82f6; /* ボタンの色を変更 */
-  color: white;
-  padding: 0.75rem 1.5rem; /* パディングを増やす */
-  border-radius: 0.25rem;
-  font-size: 1rem;
-  font-weight: 600;
-  transition: all 0.3s ease;
-}
-
-.signOutButton:hover {
-  background-color: #2563eb; /* ホバー時の色を変更 */
-  transform: translateY(-2px); /* ホバー時に少し浮き上がる */
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* ホバー時にシャドウを追加 */
-}
-
 .signInButton,
 .signUpButton {
   width: 100%;
@@ -102,15 +84,6 @@
 
 :global(.dark) .cardDescription {
   color: #9ca3af;
-}
-
-:global(.dark) .signOutButton {
-  background-color: #4b5563;
-  color: #f3f4f6;
-}
-
-:global(.dark) .signOutButton:hover {
-  background-color: #6b7280;
 }
 
 /* ダークモード対応 */

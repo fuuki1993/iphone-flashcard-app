@@ -9,6 +9,7 @@ import { Settings, PlusCircle, BookOpen, Trophy, BarChart2, Clock, Calendar } fr
 import AddEventModal from '../schedule/AddEventModal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import AdminUpdateForm from '../admin/AdminUpdateForm';
+import SignOut from '../auth/SignOut';
 
 import useHomeScreenData from './hooks/useHomeScreenData';
 import useRecentActivities from './hooks/useRecentActivities';
@@ -303,11 +304,7 @@ const HomeScreen = ({
         isGoalAchieved={homeScreenData.isGoalAchieved} 
       />
 
-      <div className={styles.signOutButton}>
-        <Button onClick={onSignOut} variant="outline" className="w-full">
-          サインアウト
-        </Button>
-      </div>
+      <SignOut onSignOut={onSignOut} />
 
       <AddEventModal
         isOpen={scheduledEventsData.isAddEventModalOpen}
