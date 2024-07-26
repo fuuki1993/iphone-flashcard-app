@@ -22,14 +22,19 @@ export const useClassificationQuiz = (setId, sessionState, onFinish, setTodayStu
   const { user, shuffleArray } = useBaseQuiz();
 
   // 状態変数の定義
-  const [quizData, setQuizData] = useState({
-    question: null,
-    categories: [],
-    items: [],
-    correctClassification: {},
-    isFinished: false,
-    showResults: false,
-    score: 0,
+  const [quizData, setQuizData] = useState(() => {
+    if (sessionState && sessionState.quizData) {
+      return sessionState.quizData;
+    }
+    return {
+      question: null,
+      categories: [],
+      items: [],
+      correctClassification: {},
+      isFinished: false,
+      showResults: false,
+      score: 0,
+    };
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -46,6 +51,7 @@ export const useClassificationQuiz = (setId, sessionState, onFinish, setTodayStu
   const [studiedItems, setStudiedItems] = useState(new Set());
   const [correctAnswers, setCorrectAnswers] = useState({});
   const [incorrectAnswers, setIncorrectAnswers] = useState({});
+  const [categoryImages, setCategoryImages] = useState({});
 
   /**
    * =============================================
@@ -92,17 +98,19 @@ export const useClassificationQuiz = (setId, sessionState, onFinish, setTodayStu
    * @param {Object} set - クイズセットデータ
    */  
   const initializeQuizData = useCallback((set) => {
-    if (sessionState) {
+    if (sessionState && sessionState.quizData) {
       setQuizData(sessionState.quizData);
-      setShuffledItems(sessionState.shuffledItems);
-      setShuffledCategories(sessionState.shuffledCategories);
-      setClassifiedItems(sessionState.classifiedItems);
-      setCurrentItemIndex(sessionState.currentItemIndex);
-      setUnclassifiedItems(sessionState.unclassifiedItems);
-      setStudiedItems(new Set(sessionState.studiedItems));
-      setCorrectAnswers(sessionState.correctAnswers);
-      setIncorrectAnswers(sessionState.incorrectAnswers);
-    } else {
+      setShuffledItems(sessionState.shuffledItems || []);
+      setShuffledCategories(sessionState.shuffledCategories || []);
+      setClassifiedItems(sessionState.classifiedItems || {});
+      setCurrentItemIndex(sessionState.currentItemIndex || 0);
+      setUnclassifiedItems(sessionState.unclassifiedItems || []);
+      setStudiedItems(new Set(sessionState.studiedItems || []));
+      setCorrectAnswers(sessionState.correctAnswers || {});
+      setIncorrectAnswers(sessionState.incorrectAnswers || {});
+      setCategoryImages(sessionState.categoryImages || {});
+      startTimeRef.current = new Date(sessionState.startTime || new Date());
+    } else if (set && set.categories) {
       const newItems = set.categories.flatMap(c => 
         c.items.map((item, index) => ({ 
           id: `${c.name}-${index}`, 
@@ -117,6 +125,15 @@ export const useClassificationQuiz = (setId, sessionState, onFinish, setTodayStu
         acc[cat.name] = cat.items;
         return acc;
       }, {});
+
+      // カテゴリーの画像URLを保存
+      const newCategoryImages = set.categories.reduce((acc, cat) => {
+        if (cat.image) {
+          acc[cat.name] = cat.image;
+        }
+        return acc;
+      }, {});
+
       setQuizData({
         question: null,
         categories: shuffledCategories,
@@ -131,28 +148,41 @@ export const useClassificationQuiz = (setId, sessionState, onFinish, setTodayStu
       setClassifiedItems({});
       setCurrentItemIndex(0);
       setUnclassifiedItems(shuffledItems);
+      setCategoryImages(newCategoryImages);
+      startTimeRef.current = new Date();
+      setStudiedItems(new Set());
+      setCorrectAnswers({});
+      setIncorrectAnswers({});
     }
   }, [sessionState, shuffleArray]);
 
   // セッション状態の保存
   useEffect(() => {
     const saveState = async () => {
-      if (setId && user) {
-        await saveSessionState(user.uid, setId, 'classification', {
-          quizData,
-          shuffledItems,
-          shuffledCategories,
-          classifiedItems,
-          currentItemIndex,
-          unclassifiedItems,
-          studiedItems: Array.from(studiedItems),
-          correctAnswers,
-          incorrectAnswers
-        });
+      if (user && quizData.items.length > 0) {
+        try {
+          const stateToSave = {
+            quizData,
+            shuffledItems,
+            shuffledCategories,
+            classifiedItems,
+            currentItemIndex,
+            unclassifiedItems,
+            studiedItems: Array.from(studiedItems),
+            correctAnswers,
+            incorrectAnswers,
+            categoryImages,
+            startTime: startTimeRef.current.toISOString(),
+          };
+
+          await saveSessionState(user.uid, setId, 'classification', stateToSave);
+        } catch (error) {
+          console.error("セッション状態の保存中にエラーが発生しました:", error);
+        }
       }
     };
     saveState();
-  }, [setId, quizData, shuffledItems, shuffledCategories, classifiedItems, currentItemIndex, unclassifiedItems, user, studiedItems, correctAnswers, incorrectAnswers]);
+  }, [user, setId, quizData, shuffledItems, shuffledCategories, classifiedItems, currentItemIndex, unclassifiedItems, studiedItems, correctAnswers, incorrectAnswers, categoryImages]);
 
   /**
    * =============================================
@@ -287,6 +317,15 @@ export const useClassificationQuiz = (setId, sessionState, onFinish, setTodayStu
             acc[cat.name] = cat.items;
             return acc;
           }, {});
+
+          // カテゴリーの画像URLを保存
+          const newCategoryImages = set.categories.reduce((acc, cat) => {
+            if (cat.image) {
+              acc[cat.name] = cat.image;
+            }
+            return acc;
+          }, {});
+
           setQuizData({
             question: null,
             categories: shuffledCategories,
@@ -306,6 +345,7 @@ export const useClassificationQuiz = (setId, sessionState, onFinish, setTodayStu
           setStudiedItems(new Set());
           setCorrectAnswers({});
           setIncorrectAnswers({});
+          setCategoryImages(newCategoryImages);
         } else {
           throw new Error('無効なデータ構造です');
         }
@@ -420,6 +460,7 @@ export const useClassificationQuiz = (setId, sessionState, onFinish, setTodayStu
     shuffledCategories,
     currentItemIndex,
     unclassifiedItems,
+    categoryImages,
     handleShuffle,
     handleDragStart,
     handleDragOver,

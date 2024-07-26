@@ -2,9 +2,10 @@ import React, { memo, useMemo } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useDroppable } from '@dnd-kit/core';
+import styles from '@/styles/modules/quiz/ClassificationQuizComponents.module.css';
 
 // ドラッグ可能なアイテムコンポーネント
-export const SortableItem = memo(({ id, children, isDragging, isClassified }) => {
+export const SortableItem = memo(({ id, children, isDragging, isClassified, isWideScreen }) => {
   // useSortableフックを使用してドラッグ＆ドロップの機能を追加
   const {
     attributes,
@@ -28,9 +29,7 @@ export const SortableItem = memo(({ id, children, isDragging, isClassified }) =>
       style={style}
       {...attributes}
       {...listeners}
-      className={`inline-block p-4 m-2 rounded border text-2xl font-semibold ${
-        isClassified ? 'bg-gray-100' : 'bg-white'
-      } ${isDragging ? 'shadow-lg' : 'shadow'} transform rotate-90`}
+      className={`${styles.sortableItem} ${isClassified ? styles.classified : ''} ${isDragging ? styles.dragging : ''} ${isWideScreen ? styles.wideScreenItem : ''}`}
     >
       {children}
     </div>
@@ -40,7 +39,7 @@ export const SortableItem = memo(({ id, children, isDragging, isClassified }) =>
 SortableItem.displayName = 'SortableItem';
 
 // ドロップ可能なカテゴリーコンポーネント
-export const DroppableCategory = memo(({ category, isActive, feedbackColor, style }) => {
+export const DroppableCategory = memo(({ category, isActive, feedbackColor, style, isWideScreen }) => {
   // useDroppableフックを使用してドロップ機能を追加
   const { setNodeRef } = useDroppable({
     id: category.name,
@@ -49,18 +48,20 @@ export const DroppableCategory = memo(({ category, isActive, feedbackColor, styl
 
   // クラス名をメモ化
   const className = useMemo(() => `
-    flex flex-col items-center justify-center rounded transition-all duration-300
-    ${feedbackColor ? feedbackColor : 'bg-gray-100'}
-    ${isActive ? 'border-2 border-blue-500' : ''}
-    w-full h-full
-  `, [feedbackColor, isActive]);
+    ${styles.droppableCategory}
+    ${feedbackColor ? styles[feedbackColor] : ''}
+    ${isActive ? styles.active : ''}
+    ${isWideScreen ? styles.wideScreenCategory : ''}
+  `, [feedbackColor, isActive, isWideScreen]);
 
   return (
     <div ref={setNodeRef} className={className} style={style}>
-      {category.image && (
-        <img src={category.image} alt={category.name} className="w-full h-24 object-cover mb-2 transform rotate-90" />
-      )}
-      <h3 className="text-center transform rotate-90">{category.name}</h3>
+      <div className={`${styles.categoryContent} ${isWideScreen ? styles.wideScreenCategoryContent : ''}`}>
+        {category.image && (
+          <img src={category.image} alt={category.name} className={`${styles.categoryImage} ${isWideScreen ? styles.wideScreenCategoryImage : ''}`} />
+        )}
+        <h3 className={`${styles.categoryName} ${isWideScreen ? styles.wideScreenCategoryName : ''}`}>{category.name}</h3>
+      </div>
     </div>
   );
 });

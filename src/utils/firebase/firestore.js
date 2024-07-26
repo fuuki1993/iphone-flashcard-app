@@ -253,14 +253,6 @@ export const saveStudyHistory = async (userId, studyHistoryEntry) => {
  */
 export const getStudyHistory = async (userId) => {
   try {
-    const cachedStudyHistory = localStorage.getItem(`studyHistory_${userId}`);
-    if (cachedStudyHistory) {
-      const { data, timestamp } = JSON.parse(cachedStudyHistory);
-      if (Date.now() - timestamp < 5 * 60 * 1000) {
-        return data;
-      }
-    }
-
     const studyHistoryRef = collection(db, 'users', userId, 'studyHistory');
     const q = query(studyHistoryRef, orderBy('createdAt', 'desc'));
     const querySnapshot = await getDocs(q);
@@ -269,15 +261,15 @@ export const getStudyHistory = async (userId) => {
       return {
         ...data,
         id: doc.id,
-        createdAt: data.createdAt instanceof Timestamp ? data.createdAt : new Timestamp(data.createdAt.seconds, data.createdAt.nanoseconds)
+        createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt.seconds * 1000)
       };
     });
 
-    localStorage.setItem(`studyHistory_${userId}`, JSON.stringify({ data: studyHistory, timestamp: Date.now() }));
+    console.log('Fetched study history from Firestore:', studyHistory);
     return studyHistory;
   } catch (error) {
     console.error("Error fetching study history:", error);
-    throw error;
+    return [];
   }
 };
 
@@ -413,26 +405,21 @@ export const getSettings = async (userId, key) => {
   }
 };
 
-/**
- * ユーザー設定を更新する
- * @param {string} userId - ユーザーID
- * @param {Object} settings - 更新する設定
- */
+// ユーザー設定を更新する関数を修正
 export const updateUserSettings = async (userId, settings) => {
   try {
     const userSettingsRef = doc(db, `users/${userId}/${SETTINGS_COLLECTION}`, 'userSettings');
-    await setDoc(userSettingsRef, settings, { merge: true });
+    await setDoc(userSettingsRef, {
+      ...settings,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
   } catch (error) {
     console.error('Error updating user settings:', error);
     throw error;
   }
 };
 
-/**
- * ユーザー設定を取得する
- * @param {string} userId - ユーザーID
- * @returns {Promise<Object>} ユーザー設定
- */
+// ユーザー設定を取得する関数を修正
 export const getUserSettings = async (userId) => {
   try {
     const userSettingsRef = doc(db, `users/${userId}/${SETTINGS_COLLECTION}`, 'userSettings');
@@ -440,12 +427,31 @@ export const getUserSettings = async (userId) => {
     if (docSnap.exists()) {
       return docSnap.data();
     } else {
-      return {}; // デフォルトの設定を返す
+      return {
+        darkMode: false, // デフォルト値
+        dailyGoal: 60,   // デフォルト値
+        // 他のデフォルト設定...
+      };
     }
   } catch (error) {
     console.error('Error getting user settings:', error);
     throw error;
   }
+};
+
+export const getDarkModeSetting = async (userId) => {
+  const userDoc = doc(db, 'users', userId);
+  const userSnapshot = await getDoc(userDoc);
+  if (userSnapshot.exists()) {
+    const userData = userSnapshot.data();
+    return userData.darkMode || false;
+  }
+  return false;
+};
+
+export const updateDarkModeSetting = async (userId, darkMode) => {
+  const userDoc = doc(db, 'users', userId);
+  await setDoc(userDoc, { darkMode }, { merge: true });
 };
 
 //=============================================================================

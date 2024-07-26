@@ -6,9 +6,7 @@ import { ArrowLeft, Check, X, Shuffle } from 'lucide-react';
 import { useQAQuiz } from './hooks/useQAQuiz';
 import styles from '@/styles/modules/quiz/QAQuiz.module.css';
 
-// 一問一答クイズコンポーネント
 const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTodayStudyTime }) => {
-  // カスタムフックを使用してクイズの状態と関数を取得
   const {
     shuffledQuestions,
     currentQuestionIndex,
@@ -25,35 +23,23 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTod
     handleFinish
   } = useQAQuiz(setId, title, quizType, sessionState, setTodayStudyTime, onFinish);
 
-  // ローディング中の表示
-  if (isLoading) {
-    return <div>読み込み中...</div>;
-  }
-
-  // エラー時の表示
-  if (error) {
-    return <div>{error}</div>;
-  }
-
-  // 質問がない場合の表示
-  if (shuffledQuestions.length === 0) {
-    return <div>質問がありません。</div>;
-  }
+  if (isLoading) return <div className={styles.loading}>読み込み中...</div>;
+  if (error) return <div className={styles.error}>{error}</div>;
+  if (shuffledQuestions.length === 0) return <div className={styles.empty}>質問がありません。</div>;
 
   const currentQuestion = shuffledQuestions[currentQuestionIndex];
 
-  // クイズ終了時の表示
   if (isLastQuestion) {
     const finalScore = calculateScore();
     return (
-      <div className="p-4 max-w-md mx-auto">
-        <Card className="mb-4">
+      <div className={styles.finalScoreContainer}>
+        <Card className={styles.finalScoreCard}>
           <CardHeader>
-            <CardTitle className="text-xl font-bold">クイズ終了</CardTitle>
+            <CardTitle className={styles.finalScoreTitle}>クイズ終了</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-lg mb-4">最終スコア: {finalScore}%</p>
-            <div className="flex justify-between">
+            <p className={styles.finalScoreText}>最終スコア: {finalScore}%</p>
+            <div className={styles.finalScoreButtons}>
               <Button onClick={handleShuffle}>もう一度挑戦</Button>
               <Button onClick={handleFinish}>終了</Button>
             </div>
@@ -67,15 +53,15 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTod
     <div className={styles.container}>
       <div className={styles.header}>
         <div className={styles.headerContent}>
-          <Button variant="ghost" size="icon" onClick={onBack}>
+          <Button variant="ghost" size="icon" onClick={onBack} className={styles.backButton}>
             <ArrowLeft />
           </Button>
           <h2 className={styles.title}>一問一答</h2>
-          <div className="flex">
-            <Button variant="ghost" size="icon" onClick={handleShuffle}>
+          <div className={styles.headerButtons}>
+            <Button variant="ghost" size="icon" onClick={handleShuffle} className={styles.shuffleButton}>
               <Shuffle />
             </Button>
-            <Button variant="ghost" size="icon" onClick={handleFinish}>
+            <Button variant="ghost" size="icon" onClick={handleFinish} className={styles.finishButton}>
               終了
             </Button>
           </div>
@@ -84,7 +70,7 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTod
 
       <Card className={styles.quizCard}>
         <CardHeader>
-          <CardTitle className="text-lg">{currentQuestion.question}</CardTitle>
+          <CardTitle className={styles.questionTitle}>{currentQuestion.question}</CardTitle>
         </CardHeader>
         <CardContent>
           {currentQuestion.image && (
@@ -96,19 +82,20 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTod
             value={userAnswer}
             onChange={(e) => setUserAnswer(e.target.value)}
             disabled={showAnswer}
+            className={styles.answerInput}
           />
         </CardContent>
-        <CardFooter className="flex justify-between">
+        <CardFooter className={styles.cardFooter}>
           {!showAnswer ? (
-            <Button onClick={handleSubmit}>回答する</Button>
+            <Button onClick={handleSubmit} className={styles.submitButton}>回答する</Button>
           ) : (
-            <div className="flex items-center text-sm">
+            <div className={styles.resultContainer}>
               {results[currentQuestionIndex] ? (
-                <Check className={`text-green-500 ${styles.resultIcon}`} />
+                <Check className={`${styles.resultIcon} ${styles.correctIcon}`} />
               ) : (
-                <X className={`text-red-500 ${styles.resultIcon}`} />
+                <X className={`${styles.resultIcon} ${styles.incorrectIcon}`} />
               )}
-              <span>正解: {currentQuestion.answer}</span>
+              <span className={styles.correctAnswer}>正解: {currentQuestion.answer}</span>
             </div>
           )}
         </CardFooter>

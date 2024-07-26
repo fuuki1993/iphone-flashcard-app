@@ -180,7 +180,7 @@ const MultipleChoiceCreationScreen = ({ onBack, onSave }) => {
   }, []);
 
   return (
-    <div className={styles.mobileFriendlyForm}>
+    <div className={styles.creationScreenContainer}>
       <div className={styles.scrollableContent}>
         <div className="flex items-center mb-6">
           <Button variant="ghost" size="icon" onClick={onBack}>
@@ -201,34 +201,34 @@ const MultipleChoiceCreationScreen = ({ onBack, onSave }) => {
         </div>
 
         {questions.map((q, qIndex) => (
-          <Card key={qIndex} className="mb-4">
+          <Card key={qIndex} className="mb-4 w-full sm:w-[calc(50%-0.5rem)] inline-block align-top">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-lg font-medium">問題 {qIndex + 1}</CardTitle>
               <div>
                 <Button variant="ghost" size="icon" onClick={() => togglePreview(qIndex)}>
                   {previewIndex === qIndex ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
-                <Button variant="ghost" size="icon" onClick={() => removeQuestion(qIndex)} >
+                <Button variant="ghost" size="icon" onClick={() => removeQuestion(qIndex)}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
             </CardHeader>
             <CardContent>
               {previewIndex === qIndex ? (
-                <div className="bg-gray-100 p-4 rounded-md">
-                  <h3 className="font-bold mb-2">問題:</h3>
-                  <p>{q.question}</p>
-                  {q.image && <img src={q.image} alt="Question" className="mt-2 max-w-full h-auto" />}
-                  <h3 className="font-bold mt-4 mb-2">選択肢:</h3>
-                  <ul className="list-disc pl-5">
-                    {q.choices.map((choice, cIndex) => (
-                      <li key={cIndex} className={choice.isCorrect ? "text-green-600 font-bold" : ""}>
-                        {choice.text} {choice.isCorrect && "(正解)"}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : (
+                <div className={styles.previewContent}>
+                <h3 className={styles.previewTitle}>問題:</h3>
+                <p>{q.question}</p>
+                {q.image && <img src={q.image} alt="Question" className={styles.previewImage} />}
+                <h3 className={styles.previewTitle}>選択肢:</h3>
+                <ul className={styles.previewList}>
+                  {q.choices.map((choice, cIndex) => (
+                    <li key={cIndex} className={choice.isCorrect ? styles.choiceCorrect : ""}>
+                      {choice.text} {choice.isCorrect && "(正解)"}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
                 <>
                   <Textarea
                     ref={inputRef}
@@ -245,31 +245,32 @@ const MultipleChoiceCreationScreen = ({ onBack, onSave }) => {
                     onChange={(e) => handleImageUpload(qIndex, e)}
                     className={styles.mobileFriendlyInput}
                   />
-                  {q.image && <img src={q.image} alt="Uploaded" className="mt-2 max-w-full h-auto" />}
+                  {q.image && <img src={q.image} alt="Uploaded" className={styles.previewImage} />}
                   <h4 className="font-medium mt-4 mb-2">選択肢:</h4>
                   {q.choices.map((choice, cIndex) => (
-                    <div key={cIndex} className="flex items-center mb-2">
+                    <div key={cIndex} className={styles.checkboxContainer}>
                       <Checkbox
-                        ref={inputRef}
+                        id={`choice-${qIndex}-${cIndex}`}
                         checked={choice.isCorrect}
                         onCheckedChange={(checked) => updateChoice(qIndex, cIndex, 'isCorrect', checked)}
-                        className="mr-2"
+                        className={styles.customCheckbox}
                       />
-                      <Input
-                        ref={inputRef}
-                        placeholder={`選択肢 ${cIndex + 1}`}
-                        value={choice.text}
-                        onChange={(e) => updateChoice(qIndex, cIndex, 'text', e.target.value)}
-                        className={`${styles.mobileFriendlyInput} flex-grow mr-2`}
-                        style={{ fontSize: '16px' }}
-                      />
-                      <Button variant="ghost" size="icon" onClick={() => removeChoice(qIndex, cIndex)} >
+                      <label htmlFor={`choice-${qIndex}-${cIndex}`} className={styles.checkboxLabel}>
+                        <Input
+                          placeholder={`選択肢 ${cIndex + 1}`}
+                          value={choice.text}
+                          onChange={(e) => updateChoice(qIndex, cIndex, 'text', e.target.value)}
+                          className={`${styles.mobileFriendlyInput} flex-grow mr-2`}
+                          style={{ fontSize: '16px' }}
+                        />
+                      </label>
+                      <Button variant="ghost" size="icon" onClick={() => removeChoice(qIndex, cIndex)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   ))}
-                  <Button onClick={() => addChoice(qIndex)}>
-                    <Plus className="mr-2 h-4 w-4" /> 選択肢を追加
+                  <Button onClick={() => addChoice(qIndex)} className={styles.addChoiceButton}>
+                    <Plus className={styles.addChoiceButtonIcon} /> 選択肢を追加
                   </Button>
                 </>
               )}
@@ -283,12 +284,12 @@ const MultipleChoiceCreationScreen = ({ onBack, onSave }) => {
         ))}
 
         <div className={styles.fixedBottom}>
-          <div className="flex justify-between">
-            <Button onClick={addQuestion}>
+          <div className={styles.bottomButtonContainer}>
+            <Button onClick={addQuestion} className={`${styles.bottomButton} ${styles.addButton}`}>
               <Plus className="mr-2 h-4 w-4" /> 問題を追加
             </Button>
-              <Button onClick={handleSave} disabled={isSaving}>
-              <Save className="mr-2 h-4 w-4" /> {isSaving ? '保存中...' : '保存'}
+            <Button onClick={handleSave} className={`${styles.bottomButton} ${styles.saveButton}`}>
+              <Save className="mr-2 h-4 w-4" /> 保存
             </Button>
           </div>
         </div>

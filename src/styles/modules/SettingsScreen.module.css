@@ -1,47 +1,254 @@
 .container {
-    @apply p-4 w-full max-w-md mx-auto;
+  padding: 0.75rem;
+  width: 100%;
+  max-width: 390px;
+  margin-left: auto;
+  margin-right: auto;
+  background-color: #f3f4f6;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.title {
+  font-size: 1.125rem;
+  font-weight: bold;
+  color: #1f2937;
+  margin-left: 0.5rem;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.inputGroup {
+  margin-bottom: 0.75rem;
+}
+
+.label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6b7280;
+  margin-bottom: 0.25rem;
+}
+
+.inputWrapper {
+  position: relative;
+}
+
+.icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+}
+
+.input {
+  padding-left: 2.5rem;
+  width: 100%;
+  height: 2.5rem;
+  font-size: 0.875rem;
+  background-color: white;
+  border: 1px solid #d1d5db;
+  border-radius: 0.25rem;
+}
+
+.switchGroup {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+}
+
+.switchLabel {
+  font-size: 0.875rem;
+  color: #1f2937;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 3rem;
+  height: 1.5rem;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 1.5rem;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 1.25rem;
+  width: 1.25rem;
+  left: 0.125rem;
+  bottom: 0.125rem;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: #2196F3;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #2196F3;
+}
+
+input:checked + .slider:before {
+  transform: translateX(1.5rem);
+}
+
+.errorMessage {
+  color: #ef4444;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.button {
+  width: 100%;
+  height: 2.5rem;
+  background-color: #374151;
+  color: white;
+  font-size: 0.875rem;
+  border-radius: 0.25rem;
+}
+
+.button:hover {
+  background-color: #4b5563;
+}
+
+/* レスポンシブデザイン */
+/* 600px未満 */
+@media (max-width: 480px) {
+  .container {
+    padding: 0.5rem;
   }
-  
-  .header {
-    @apply flex items-center mb-6;
-  }
-  
+
   .title {
-    @apply text-2xl font-bold ml-2;
+    font-size: 1rem;
   }
-  
-  .formGroup {
-    @apply space-y-6;
-  }
-  
-  .inputGroup {
-    @apply mb-4;
-  }
-  
-  .label {
-    @apply block text-sm font-medium text-gray-700 mb-1;
-  }
-  
-  .inputWrapper {
-    @apply relative;
-  }
-  
-  .icon {
-    @apply absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400;
-  }
-  
+
   .input {
-    @apply pl-10;
+    height: 2.25rem;
   }
-  
-  .switchGroup {
-    @apply flex items-center justify-between;
-  }
-  
-  .errorMessage {
-    @apply text-red-500 text-sm;
-  }
-  
+
   .button {
-    @apply w-full;
+    height: 2.25rem;
   }
+}
+
+/* 600px以上1024px未満 */
+@media (min-width: 481px) and (max-width: 768px) {
+  .container {
+    padding: 1rem;
+    max-width: 600px;
+  }
+
+  .title {
+    font-size: 1.25rem;
+  }
+
+  .formGroup {
+    gap: 1rem;
+  }
+}
+
+/* 1024px以上 */
+@media (min-width: 769px) {
+  .container {
+    padding: 1.5rem;
+    max-width: 800px;
+  }
+
+  .title {
+    font-size: 1.5rem;
+  }
+
+  .formGroup {
+    gap: 1.25rem;
+  }
+
+  .input {
+    height: 3rem;
+    font-size: 1rem;
+  }
+
+  .button {
+    height: 3rem;
+    font-size: 1rem;
+  }
+}
+
+/* ダークモード対応 */
+:global(.dark) .container {
+  background-color: #111827;
+}
+
+:global(.dark) .title {
+  color: #f3f4f6;
+}
+
+:global(.dark) .label {
+  color: #9ca3af;
+}
+
+:global(.dark) .input {
+  background-color: #1f2937;
+  border-color: #4b5563;
+  color: #f3f4f6;
+}
+
+:global(.dark) .icon {
+  color: #6b7280;
+}
+
+:global(.dark) .errorMessage {
+  color: #f87171;
+}
+
+:global(.dark) .button {
+  background-color: #4b5563;
+}
+
+:global(.dark) .button:hover {
+  background-color: #6b7280;
+}
+
+:global(.dark) .switchLabel {
+  color: #f3f4f6;
+}
+
+:global(.dark) .slider {
+  background-color: #4b5563;
+}
+
+:global(.dark) input:checked + .slider {
+  background-color: #3b82f6;
+}
+
+:global(.dark) input:focus + .slider {
+  box-shadow: 0 0 1px #3b82f6;
+}

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/form/input";
 import { Label } from "@/components/ui/form/label";
 import { Trash2 } from 'lucide-react';
+import styles from '@/styles/modules/HomeScreen.module.css';
 
 const AddEventModal = ({ isOpen, onClose, onSave, onDelete, editingEvent }) => {
   const [title, setTitle] = useState('');
@@ -45,27 +46,29 @@ const AddEventModal = ({ isOpen, onClose, onSave, onDelete, editingEvent }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
+      <DialogContent className={styles.eventDialog}>
         <DialogHeader>
-          <DialogTitle>{editingEvent ? '予定を編集' : '予定を追加'}</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className={styles.eventDialogTitle}>
+            {editingEvent ? '予定を編集' : '予定を追加'}
+          </DialogTitle>
+          <DialogDescription className={styles.eventDialogDescription}>
             {editingEvent ? '既存の予定を編集します。' : '新しい予定を追加します。'}
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="title" className="text-right">
+        <form className={styles.eventForm}>
+          <div>
+            <Label htmlFor="title" className={styles.eventFormLabel}>
               タイトル
             </Label>
             <Input
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="col-span-3"
+              className={styles.eventFormInput}
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="date" className="text-right">
+          <div>
+            <Label htmlFor="date" className={styles.eventFormLabel}>
               日付
             </Label>
             <Input
@@ -73,11 +76,11 @@ const AddEventModal = ({ isOpen, onClose, onSave, onDelete, editingEvent }) => {
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="col-span-3"
+              className={styles.eventFormInput}
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="time" className="text-right">
+          <div>
+            <Label htmlFor="time" className={styles.eventFormLabel}>
               時間
             </Label>
             <Input
@@ -85,18 +88,27 @@ const AddEventModal = ({ isOpen, onClose, onSave, onDelete, editingEvent }) => {
               type="time"
               value={time}
               onChange={(e) => setTime(e.target.value)}
-              className="col-span-3"
+              className={styles.eventFormInput}
             />
           </div>
-        </div>
-        <DialogFooter>
+        </form>
+        <DialogFooter className={styles.eventFormFooter}>
           {editingEvent && (
-            <Button variant="destructive" onClick={handleDelete}>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              className={`${styles.eventFormButton} ${styles.eventFormDeleteButton}`}
+            >
               <Trash2 className="mr-2 h-4 w-4" />
               削除
             </Button>
           )}
-          <Button onClick={handleSave}>保存</Button>
+          <Button
+            onClick={handleSave}
+            className={`${styles.eventFormButton} ${styles.eventFormSaveButton}`}
+          >
+            保存
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

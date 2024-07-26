@@ -1,0 +1,174 @@
+.sortableItem {
+    display: inline-block;
+    padding: 1rem;
+    margin: 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+    background-color: #ffffff;
+    color: #1f2937;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    transform: rotate(90deg);
+  }
+  
+  .classified {
+    background-color: #e5e7eb;
+  }
+  
+  .dragging {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+  
+  .droppableCategory {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.25rem;
+    transition: all 0.3s ease;
+    width: 100%;
+    height: 100%;
+    background-color: #f3f4f6;
+    border: 1px solid #d1d5db;
+    overflow: hidden;
+    position: relative; /* Added: Positioning context for child elements */
+    min-height: 100px; /* Added: Minimum height */
+  }
+  
+  .categoryContent {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    transform: rotate(90deg);
+    position: relative; /* Added: Positioning context for child elements */
+  }
+  
+  .categoryImage {
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 100%; /* Increased from 60% */
+    object-fit: contain;
+    margin-bottom: 0;
+  }
+  
+  .categoryName {
+    text-align: center;
+    font-size: 0.75rem;
+    word-break: break-word;
+    max-width: 100%;
+    background-color: rgba(255, 255, 255, 0.7);
+    z-index: 1;
+  }
+  
+  .active {
+    border: 2px solid #3b82f6;
+    background-color: #eff6ff;
+  }
+  
+  /* フィードバックカラー */
+  .green { background-color: #d1fae5; }
+  .red { background-color: #fee2e2; }
+  
+  /* ダークモード対応 */
+  :global(.dark) .sortableItem {
+    background-color: #374151;
+    color: #f3f4f6;
+    box-shadow: 0 1px 3px 0 rgba(255, 255, 255, 0.1), 0 1px 2px 0 rgba(255, 255, 255, 0.06);
+  }
+  
+  :global(.dark) .classified {
+    background-color: #4b5563;
+  }
+  
+  :global(.dark) .droppableCategory {
+    background-color: #1f2937;
+    border-color: #4b5563;
+  }
+  
+  :global(.dark) .active {
+    border-color: #3b82f6;
+    background-color: #1e3a8a;
+  }
+  
+  :global(.dark) .green { background-color: #065f46; }
+  :global(.dark) .red { background-color: #991b1b; }
+
+@media (max-width: 600px) {
+  .sortableItem {
+    font-size: 1rem; /* 1.25remから1remに縮小 */
+    padding: 0.5rem; /* 0.75remから0.5remに縮小 */
+  }
+
+  .categoryContent {
+    padding-top: 0; /* Remove top padding */
+  }
+
+  .categoryName {
+    position: static; /* Reset positioning */
+    font-size: 1rem;
+    background-color: transparent !important;; /* 背景を透明に設定 */
+    padding: 0; /* パディングも削除 */
+  }
+
+  .categoryImage {
+    max-height: 100%; /* Adjust image height */
+  }
+
+  /* ダークモード対応を更新 */
+  :global(.dark) .categoryName {
+    background-color: transparent !important;; /* ダークモードでも背景を透明に */
+  }
+}
+
+@media (min-width: 601px) {
+    .wideScreenCategory {
+      transform: none;
+    }
+  
+    .wideScreenCategoryContent {
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      transform: none;
+      position: relative; /* Added: Positioning context for child elements */
+    }
+  
+    .wideScreenCategoryImage {
+      transform: none;
+      max-width: 100%;
+      max-height: 85%; /* Increased from 60% */
+    }
+  
+    .wideScreenCategoryName {
+      position: absolute; /* Added: Positioning */
+      top: 0; /* Added: Top alignment */
+      left: 0; /* Added: Left alignment */
+      right: 0; /* Added: Right alignment */
+      transform: none;
+      writing-mode: horizontal-tb;
+      text-orientation: mixed;
+      padding: 0.25rem; /* Added: Padding */
+      margin: 0;
+      background-color: rgba(255, 255, 255, 0.7); /* Added: Background */
+      z-index: 1; /* Added: Z-index */
+      font-size: 1.3rem;
+    }
+  
+    .wideScreenItem {
+      transform: none;
+    }
+  
+    .wideScreenDragOverlay {
+      transform: none;
+    }
+  }
+
+  /* ダークモード対応 */
+  :global(.dark) .categoryName,
+  :global(.dark) .wideScreenCategoryName {
+    background-color: rgba(0, 0, 0, 0.7); /* Added: Dark mode background */
+  }

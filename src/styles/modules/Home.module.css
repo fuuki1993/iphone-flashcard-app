@@ -1,7 +1,26 @@
 .container {
-    @apply bg-gray-100 min-h-screen w-full;
-  }
-  
-  .main {
-    @apply flex flex-col items-center justify-between max-w-4xl mx-auto;
-  }
+  @apply bg-gray-100 min-h-screen w-full;
+  transition: background-color 0.3s ease;
+}
+
+.main {
+  @apply flex flex-col items-center justify-between max-w-4xl mx-auto;
+}
+
+.darkMode {
+  @apply bg-gray-900 text-white;
+}
+
+/* ダークモード時の他の要素のスタイルを追加 */
+.darkMode .someElement {
+  @apply bg-gray-800 text-gray-200;
+}
+
+/* グローバルなダークモードクラスを使用 */
+:global(.dark) .container {
+  @apply bg-gray-900;
+}
+
+:global(.dark) .main {
+  @apply text-white;
+}

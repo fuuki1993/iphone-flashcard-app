@@ -184,11 +184,12 @@ const DailyGoalCard = ({ todayStudyTime, dailyGoal, convertSecondsToMinutes, isG
       <div className={styles.dailyGoalInfo}>
         <span className={styles.dailyGoalText}>
           {convertSecondsToMinutes(todayStudyTime)}分 / {dailyGoal}分
-          （{todayStudyTime}秒）
         </span>
+      </div>
+      <div className={styles.dailyGoalProgressWrapper}>
         <Progress 
           value={(convertSecondsToMinutes(todayStudyTime) / dailyGoal) * 100} 
-          className="w-1/2 h-2" 
+          className={styles.dailyGoalProgress}
         />
       </div>
       {isGoalAchieved && (
@@ -236,7 +237,7 @@ const HomeScreen = ({
   const { isUpdateDialogOpen, updateContents, closeUpdateDialog } = useUpdateNotification(userId);
 
   // 並列データ取得
-  const homeScreenData = useHomeScreenData(userId, dailyGoal, cachedHomeScreenData, setCachedHomeScreenData);
+  const homeScreenData = useHomeScreenData(userId, dailyGoal, refreshTrigger);
   const recentActivitiesData = useRecentActivities(userId, onStartLearning, cachedRecentActivities, setCachedRecentActivities);
   const scheduledEventsData = useScheduledEvents(cachedScheduledEvents, setCachedScheduledEvents);
 
@@ -333,14 +334,24 @@ const HomeScreen = ({
 
       {isAdmin && (
         <>
-          <Button onClick={() => setIsAdminUpdateDialogOpen(true)} className="mt-4">
+          <Button 
+            onClick={() => setIsAdminUpdateDialogOpen(true)} 
+            className={styles.adminUpdateButton}
+          >
             管理者用更新フォーム
           </Button>
-          <Dialog open={isAdminUpdateDialogOpen} onOpenChange={setIsAdminUpdateDialogOpen}>
-            <DialogContent>
+          <Dialog 
+            open={isAdminUpdateDialogOpen} 
+            onOpenChange={setIsAdminUpdateDialogOpen}
+          >
+            <DialogContent className={styles.adminUpdateDialog}>
               <DialogHeader>
-                <DialogTitle>管理者用更新フォーム</DialogTitle>
-                <DialogDescription>更新内容を入力してください。</DialogDescription>
+                <DialogTitle className={styles.adminUpdateDialogTitle}>
+                  管理者用更新フォーム
+                </DialogTitle>
+                <DialogDescription className={styles.adminUpdateDialogDescription}>
+                  更新内容を入力してください。
+                </DialogDescription>
               </DialogHeader>
               <AdminUpdateForm onClose={() => setIsAdminUpdateDialogOpen(false)} />
             </DialogContent>

@@ -119,6 +119,7 @@
   .eventTitle {
     font-weight: 500;
     font-size: 0.75rem;
+    color: #1f2937;
   }
   
   .eventDate {
@@ -129,10 +130,18 @@
   .addEventButton {
     width: 100%;
     margin-top: 1rem;
+    background-color: #6b7280;
+    color: white;
+  }
+
+  .addEventButton:hover {
+    background-color: #4b5563;
   }
   
   .dailyGoalCard {
     margin-bottom: 0.75rem;
+    background-color: white;
+    color: #1f2937;
   }
   
   .dailyGoalHeader {
@@ -151,22 +160,424 @@
   
   .dailyGoalInfo {
     display: flex;
-    align-items: center;
     justify-content: space-between;
-    margin-bottom: 0.25rem;
+    align-items: center;
+    margin-bottom: 0.5rem;
   }
   
   .dailyGoalText {
-    font-size: 0.75rem;
+    font-size: 0.875rem;
+    color: #4b5563;
   }
   
+  .dailyGoalProgressWrapper {
+    width: 100%;
+    height: 0.5rem;
+    background-color: #e5e7eb;
+    border-radius: 9999px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+  }
+
+  .dailyGoalProgress {
+    height: 100%;
+    border-radius: 9999px;
+  }
+
+  .dailyGoalProgress::-webkit-progress-bar {
+    background-color: #e5e7eb;
+  }
+
+  .dailyGoalProgress::-webkit-progress-value {
+    background-color: #3b82f6;
+  }
+
+  .dailyGoalProgress::-moz-progress-bar {
+    background-color: #3b82f6;
+  }
+
   .goalAchieved {
-    color: #374151;
+    color: #059669;
     font-weight: bold;
-    font-size: 0.75rem;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
   }
   
   .signOutButton {
     margin-top: 1.5rem;
     width: 100%;
+    background-color: #e5e7eb;
+    color: #1f2937;
   }
+
+  .signOutButton:hover {
+    background-color: #d1d5db;
+  }
+
+  .adminUpdateButton {
+    width: 100%;
+    margin-top: 1rem;
+    background-color: #4b5563;
+    color: white;
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+    transition: background-color 0.2s;
+  }
+
+  .adminUpdateButton:hover {
+    background-color: #374151;
+  }
+
+  .adminUpdateDialog {
+    background-color: white;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    max-width: 90%;
+    width: 400px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+
+  .adminUpdateDialogTitle {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: #1f2937;
+    margin-bottom: 0.5rem;
+  }
+
+  .adminUpdateDialogDescription {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-bottom: 1rem;
+  }
+
+  .eventDialog {
+    background-color: white;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    max-width: 90%;
+    width: 400px;
+  }
+
+  .eventDialogTitle {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: #1f2937;
+    margin-bottom: 0.5rem;
+  }
+
+  .eventDialogDescription {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-bottom: 1rem;
+  }
+
+  .eventForm {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .eventFormLabel {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #4b5563;
+  }
+
+  .eventFormInput {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+  }
+
+  .eventFormFooter {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  .eventFormButton {
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  .eventFormSaveButton {
+    background-color: #3b82f6;
+    color: white;
+  }
+
+  .eventFormSaveButton:hover {
+    background-color: #2563eb;
+  }
+
+  .eventFormDeleteButton {
+    background-color: #ef4444;
+    color: white;
+  }
+
+  .eventFormDeleteButton:hover {
+    background-color: #dc2626;
+  }
+
+  .adminUpdateForm {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .adminUpdateFormFooter {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  .adminUpdateFormButton {
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: background-color 0.2s;
+  }
+
+  .adminUpdateFormSaveButton {
+    background-color: #3b82f6;
+    color: white;
+  }
+
+  .adminUpdateFormSaveButton:hover {
+    background-color: #2563eb;
+  }
+
+  .adminUpdateFormCancelButton {
+    background-color: #e5e7eb;
+    color: #1f2937;
+  }
+
+  .adminUpdateFormCancelButton:hover {
+    background-color: #d1d5db;
+  }
+
+/* レスポンシブデザイン */
+@media (max-width: 480px) {
+  .container {
+    padding: 0.5rem;
+    max-width: 100%;
+  }
+
+  .title {
+    font-size: 1rem;
+  }
+
+  .actionButtons {
+    grid-template-columns: (2, 1fr);
+  }
+
+  .eventDialog,
+  .adminUpdateDialog {
+    width: 95%;
+  }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+  .container {
+    max-width: 600px;
+  }
+
+  .actionButtons {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .eventDialog,
+  .adminUpdateDialog {
+    width: 500px;
+  }
+}
+
+@media (min-width: 769px) {
+  .container {
+    max-width: 800px;
+    padding: 1rem;
+  }
+
+  .title {
+    font-size: 1.25rem;
+  }
+
+  .actionButtons {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .eventDialog,
+  .adminUpdateDialog {
+    width: 600px;
+  }
+}
+
+  /* ダークモード対応 */
+:global(.dark) .container {
+  background-color: #111827;
+}
+
+:global(.dark) .title {
+  color: #f3f4f6;
+}
+
+:global(.dark) .progressCard {
+  background-color: #374151;
+}
+
+:global(.dark) .detailsButton {
+  color: #f3f4f6;
+  background-color: #4b5563;
+}
+
+:global(.dark) .detailsButton:hover {
+  background-color: #6b7280;
+}
+
+:global(.dark) .actionButton {
+  background-color: #4b5563;
+}
+
+:global(.dark) .actionButton:hover {
+  background-color: #6b7280;
+}
+
+:global(.dark) .emptyMessage {
+  color: #9ca3af;
+}
+
+:global(.dark) .eventTitle {
+  color: #f3f4f6;
+}
+
+:global(.dark) .eventDate {
+  color: #9ca3af;
+}
+
+:global(.dark) .addEventButton {
+  background-color: #4b5563;
+}
+
+:global(.dark) .addEventButton:hover {
+  background-color: #6b7280;
+}
+
+:global(.dark) .dailyGoalCard {
+  background-color: #1f2937;
+  color: #f3f4f6;
+}
+
+:global(.dark) .dailyGoalText {
+  color: #e5e7eb;
+}
+
+:global(.dark) .dailyGoalProgressWrapper {
+  background-color: #4b5563;
+}
+
+:global(.dark) .dailyGoalProgress::-webkit-progress-bar {
+  background-color: #4b5563;
+}
+
+:global(.dark) .dailyGoalProgress::-webkit-progress-value {
+  background-color: #60a5fa;
+}
+
+:global(.dark) .dailyGoalProgress::-moz-progress-bar {
+  background-color: #60a5fa;
+}
+
+:global(.dark) .goalAchieved {
+  color: #10b981;
+}
+
+:global(.dark) .signOutButton {
+  background-color: #4b5563;
+  color: #f3f4f6;
+}
+
+:global(.dark) .signOutButton:hover {
+  background-color: #6b7280;
+}
+
+:global(.dark) .adminUpdateButton {
+  background-color: #6b7280;
+}
+
+:global(.dark) .adminUpdateButton:hover {
+  background-color: #4b5563;
+}
+
+:global(.dark) .adminUpdateDialog {
+  background-color: #1f2937;
+}
+
+:global(.dark) .adminUpdateDialogTitle {
+  color: #f3f4f6;
+}
+
+:global(.dark) .adminUpdateDialogDescription {
+  color: #9ca3af;
+}
+
+:global(.dark) .eventDialog {
+  background-color: #1f2937;
+}
+
+:global(.dark) .eventDialogTitle {
+  color: #f3f4f6;
+}
+
+:global(.dark) .eventDialogDescription {
+  color: #9ca3af;
+}
+
+:global(.dark) .eventFormLabel {
+  color: #d1d5db;
+}
+
+:global(.dark) .eventFormInput {
+  background-color: #374151;
+  border-color: #4b5563;
+  color: #f3f4f6;
+}
+
+:global(.dark) .eventFormSaveButton {
+  background-color: #3b82f6;
+}
+
+:global(.dark) .eventFormSaveButton:hover {
+  background-color: #2563eb;
+}
+
+:global(.dark) .eventFormDeleteButton {
+  background-color: #ef4444;
+}
+
+:global(.dark) .eventFormDeleteButton:hover {
+  background-color: #dc2626;
+}
+
+:global(.dark) .adminUpdateFormSaveButton {
+  background-color: #3b82f6;
+}
+
+:global(.dark) .adminUpdateFormSaveButton:hover {
+  background-color: #2563eb;
+}
+
+:global(.dark) .adminUpdateFormCancelButton {
+  background-color: #4b5563;
+  color: #f3f4f6;
+}
+
+:global(.dark) .adminUpdateFormCancelButton:hover {
+  background-color: #6b7280;
+}

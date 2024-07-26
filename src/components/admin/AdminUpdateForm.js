@@ -9,6 +9,7 @@ import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/fire
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/form/textarea';
 import { Input } from '@/components/ui/form/input';
+import styles from '@/styles/modules/HomeScreen.module.css';
 
 /**
  * @component AdminUpdateForm
@@ -54,21 +55,34 @@ const AdminUpdateForm = ({ onClose }) => {
   // レンダリング
   // ----------------------------------------
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className={styles.adminUpdateForm}>
       <Input
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="タイトル"
+        className={styles.eventFormInput}
       />
       <Textarea
         value={content}
         onChange={(e) => setContent(e.target.value)}
         placeholder="更新内容を入力してください"
         rows={5}
+        className={styles.eventFormInput}
       />
-      <div className="flex justify-end space-x-2">
-        <Button type="button" variant="outline" onClick={onClose}>キャンセル</Button>
-        <Button type="submit">保存</Button>
+      <div className={styles.adminUpdateFormFooter}>
+        <Button
+          type="button"
+          onClick={onClose}
+          className={`${styles.adminUpdateFormButton} ${styles.adminUpdateFormCancelButton}`}
+        >
+          キャンセル
+        </Button>
+        <Button
+          type="submit"
+          className={`${styles.adminUpdateFormButton} ${styles.adminUpdateFormSaveButton}`}
+        >
+          保存
+        </Button>
       </div>
     </form>
   );

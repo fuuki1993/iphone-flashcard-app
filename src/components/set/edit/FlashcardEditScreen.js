@@ -254,7 +254,7 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
   }, [selectedSetId, cards, user, onBack]);
 
   return (
-    <div className={styles.mobileFriendlyForm}>
+    <div className={styles.editScreenContainer}>
       <div className={styles.scrollableContent}>
         <div className="flex items-center mb-6">
           <Button variant="ghost" size="icon" onClick={onBack}>
@@ -263,9 +263,9 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
           <h1 className="text-2xl font-bold ml-2">フラッシュカード編集</h1>
         </div>
 
-        <div className="mb-6">
+        <div className={styles.selectContainer}>
           <Select onValueChange={handleSetChange} value={selectedSetId}>
-            <SelectTrigger className="w-full">
+            <SelectTrigger className={styles.selectTrigger}>
               <SelectValue placeholder="編集するセットを選択" />
             </SelectTrigger>
             <SelectContent>
@@ -278,8 +278,7 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
             placeholder="セットのタイトル"
             value={setTitle}
             onChange={(e) => setSetTitle(e.target.value)}
-            className={`${styles.mobileFriendlyInput} mb-2`}
-            style={{ fontSize: '16px' }}
+            className={`${styles.mobileFriendlyInput} ${styles.setTitle} mb-2`}
           />
           {errors.title && <Alert variant="destructive"><AlertDescription>{errors.title}</AlertDescription></Alert>}
           {selectedSetId && (
@@ -291,7 +290,7 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
 
         {cards && cards.length > 0 ? (
           cards.map((card, index) => (
-            <Card key={`card-${index}`} className="mb-4">
+            <Card key={`card-${index}`} className="mb-4 w-full sm:w-[calc(50%-0.5rem)] inline-block align-top">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-lg font-medium">カード {index + 1}</CardTitle>
                 <div>
@@ -305,12 +304,17 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
               </CardHeader>
               <CardContent>
                 {previewIndex === index ? (
-                  <div className="bg-gray-100 p-4 rounded-md">
-                    <h3 className="font-bold mb-2">表面:</h3>
-                    <p>{card.front}</p>
-                    {card.image && <img src={card.image} alt="Card image" className="mt-2 max-w-full h-auto" />}
-                    <h3 className="font-bold mt-4 mb-2">裏面:</h3>
-                    <p>{card.back}</p>
+                  <div className={styles.previewContent}>
+                    <h2 className={styles.previewTitle}>{setTitle}</h2>
+                    <div className={styles.previewCategory}>
+                      <h3 className={styles.previewCategoryTitle}>表面:</h3>
+                      <p>{card.front}</p>
+                      {card.image && <img src={card.image} alt="Card image" className={styles.previewImage} />}
+                    </div>
+                    <div className={styles.previewCategory}>
+                      <h3 className={styles.previewCategoryTitle}>裏面:</h3>
+                      <p>{card.back}</p>
+                    </div>
                   </div>
                 ) : (
                   <>
@@ -318,20 +322,20 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
                       placeholder="表面"
                       value={card.front}
                       onChange={(e) => updateCard(index, 'front', e.target.value)}
-                      className="mb-2"
+                      className={`${styles.mobileFriendlyInput} mb-2`}
                     />
                     <Input
                       type="file"
                       accept="image/*"
                       onChange={(e) => handleImageUpload(index, e)}
-                      className="mb-2"
+                      className={`${styles.mobileFriendlyInput} mb-2`}
                     />
-                    {card.image && <img src={card.image} alt="Uploaded image" className="mt-2 max-w-full h-auto" />}
+                    {card.image && <img src={card.image} alt="Uploaded image" className={styles.previewImage} />}
                     <Textarea
                       placeholder="裏面"
                       value={card.back}
                       onChange={(e) => updateCard(index, 'back', e.target.value)}
-                      className="mt-4 mb-2"
+                      className={`${styles.mobileFriendlyInput} mb-2`}
                     />
                   </>
                 )}
@@ -350,11 +354,11 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
         )}
 
         <div className={styles.fixedBottom}>
-          <div className="flex justify-between">
-            <Button onClick={addCard}>
+          <div className={styles.bottomButtonContainer}>
+            <Button onClick={addCard} className={`${styles.bottomButton} ${styles.addButton}`}>
               <Plus className="mr-2 h-4 w-4" /> カードを追加
             </Button>
-            <Button onClick={handleSave}>
+            <Button onClick={handleSave} className={`${styles.bottomButton} ${styles.saveButton}`}>
               <Save className="mr-2 h-4 w-4" /> 保存
             </Button>
           </div>

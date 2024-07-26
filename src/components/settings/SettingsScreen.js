@@ -4,11 +4,12 @@ import { Input } from '@/components/ui/form/input';
 import { Switch } from '@/components/ui/form/switch';
 import { ArrowLeft, User, Mail, Lock } from 'lucide-react';
 import { auth, updateUserProfile, updateUserEmail, updateUserPassword, reauthenticateUser } from '@/utils/firebase/auth';
-import { getUserSettings, updateUserSettings, syncUnsyncedData } from '@/utils/firebase/firestore';
+import { getUserSettings, updateUserSettings, syncUnsyncedData, getDarkModeSetting, updateDarkModeSetting } from '@/utils/firebase/firestore';
 import styles from '@/styles/modules/SettingsScreen.module.css';
 
 const SettingsScreen = ({ onBack, userId, dailyGoal, setDailyGoal, darkMode, setDarkMode, onSettingsUpdate }) => {
   const [localDailyGoal, setLocalDailyGoal] = useState(dailyGoal);
+  const [localDarkMode, setLocalDarkMode] = useState(darkMode);
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -23,7 +24,9 @@ const SettingsScreen = ({ onBack, userId, dailyGoal, setDailyGoal, darkMode, set
         try {
           const settings = await getUserSettings(userId);
           setLocalDailyGoal(settings.dailyGoal || 60);
-          setDarkMode(settings.darkMode || false);
+          const darkModeSetting = await getDarkModeSetting(userId);
+          setLocalDarkMode(darkModeSetting);
+          setDarkMode(darkModeSetting);
         } catch (error) {
           console.error('Failed to load user settings:', error);
           setError('設定の読み込みに失敗しました。');
@@ -38,7 +41,7 @@ const SettingsScreen = ({ onBack, userId, dailyGoal, setDailyGoal, darkMode, set
       setDisplayName(user.displayName || '');
       setEmail(user.email || '');
     }
-  }, [userId]);
+  }, [userId, setDarkMode]);
 
   const handleSave = async () => {
     setError('');
@@ -63,10 +66,11 @@ const SettingsScreen = ({ onBack, userId, dailyGoal, setDailyGoal, darkMode, set
 
       await updateUserSettings(userId, {
         dailyGoal: localDailyGoal,
-        darkMode: darkMode
+        darkMode: localDarkMode
       });
 
       setDailyGoal(localDailyGoal);
+      setDarkMode(localDarkMode);
 
       // 設定更新後にコールバックを呼び出す
       if (typeof onSettingsUpdate === 'function') {
@@ -97,6 +101,20 @@ const SettingsScreen = ({ onBack, userId, dailyGoal, setDailyGoal, darkMode, set
       setError('データの同期に失敗しました。');
     } finally {
       setIsSyncing(false);
+    }
+  };
+
+  const handleDarkModeToggle = async (checked) => {
+    try {
+      await updateDarkModeSetting(userId, checked);
+      setLocalDarkMode(checked);
+      setDarkMode(checked);
+      if (typeof onSettingsUpdate === 'function') {
+        onSettingsUpdate({ darkMode: checked });
+      }
+    } catch (error) {
+      console.error('Failed to update dark mode setting:', error);
+      setError('ダークモード設定の更新に失敗しました。');
     }
   };
 
@@ -189,11 +207,15 @@ const SettingsScreen = ({ onBack, userId, dailyGoal, setDailyGoal, darkMode, set
         </div>
 
         <div className={styles.switchGroup}>
-          <span className={styles.label}>ダークモード</span>
-          <Switch
-            checked={darkMode}
-            onCheckedChange={setDarkMode}
-          />
+          <span className={styles.switchLabel}>ダークモード</span>
+          <label className={styles.switch}>
+            <input
+              type="checkbox"
+              checked={localDarkMode}
+              onChange={(e) => handleDarkModeToggle(e.target.checked)}
+            />
+            <span className={styles.slider}></span>
+          </label>
         </div>
 
         <div className={styles.inputGroup}>

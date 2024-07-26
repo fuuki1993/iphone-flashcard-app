@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/form/select';
 import { ArrowLeft, Plus, Save, Trash2, Image, Eye, EyeOff } from 'lucide-react';
 import { getSets, getSetById, updateSet, deleteSet } from '@/utils/firebase/firestore';
+import { compressImage } from '@/utils/helpers/imageCompression';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { getFirestore, writeBatch, doc, getDoc, serverTimestamp } from "firebase/firestore";
@@ -277,7 +278,7 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
   }, [selectedSetId, questions, onBack, user]);
 
   return (
-    <div className={styles.mobileFriendlyForm}>
+    <div className={styles.editScreenContainer}>
       <div className={styles.scrollableContent}>
         <div className="flex items-center mb-6">
           <Button variant="ghost" size="icon" onClick={onBack}>
@@ -286,9 +287,9 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
           <h1 className="text-2xl font-bold ml-2">多肢選択問題編集</h1>
         </div>
 
-        <div className="mb-6">
+        <div className={styles.selectContainer}>
           <Select onValueChange={handleSetChange} value={selectedSetId}>
-            <SelectTrigger className="w-full">
+            <SelectTrigger className={styles.selectTrigger}>
               <SelectValue placeholder="編集するセットを選択" />
             </SelectTrigger>
             <SelectContent>
@@ -302,6 +303,7 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
             value={setTitle}
             onChange={(e) => setSetTitle(e.target.value)}
             className={`${styles.mobileFriendlyInput} mb-2`}
+            style={{ fontSize: '16px' }}
           />
           {errors.title && <Alert variant="destructive"><AlertDescription>{errors.title}</AlertDescription></Alert>}
           {selectedSetId && (
@@ -312,7 +314,7 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
         </div>
 
         {questions.map((q, qIndex) => (
-          <Card key={qIndex} className="mb-4">
+          <Card key={qIndex} className="mb-4 w-full sm:w-[calc(50%-0.5rem)] inline-block align-top">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-lg font-medium">問題 {qIndex + 1}</CardTitle>
               <div>
@@ -326,14 +328,14 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
             </CardHeader>
             <CardContent>
               {previewIndex === qIndex ? (
-                <div className="bg-gray-100 p-4 rounded-md">
-                  <h3 className="font-bold mb-2">問題:</h3>
+                <div className={styles.previewContent}>
+                  <h3 className={styles.previewTitle}>問題:</h3>
                   <p>{q.question}</p>
-                  {q.image && <img src={q.image} alt="Question" className="mt-2 max-w-full h-auto" />}
-                  <h3 className="font-bold mt-4 mb-2">選択肢:</h3>
-                  <ul className="list-disc pl-5">
+                  {q.image && <img src={q.image} alt="Question" className={styles.previewImage} />}
+                  <h3 className={styles.previewTitle}>選択肢:</h3>
+                  <ul className={styles.previewList}>
                     {q.choices.map((choice, cIndex) => (
-                      <li key={cIndex} className={choice.isCorrect ? "text-green-600 font-bold" : ""}>
+                      <li key={cIndex} className={choice.isCorrect ? styles.choiceCorrect : ""}>
                         {choice.text} {choice.isCorrect && "(正解)"}
                       </li>
                     ))}
@@ -345,36 +347,41 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
                     placeholder="問題文"
                     value={q.question}
                     onChange={(e) => updateQuestion(qIndex, 'question', e.target.value)}
-                    className="mb-2"
+                    className={`${styles.mobileFriendlyInput} mb-2`}
+                    style={{ fontSize: '16px' }}
                   />
                   <Input
                     type="file"
                     accept="image/*"
                     onChange={(e) => handleImageUpload(qIndex, e)}
-                    className="mb-2"
+                    className={styles.mobileFriendlyInput}
                   />
-                  {q.image && <img src={q.image} alt="Uploaded" className="mt-2 max-w-full h-auto" />}
+                  {q.image && <img src={q.image} alt="Uploaded" className={styles.previewImage} />}
                   <h4 className="font-medium mt-4 mb-2">選択肢:</h4>
                   {q.choices.map((choice, cIndex) => (
-                    <div key={cIndex} className="flex items-center mb-2">
+                    <div key={cIndex} className={styles.checkboxContainer}>
                       <Checkbox
+                        id={`choice-${qIndex}-${cIndex}`}
                         checked={choice.isCorrect}
                         onCheckedChange={(checked) => updateChoice(qIndex, cIndex, 'isCorrect', checked)}
-                        className="mr-2"
+                        className={styles.customCheckbox}
                       />
-                      <Input
-                        placeholder={`選択肢 ${cIndex + 1}`}
-                        value={choice.text}
-                        onChange={(e) => updateChoice(qIndex, cIndex, 'text', e.target.value)}
-                        className="flex-grow mr-2"
-                      />
+                      <label htmlFor={`choice-${qIndex}-${cIndex}`} className={styles.checkboxLabel}>
+                        <Input
+                          placeholder={`選択肢 ${cIndex + 1}`}
+                          value={choice.text}
+                          onChange={(e) => updateChoice(qIndex, cIndex, 'text', e.target.value)}
+                          className={`${styles.mobileFriendlyInput} flex-grow mr-2`}
+                          style={{ fontSize: '16px' }}
+                        />
+                      </label>
                       <Button variant="ghost" size="icon" onClick={() => removeChoice(qIndex, cIndex)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   ))}
-                  <Button onClick={() => addChoice(qIndex)} className="mt-2">
-                    <Plus className="mr-2 h-4 w-4" /> 選択肢を追加
+                  <Button onClick={() => addChoice(qIndex)} className={styles.addChoiceButton}>
+                    <Plus className={styles.addChoiceButtonIcon} /> 選択肢を追加
                   </Button>
                 </>
               )}
@@ -388,11 +395,11 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
         ))}
 
         <div className={styles.fixedBottom}>
-          <div className="flex justify-between">
-            <Button onClick={addQuestion} >
+          <div className={styles.bottomButtonContainer}>
+            <Button onClick={addQuestion} className={`${styles.bottomButton} ${styles.addButton}`}>
               <Plus className="mr-2 h-4 w-4" /> 問題を追加
             </Button>
-            <Button onClick={handleSave} >
+            <Button onClick={handleSave} className={`${styles.bottomButton} ${styles.saveButton}`}>
               <Save className="mr-2 h-4 w-4" /> 保存
             </Button>
           </div>

@@ -294,7 +294,7 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
   }, [categoryImages]);
 
   return (
-    <div className={styles.mobileFriendlyForm}>
+    <div className={styles.editScreenContainer}>
       <div className={styles.scrollableContent}>
         <div className="flex items-center mb-6">
           <Button variant="ghost" size="icon" onClick={onBack}>
@@ -303,9 +303,9 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
           <h1 className="text-2xl font-bold ml-2">分類問題編集</h1>
         </div>
 
-        <div className="mb-6">
+        <div className={styles.selectContainer}>
           <Select onValueChange={handleSetChange} value={selectedSetId}>
-            <SelectTrigger className="w-full">
+            <SelectTrigger className={styles.selectTrigger}>
               <SelectValue placeholder="編集するセットを選択" />
             </SelectTrigger>
             <SelectContent>
@@ -318,7 +318,7 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
             placeholder="セットのタイトル"
             value={setTitle}
             onChange={(e) => setSetTitle(e.target.value)}
-            className={`${styles.mobileFriendlyInput} mb-2`}
+            className={`${styles.mobileFriendlyInput} ${styles.setTitle} mb-2`}
           />
           {errors.title && <Alert variant="destructive"><AlertDescription>{errors.title}</AlertDescription></Alert>}
           {selectedSetId && (
@@ -328,20 +328,27 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
           )}
         </div>
 
-        <Button onClick={() => setPreviewMode(!previewMode)} className="mb-4">
-          {previewMode ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
+        <Button onClick={() => setPreviewMode(!previewMode)} className={styles.previewButton}>
+          {previewMode ? <EyeOff className={styles.previewButtonIcon} /> : <Eye className={styles.previewButtonIcon} />}
           {previewMode ? 'プレビューを終了' : 'プレビュー'}
         </Button>
 
         {previewMode ? (
-          <div className="bg-gray-100 p-4 rounded-md mb-4">
-            <h2 className="text-xl font-bold mb-4">{setTitle}</h2>
+          <div className={styles.previewContent}>
+            <h2 className={styles.previewTitle}>{setTitle}</h2>
             {categories.map((category, index) => (
-              <div key={index} className="mb-4">
-                <h3 className="font-bold">{category.name}</h3>
-                <ul className="list-disc pl-5">
+              <div key={index} className={styles.previewCategory}>
+                <h3 className={styles.previewCategoryTitle}>{category.name}</h3>
+                {categoryImages[index] && (
+                  <img 
+                    src={categoryImages[index]} 
+                    alt={`Category ${index + 1}`} 
+                    className={styles.previewImage}
+                  />
+                )}
+                <ul className={styles.previewList}>
                   {category.items.map((item, itemIndex) => (
-                    <li key={itemIndex}>{item}</li>
+                    <li key={itemIndex} className={styles.previewListItem}>{item}</li>
                   ))}
                 </ul>
               </div>
@@ -349,7 +356,7 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
           </div>
         ) : (
           categories.map((category, categoryIndex) => (
-            <Card key={categoryIndex} className="mb-4">
+            <Card key={categoryIndex} className="mb-4 w-full sm:w-[calc(50%-0.5rem)] inline-block align-top">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-lg font-medium">カテゴリー {categoryIndex + 1}</CardTitle>
                 <div className="flex items-center">
@@ -373,7 +380,7 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
                   <img 
                     src={categoryImages[categoryIndex]} 
                     alt={`Category ${categoryIndex + 1}`} 
-                    className="w-full h-32 object-cover mb-2" 
+                    className={styles.previewImage} 
                     onError={(e) => {
                       console.error(`Error loading image for category ${categoryIndex}:`, e);
                       e.target.style.display = 'none';
@@ -399,8 +406,8 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
                     </Button>
                   </div>
                 ))}
-                <Button onClick={() => addItem(categoryIndex)}>
-                  <Plus className="mr-2 h-4 w-4" /> 項目を追加
+                <Button onClick={() => addItem(categoryIndex)} className={styles.addItemButton}>
+                  <Plus className={styles.addItemButtonIcon} /> 項目を追加
                 </Button>
               </CardContent>
               <CardFooter>
@@ -412,14 +419,11 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
         )}
 
         <div className={styles.fixedBottom}>
-          <div className="flex justify-between">
-            <Button 
-              onClick={addCategory} 
-              disabled={categories.length >= 10}
-            >
+          <div className={styles.bottomButtonContainer}>
+            <Button onClick={addCategory} className={`${styles.bottomButton} ${styles.addButton}`} disabled={categories.length >= 10}>
               <Plus className="mr-2 h-4 w-4" /> カテゴリーを追加
             </Button>
-            <Button onClick={handleSave}>
+            <Button onClick={handleSave} className={`${styles.bottomButton} ${styles.saveButton}`}>
               <Save className="mr-2 h-4 w-4" /> 保存
             </Button>
           </div>

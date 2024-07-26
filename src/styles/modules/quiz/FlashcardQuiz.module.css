@@ -1,8 +1,38 @@
+.quizContainer {
+  padding: 0.75rem;
+  width: 100%;
+  max-width: 390px;
+  margin: 0 auto;
+  background-color: #f3f4f6;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.title {
+  font-size: 1.125rem;
+  font-weight: bold;
+  color: #1f2937;
+}
+
+.headerButtons {
+  display: flex;
+}
+
+.shuffleButton {
+  margin-right: 0.5rem;
+}
+
 .flashcardContainer {
   perspective: 1000px;
   width: 100%;
   height: 250px;
   cursor: pointer;
+  background-color: white;
 }
 
 .flashcard {
@@ -37,14 +67,14 @@
   background-color: #f8f9fa;
   border: 1px solid #e9ecef;
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-  color: #495057;
+  color: #1f2937;
 }
 
 .back {
   background-color: #e9ecef;
   border: 1px solid #ced4da;
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-  color: #495057;
+  color: #1f2937;
   transform: rotateY(180deg);
 }
 
@@ -88,4 +118,156 @@
 
 .backContent {
   background-color: #e9ecef;
+}
+
+.navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1rem;
+}
+
+.navigationIcon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.cardCount {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.completedButtonContainer {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.completedButton {
+  display: flex;
+  align-items: center;
+  background-color: #f3f4f6;
+  color: #1f2937;
+  border: 1px solid #d1d5db;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  transition: background-color 0.3s ease;
+}
+
+.completedButton:hover {
+  background-color: #e5e7eb;
+}
+
+.completedIcon {
+  margin-right: 0.5rem;
+  width: 1rem;
+  height: 1rem;
+  color: #4b5563;
+}
+
+/* レスポンシブデザイン */
+@media (max-width: 600px) {
+  .quizContainer {
+    padding: 0.5rem;
+  }
+
+  .flashcardContainer {
+    height: 300px;
+  }
+
+  .contentText {
+    font-size: 1rem;
+  }
+
+  .contentImage {
+    max-height: 200px;
+  }
+}
+
+@media (min-width: 601px) and (max-width: 1023px) {
+  .quizContainer {
+    max-width: 90%;
+  }
+
+  .flashcardContainer {
+    height: 400px;
+  }
+
+  .contentText {
+    font-size: 1.3rem;
+  }
+
+  .contentImage {
+    max-height: 16rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .quizContainer {
+    max-width: 900px;
+  }
+
+  .flashcardContainer {
+    height: 600px;
+  }
+
+  .contentText {
+    font-size: 1.5rem;
+  }
+
+  .contentImage {
+    max-height: 20rem;
+  }
+}
+
+/* ダークモード対応 */
+:global(.dark) .quizContainer {
+  background-color: #111827;
+}
+
+:global(.dark) .title {
+  color: #f3f4f6;
+}
+
+:global(.dark) .flashcardContainer {
+  background-color: #1f2937;
+}
+
+:global(.dark) .front,
+:global(.dark) .back {
+  background-color: #374151;
+  border: 1px solid #4b5563;
+  box-shadow: 0 2px 4px rgba(255,255,255,0.05);
+  color: #f3f4f6;
+}
+
+:global(.dark) .frontContent,
+:global(.dark) .backContent {
+  background-color: #374151;
+}
+
+:global(.dark) .cardCount {
+  color: #d1d5db;
+}
+
+:global(.dark) .contentText {
+  color: #f3f4f6;
+}
+
+:global(.dark) .navigationIcon {
+  filter: invert(1);
+}
+
+:global(.dark) .completedButton {
+  background-color: #374151;
+  color: #f3f4f6;
+  border-color: #4b5563;
+}
+
+:global(.dark) .completedButton:hover {
+  background-color: #4b5563;
+}
+
+:global(.dark) .completedIcon {
+  color: #d1d5db;
 }

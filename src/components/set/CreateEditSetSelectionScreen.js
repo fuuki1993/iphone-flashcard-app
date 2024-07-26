@@ -32,8 +32,8 @@ const CreateEditSetSelectionScreen = ({ onBack, onSelectType, onEditType }) => {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <Button variant="ghost" size="icon" onClick={onBack} className={styles.backButton}>
-          <ArrowLeft className={styles.buttonIcon} />
+      <Button variant="ghost" size="icon" onClick={onBack} className="mr-2 p-1">
+          <ArrowLeft className="h-5 w-5" />
         </Button>
         <h1 className={styles.title}>セットの作成・編集</h1>
       </div>
@@ -44,12 +44,12 @@ const CreateEditSetSelectionScreen = ({ onBack, onSelectType, onEditType }) => {
 
       <div className={styles.cardList}>
         {setTypes.map((type) => (
-          <Card key={type.id} className="hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center space-y-0 py-3 px-4">
-              <type.icon className={`${styles.cardIcon} text-primary`} />
+          <Card key={type.id} className={styles.quizTypeCard}>
+            <CardHeader className={styles.cardHeader}>
+              <type.icon className={styles.cardIcon} />
               <CardTitle className={styles.cardTitle}>{type.title}</CardTitle>
             </CardHeader>
-            <CardContent className="py-2 px-4">
+            <CardContent className={styles.cardContent}>
               <p className={styles.cardDescription}>{type.description}</p>
               <div className={styles.buttonGroup}>
                 <Button 

@@ -144,7 +144,7 @@ const QACreationScreen = ({ onBack, onSave }) => {
   }, []);
 
   return (
-    <div className={styles.mobileFriendlyForm}>
+    <div className={styles.creationScreenContainer}>
       <div className={styles.scrollableContent}>
         <div className="flex items-center mb-6">
           <Button variant="ghost" size="icon" onClick={onBack}>
@@ -159,31 +159,31 @@ const QACreationScreen = ({ onBack, onSave }) => {
             placeholder="セットのタイトル"
             value={setTitle}
             onChange={(e) => setSetTitle(e.target.value)}
-            className={`${styles.mobileFriendlyInput} mb-2`}
-            style={{ fontSize: '16px' }}
+            className={`${styles.mobileFriendlyInput} ${styles.setTitle} mb-2`}
           />
           {errors.title && <Alert variant="destructive"><AlertDescription>{errors.title}</AlertDescription></Alert>}
         </div>
 
         {qaItems.map((item, index) => (
-          <Card key={index} className="mb-4">
+          <Card key={index} className="mb-4 w-full sm:w-[calc(50%-0.5rem)] inline-block align-top">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-lg font-medium">問題 {index + 1}</CardTitle>
               <div>
                 <Button variant="ghost" size="icon" onClick={() => togglePreview(index)}>
                   {previewIndex === index ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
-                <Button variant="ghost" size="icon" onClick={() => removeQAItem(index)} >
+                <Button variant="ghost" size="icon" onClick={() => removeQAItem(index)}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
             </CardHeader>
             <CardContent>
               {previewIndex === index ? (
-                <div className="bg-gray-100 p-4 rounded-md">
+                  <div className={styles.previewContent}>
+                  <h2 className={styles.previewTitle}>{setTitle}</h2>
                   <h3 className="font-bold mb-2">質問:</h3>
                   <p>{item.question}</p>
-                  {item.image && <img src={item.image} alt="Question" className="mt-2 max-w-full h-auto" />}
+                  {item.image && <img src={item.image} alt="Question image" className={styles.previewImage} />}
                   <h3 className="font-bold mt-4 mb-2">回答:</h3>
                   <p>{item.answer}</p>
                 </div>
@@ -197,24 +197,23 @@ const QACreationScreen = ({ onBack, onSave }) => {
                     className={`${styles.mobileFriendlyInput} mb-2`}
                     style={{ fontSize: '16px' }}
                   />
-                  <Textarea
-                    ref={inputRef}
-                    placeholder="回答"
-                    value={item.answer}
-                    onChange={(e) => updateQAItem(index, 'answer', e.target.value)}
-                    className={`${styles.mobileFriendlyInput} mb-2`}
-                    style={{ fontSize: '16px' }}
-                  />
                   <Input
                     ref={inputRef}
                     type="file"
                     accept="image/*"
                     onChange={(e) => handleImageUpload(index, e)}
-                    className={styles.mobileFriendlyInput}
+                    className={styles.imageInput}
                   />
-                  {item.image && <img src={item.image} alt="Uploaded" className="mt-2 max-w-full h-auto" />}
-                </>
-              )}
+                    {item.image && <img src={item.image} alt="Uploaded image" className={styles.previewImage} />}
+                    <Textarea
+                      placeholder="回答"
+                      value={item.answer}
+                      onChange={(e) => updateQAItem(index, 'answer', e.target.value)}
+                      className={`${styles.mobileFriendlyInput} mb-2`}
+                      style={{ fontSize: '16px' }}
+                    />
+                  </>
+                )}
             </CardContent>
             <CardFooter>
               {errors[`item${index}`] && <Alert variant="destructive"><AlertDescription>{errors[`item${index}`]}</AlertDescription></Alert>}
@@ -224,15 +223,15 @@ const QACreationScreen = ({ onBack, onSave }) => {
       </div>
 
       <div className={styles.fixedBottom}>
-        <div className="flex justify-between">
-          <Button onClick={addQAItem}>
-            <Plus className="mr-2 h-4 w-4" /> 問題を追加
-          </Button>
-          <Button onClick={handleSave} disabled={isSaving}>
-            <Save className="mr-2 h-4 w-4" /> {isSaving ? '保存中...' : '保存'}
-          </Button>
+          <div className={styles.bottomButtonContainer}>
+            <Button onClick={addQAItem} className={`${styles.bottomButton} ${styles.addButton}`}>
+              <Plus className="mr-2 h-4 w-4" /> 問題を追加
+            </Button>
+            <Button onClick={handleSave} className={`${styles.bottomButton} ${styles.saveButton}`}>
+              <Save className="mr-2 h-4 w-4" /> 保存
+            </Button>
+          </div>
         </div>
-      </div>
     </div>
   );
 };

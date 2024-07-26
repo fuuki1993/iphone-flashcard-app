@@ -107,6 +107,10 @@ const QAEditScreen = ({ onBack, onSave }) => {
   };
 
   const handleImageUpload = useCallback(async (index, event) => {
+    if (!event || !event.target || !event.target.files) {
+      console.error("Invalid event object:", event);
+      return;
+    }
     const file = event.target.files[0];
     if (file && user) {
       try {
@@ -246,7 +250,7 @@ const QAEditScreen = ({ onBack, onSave }) => {
   }, [selectedSetId, qaItems, user]);
 
   return (
-    <div className={styles.mobileFriendlyForm}>
+    <div className={styles.editScreenContainer}>
       <div className={styles.scrollableContent}>
         <div className="flex items-center mb-6">
           <Button variant="ghost" size="icon" onClick={onBack}>
@@ -255,9 +259,9 @@ const QAEditScreen = ({ onBack, onSave }) => {
           <h1 className="text-2xl font-bold ml-2">一問一答編集</h1>
         </div>
 
-        <div className="mb-6">
+        <div className={styles.selectContainer}>
           <Select onValueChange={handleSetChange} value={selectedSetId}>
-            <SelectTrigger className="w-full">
+            <SelectTrigger className={styles.selectTrigger}>
               <SelectValue placeholder="編集するセットを選択" />
             </SelectTrigger>
             <SelectContent>
@@ -270,8 +274,7 @@ const QAEditScreen = ({ onBack, onSave }) => {
             placeholder="セットのタイトル"
             value={setTitle}
             onChange={(e) => setSetTitle(e.target.value)}
-            className={`${styles.mobileFriendlyInput} mb-2`}
-            style={{ fontSize: '16px' }}
+            className={`${styles.mobileFriendlyInput} ${styles.setTitle} mb-2`}
           />
           {errors.title && <Alert variant="destructive"><AlertDescription>{errors.title}</AlertDescription></Alert>}
           {selectedSetId && (
@@ -283,7 +286,7 @@ const QAEditScreen = ({ onBack, onSave }) => {
 
         {qaItems && qaItems.length > 0 ? (
           qaItems.map((item, index) => (
-            <Card key={`item-${index}`} className="mb-4">
+            <Card key={`item-${index}`} className="mb-4 w-full sm:w-[calc(50%-0.5rem)] inline-block align-top">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-lg font-medium">問題 {index + 1}</CardTitle>
                 <div>
@@ -297,10 +300,11 @@ const QAEditScreen = ({ onBack, onSave }) => {
               </CardHeader>
               <CardContent>
                 {previewIndex === index ? (
-                  <div className="bg-gray-100 p-4 rounded-md">
+                  <div className={styles.previewContent}>
+                    <h2 className={styles.previewTitle}>{setTitle}</h2>
                     <h3 className="font-bold mb-2">質問:</h3>
                     <p>{item.question}</p>
-                    {item.image && <img src={item.image} alt="Question image" className="mt-2 max-w-full h-auto" />}
+                    {item.image && <img src={item.image} alt="Question image" className={styles.previewImage} />}
                     <h3 className="font-bold mt-4 mb-2">回答:</h3>
                     <p>{item.answer}</p>
                   </div>
@@ -310,20 +314,22 @@ const QAEditScreen = ({ onBack, onSave }) => {
                       placeholder="質問"
                       value={item.question}
                       onChange={(e) => updateQAItem(index, 'question', e.target.value)}
-                      className="mb-2"
+                      className={`${styles.mobileFriendlyInput} mb-2`}
+                      style={{ fontSize: '16px' }}
                     />
                     <Input
                       type="file"
                       accept="image/*"
                       onChange={(e) => handleImageUpload(index, e)}
-                      className="mb-2"
+                      className={styles.imageInput}
                     />
-                    {item.image && <img src={item.image} alt="Uploaded image" className="mt-2 max-w-full h-auto" />}
+                    {item.image && <img src={item.image} alt="Uploaded image" className={styles.previewImage} />}
                     <Textarea
                       placeholder="回答"
                       value={item.answer}
                       onChange={(e) => updateQAItem(index, 'answer', e.target.value)}
-                      className="mt-4 mb-2"
+                      className={`${styles.mobileFriendlyInput} mb-2`}
+                      style={{ fontSize: '16px' }}
                     />
                   </>
                 )}
@@ -342,11 +348,11 @@ const QAEditScreen = ({ onBack, onSave }) => {
         )}
 
         <div className={styles.fixedBottom}>
-          <div className="flex justify-between">
-            <Button onClick={addQAItem}>
+          <div className={styles.bottomButtonContainer}>
+            <Button onClick={addQAItem} className={`${styles.bottomButton} ${styles.addButton}`}>
               <Plus className="mr-2 h-4 w-4" /> 問題を追加
             </Button>
-            <Button onClick={handleSave}>
+            <Button onClick={handleSave} className={`${styles.bottomButton} ${styles.saveButton}`}>
               <Save className="mr-2 h-4 w-4" /> 保存
             </Button>
           </div>

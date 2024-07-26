@@ -1,66 +1,217 @@
 .container {
-    padding: 1rem;
-    width: 100%;
+  padding: 0.75rem;
+  width: 100%;
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  background-color: #f3f4f6;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.title {
+  font-size: 1.125rem;
+  font-weight: bold;
+  color: #1f2937;
+}
+
+.description {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-bottom: 0.75rem;
+}
+
+.cardList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.quizTypeCard {
+  background-color: white;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  transition: box-shadow 0.3s ease;
+}
+
+.quizTypeCard:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.cardHeader {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background-color: #1f2937;
+  color: white;
+}
+
+.cardIcon {
+  height: 1.5rem;
+  width: 1.5rem;
+  color: #3b82f6;
+  margin-right: 0.75rem;
+  flex-shrink: 0;
+}
+
+.cardTitle {
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.cardContent {
+  padding: 0.75rem 1rem;
+}
+
+.cardDescription {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-bottom: 0.75rem;
+}
+
+.buttonGroup {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.button {
+  font-size: 0.75rem;
+  white-space: nowrap;
+  background-color: #3b82f6;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  transition: background-color 0.2s;
+}
+
+.button:first-child {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.button:first-child:hover {
+  background-color: #2563eb;
+}
+
+.button:last-child {
+  background-color: white;
+  color: #3b82f6;
+  border: 1px solid #3b82f6;
+}
+
+.button:last-child:hover {
+  background-color: #f0f9ff;
+}
+
+.buttonIcon {
+  margin-right: 0.25rem;
+  height: 0.75rem;
+  width: 0.75rem;
+}
+
+/* レスポンシブデザイン */
+@media (max-width: 480px) {
+  .container {
+    padding: 0.5rem;
+    max-width: 100%;
   }
-  
-  .header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 1rem;
-  }
-  
-  .backButton {
-    margin-right: 0.5rem;
-    padding: 0.25rem;
-  }
-  
+
   .title {
-    font-size: 1.125rem;
-    font-weight: bold;
-  }
-  
-  .description {
-    font-size: 0.875rem;
-    color: #666;
-    margin-bottom: 1rem;
-  }
-  
-  .cardList {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-  
-  .cardIcon {
-    height: 1.5rem;
-    width: 1.5rem;
-    margin-right: 0.75rem;
-    flex-shrink: 0;
-  }
-  
-  .cardTitle {
     font-size: 1rem;
-    font-weight: 500;
   }
-  
-  .cardDescription {
+
+  .description {
     font-size: 0.75rem;
-    color: #666;
-    margin-bottom: 0.75rem;
   }
-  
-  .buttonGroup {
-    display: flex;
+
+  .cardList {
     gap: 0.5rem;
   }
-  
+
   .button {
-    flex: 1;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
+    padding: 0.4rem 0.8rem;
   }
-  
-  .buttonIcon {
-    margin-right: 0.25rem;
-    height: 0.75rem;
-    width: 0.75rem;
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+  .container {
+    max-width: 600px;
   }
+
+  .cardList {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    height: 400px;
+    gap: 1rem;
+  }
+}
+
+@media (min-width: 769px) {
+  .container {
+    max-width: 800px;
+    padding: 1rem;
+  }
+
+  .cardList {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    height: 400px;
+    gap: 1.5rem;
+  }
+
+  .title {
+    font-size: 1.25rem;
+  }
+
+  .description {
+    font-size: 1rem;
+  }
+
+  .button {
+    font-size: 0.875rem;
+    padding: 0.6rem 1.2rem;
+  }
+}
+
+/* Dark mode styles */
+:global(.dark) .container {
+  background-color: #111827;
+}
+
+:global(.dark) .title {
+  color: #f3f4f6;
+}
+
+:global(.dark) .description {
+  color: #9ca3af;
+}
+
+:global(.dark) .quizTypeCard {
+  background-color: #1f2937;
+}
+
+:global(.dark) .cardHeader {
+  background-color: #374151;
+}
+
+:global(.dark) .cardDescription {
+  color: #9ca3af;
+}
+
+:global(.dark) .button:last-child {
+  background-color: #4b5563;
+  color: #f3f4f6;
+  border-color: #3b82f6;
+}
+
+:global(.dark) .button:last-child:hover {
+  background-color: #2563eb;
+}

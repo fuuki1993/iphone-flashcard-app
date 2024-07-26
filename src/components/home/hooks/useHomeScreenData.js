@@ -212,20 +212,40 @@ const useHomeScreenData = (userId, externalDailyGoal) => {
       setMaxProgress(Math.max(newCurrentProgress, userMaxProgress));
       
       const studyHistoryData = await getStudyHistory(userId);
-      setStudyHistory(studyHistoryData);
-
+      console.log('Raw Study History Data:', studyHistoryData);
+  
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const totalStudyTimeToday = studyHistoryData
+
+      // 最新のセッションデータを取得
+      const allSets = await getAllSets(userId);
+      let latestSessionDuration = 0;
+      for (const set of allSets) {
+        const sessionState = await getSessionState(userId, set.id, set.type);
+        if (sessionState && sessionState.date && new Date(sessionState.date) >= today) {
+          latestSessionDuration += sessionState.studyDuration || 0;
+        }
+      }
+
+      console.log('Latest Session Duration:', latestSessionDuration);
+
+      let totalStudyTimeToday = studyHistoryData
         .filter(entry => {
           const entryDate = new Date(entry.date);
-          return entryDate.getFullYear() === today.getFullYear() &&
-                 entryDate.getMonth() === today.getMonth() &&
-                 entryDate.getDate() === today.getDate();
+          console.log('Entry date:', entryDate, 'Today:', today, 'Is same day:', entryDate.toDateString() === today.toDateString());
+          return entryDate.toDateString() === today.toDateString();
         })
-        .reduce((total, entry) => total + entry.studyDuration, 0);
+        .reduce((total, entry) => {
+          console.log('Adding study duration:', entry.studyDuration);
+          return total + (entry.studyDuration || 0);
+        }, 0);
 
-      setTodayStudyTime(totalStudyTimeToday);
+      console.log('Total Study Time Today (from history):', totalStudyTimeToday);
+
+      // 最新のセッションデータを含めた今日の総学習時間を設定
+      const finalTotalStudyTime = totalStudyTimeToday + latestSessionDuration;
+      console.log('Final Total Study Time:', finalTotalStudyTime);
+      setTodayStudyTime(finalTotalStudyTime);
 
       const newStreak = await calculateStreak(userId);
       setStreak(newStreak);

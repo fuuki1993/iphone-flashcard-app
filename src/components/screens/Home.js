@@ -1,7 +1,8 @@
 'use client';
 
+import '@/styles/global.css';
 import React, { useState, useEffect, useCallback } from 'react';
-import { getSetById, getSessionState, getStudyHistory, deleteStudyHistoryEntry, getAllSets, getUserSettings, updateUserSettings } from '@/utils/firebase/firestore';
+import { getSetById, getSessionState, getStudyHistory, deleteStudyHistoryEntry, getAllSets, getUserSettings, updateUserSettings, getDarkModeSetting, updateDarkModeSetting } from '@/utils/firebase/firestore';
 import HomeScreen from '@/components/home/HomeScreen';
 import CreateEditSetSelectionScreen from '@/components/set/CreateEditSetSelectionScreen';
 import QuizTypeSelectionScreen from '@/components/quiz/QuizTypeSelectionScreen';
@@ -168,6 +169,9 @@ export default function Home() {
         try {
           const settings = await getUserSettings(user.uid);
           setUserDailyGoal(settings.dailyGoal || 60);
+          const darkModeSetting = await getDarkModeSetting(user.uid);
+          setDarkMode(darkModeSetting);
+          applyDarkMode(darkModeSetting);
         } catch (error) {
           console.error('Failed to load user settings:', error);
         }
@@ -175,6 +179,26 @@ export default function Home() {
     };
     loadUserSettings();
   }, [user]);
+
+  const applyDarkMode = (isDark) => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  };
+
+  const handleUpdateDarkMode = async (newDarkMode) => {
+    if (user) {
+      try {
+        await updateDarkModeSetting(user.uid, newDarkMode);
+        setDarkMode(newDarkMode);
+        applyDarkMode(newDarkMode);
+      } catch (error) {
+        console.error('Failed to update dark mode setting:', error);
+      }
+    }
+  };
 
   const handleUpdateDailyGoal = async (newGoal) => {
     if (user) {
@@ -456,17 +480,17 @@ export default function Home() {
             weeklyStudyTime={weeklyStudyTime}
           />
         );
-      case 'settings':
-        return (
-          <SettingsScreen
-            onBack={() => navigateTo('home')}
-            dailyGoal={userDailyGoal}
-            setDailyGoal={handleUpdateDailyGoal}
-            darkMode={darkMode}
-            setDarkMode={setDarkMode}
-            userId={user.uid}
-          />
-        );
+        case 'settings':
+          return (
+            <SettingsScreen
+              onBack={() => navigateTo('home')}
+              dailyGoal={userDailyGoal}
+              setDailyGoal={handleUpdateDailyGoal}
+              darkMode={darkMode}
+              setDarkMode={handleUpdateDarkMode}
+              userId={user.uid}
+            />
+          );
       case 'studyHistory':
         return (
           <StudyHistoryScreen
@@ -478,14 +502,14 @@ export default function Home() {
       default:
         return <div>Unknown screen: {currentScreen}</div>;
     }
-  }, [currentScreen, user, loading, todayStudyTime, overallProgress, streak, studyHistory, userDailyGoal, navigateTo, handleFinishQuiz, setTodayStudyTime, quizType, quizSetId, quizSetTitle, sessionState, handleUpdateDailyGoal]);
+  }, [currentScreen, user, loading, todayStudyTime, overallProgress, streak, studyHistory, userDailyGoal, navigateTo, handleFinishQuiz, setTodayStudyTime, quizType, quizSetId, quizSetTitle, sessionState, handleUpdateDailyGoal, darkMode, handleUpdateDarkMode]);
 
   if (!isReady) {
     return null; // または適切なローディング表示
   }
 
   return (
-    <div className={styles.container}>
+    <div className={`${styles.container} ${darkMode ? styles.darkMode : ''}`}>
       <main className={styles.main}>
         {renderScreen()}
       </main>

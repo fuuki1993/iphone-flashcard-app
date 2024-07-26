@@ -1,83 +1,271 @@
 .container {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    width: 100vw;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  padding: 0.75rem;
+  overflow: hidden;
+  background-color: #f9fafb; /* より明るい背景色 */
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.title {
+  font-size: 1.125rem;
+  font-weight: bold;
+  color: #1f2937;
+}
+
+.headerButtons {
+  display: flex;
+  align-items: center;
+}
+
+.shuffleButton, .finishButton {
+  margin-right: 0.5rem;
+}
+
+.score {
+  font-size: 1.125rem;
+  font-weight: bold;
+}
+
+.quizCard {
+  flex-grow: 1;
+  overflow: hidden;
+  background-color: #ffffff; /* カードの背景を白に */
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); /* 軽いシャドウを追加 */
+}
+
+.quizCardContent {
+  height: 100%;
+  padding: 0.5rem;
+  overflow: hidden;
+}
+
+.gridContainer {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+  gap: 0.5rem;
+  height: 100%;
+}
+
+.itemContainer {
+  grid-column: 2;
+  grid-row: 2 / span 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dragOverlay {
+  background-color: #ffffff; /* ドラッグ中のオーバーレイを白に */
+  padding: 1rem;
+  border-radius: 0.25rem;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1f2937; /* テキスト色を濃いグレーに */
+  transform: rotate(90deg);
+}
+
+.resultsContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.buttonContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 6rem;
+}
+
+.rotatedButton {
+  transform: rotate(90deg);
+  width: 8rem;
+  height: 3rem;
+}
+
+.rotatedText {
+  display: inline-block;
+  font-size: 0.875rem;
+}
+
+.finalScore {
+  font-size: 1.5rem;
+  font-weight: bold;
+  transform: rotate(90deg);
+  white-space: nowrap;
+}
+
+/* レスポンシブデザイン */
+@media (max-width: 600px) {
+  .container {
+    max-width: 100%;
     padding: 0.5rem;
-    overflow: hidden;
   }
-  
-  .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.5rem;
-  }
-  
+
   .title {
-    font-size: 1.25rem;
-    font-weight: bold;
+    font-size: 1rem;
   }
-  
+
   .score {
-    font-size: 1.125rem;
-    font-weight: bold;
+    font-size: 1rem;
   }
-  
+
   .gridContainer {
-    display: grid;
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: repeat(4, 1fr);
-    gap: 0.5rem;
-    height: 100%;
   }
-  
+
   .itemContainer {
-    grid-column: 2;
+    grid-column: 1 / span 3;
     grid-row: 2 / span 2;
-    display: flex;
-    align-items: center;
-    justify-content: center;
   }
-  
+
   .dragOverlay {
-    background-color: white;
-    padding: 1rem;
-    border-radius: 0.25rem;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    font-size: 1.5rem;
-    font-weight: 600;
-    transform: rotate(90deg);
+    font-size: 1.25rem;
+    padding: 0.75rem;
   }
-  
-  .resultsContainer {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-  }
-  
-  .buttonContainer {
-    display: flex;
-    flex-direction: column;
-    gap: 6rem;
-  }
-  
+
   .rotatedButton {
-    transform: rotate(90deg);
-    width: 8rem;
-    height: 3rem;
+    width: 6rem;
+    height: 2.5rem;
   }
-  
+
   .rotatedText {
-    display: inline-block;
-    font-size: 0.875rem;
+    font-size: 0.75rem;
   }
-  
+
   .finalScore {
-    font-size: 1.5rem;
-    font-weight: bold;
-    transform: rotate(90deg);
-    white-space: nowrap;
+    font-size: 1.25rem;
   }
+}
+
+@media (min-width: 601px) {
+  .container {
+    height: 100vh;
+    width: 100%;
+    padding: 1rem;
+  }
+
+  .gridContainer {
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 1rem;
+  }
+
+  .itemContainer {
+    grid-column: 2 / span 2;
+    grid-row: 2;
+  }
+
+  .dragOverlay {
+    transform: none;
+  }
+
+  .buttonContainer {
+    flex-direction: row;
+    gap: 1rem;
+  }
+
+  .rotatedButton, .rotatedText, .finalScore {
+    transform: none;
+  }
+
+  /* 分類フィールドのスタイルを修正 */
+  .categoryContainer {
+    transform: none;
+  }
+
+  .categoryContent {
+    transform: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .categoryImage {
+    transform: none;
+    max-width: 100%;
+    max-height: 60%;
+  }
+
+  .categoryName {
+    transform: none;
+    writing-mode: horizontal-tb;
+    text-orientation: mixed;
+    margin-top: 0.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .gridContainer {
+    gap: 0.75rem;
+  }
+
+  .dragOverlay {
+    font-size: 1.75rem;
+    padding: 1.25rem;
+  }
+}
+
+/* ダークモード対応 */
+:global(.dark) .container {
+  background-color: #111827; /* より暗い背景色 */
+}
+
+:global(.dark) .title {
+  color: #f3f4f6;
+}
+
+:global(.dark) .dragOverlay {
+  background-color: #374151; /* ドラッグ中のオーバーレイをより明るいグレーに */
+  border-color: #4b5563;
+  color: #f3f4f6; /* テキスト色を明るいグレーに */
+}
+
+:global(.dark) .quizCard {
+  background-color: #1f2937; /* カードの背景をより暗いグレーに */
+  box-shadow: 0 1px 3px 0 rgba(255, 255, 255, 0.1), 0 1px 2px 0 rgba(255, 255, 255, 0.06); /* ダークモード用のシャドウ */
+}
+
+:global(.dark) .score {
+  color: #f3f4f6;
+}
+
+:global(.dark) .quizCardContent {
+  background-color: #1f2937;
+}
+
+:global(.dark) .rotatedButton {
+  background-color: #374151;
+  color: #f3f4f6;
+}
+
+:global(.dark) .rotatedButton:hover {
+  background-color: #4b5563;
+}
+
+:global(.dark) .rotatedText {
+  color: #f3f4f6;
+}
+
+:global(.dark) .finalScore {
+  color: #f3f4f6;
+}

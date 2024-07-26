@@ -7,6 +7,7 @@ import { getAllSets, getSessionState, getStudyHistory } from '../../../utils/fir
 import { Timestamp } from 'firebase/firestore';
 import { Book, Globe, Code, Calendar } from 'lucide-react';
 import { Progress } from '../../ui/feedback/progress';
+import styles from '../../../styles/modules/recentActivities.module.css';
 
 /**
  * 最近の学習活動を管理するカスタムフック
@@ -113,12 +114,8 @@ const useRecentActivities = (userId, onStartLearning) => {
     } else if (type === 'qa' || type === 'multiple-choice') {
       totalItems = sessionState.shuffledQuestions ? sessionState.shuffledQuestions.length : 0;
       totalItemsStudied = sessionState.studiedQuestions ? sessionState.studiedQuestions.length : 0;
-      // resultsの長さも考慮する
-      if (sessionState.results) {
-        totalItemsStudied = Math.max(totalItemsStudied, sessionState.results.length);
-      }
     } else if (type === 'classification') {
-      totalItems = sessionState.shuffledItems ? sessionState.shuffledItems.length : 0;
+      totalItems = sessionState.quizData ? sessionState.quizData.items.length : 0;
       totalItemsStudied = sessionState.studiedItems ? sessionState.studiedItems.length : 0;
     }
 
@@ -164,32 +161,34 @@ const useRecentActivities = (userId, onStartLearning) => {
     const progressPercentage = activity.totalItems > 0
       ? (activity.itemsStudied / activity.totalItems) * 100
       : 0;
-
+  
     const relativeTime = formatRelativeTime(activity.timestamp);
-
+  
     return (
       <li 
-        key={activity.uniqueId} // Use uniqueId as key
-        className="flex items-center p-2 rounded-md hover:bg-gray-200 cursor-pointer transition-colors duration-200"
+        key={activity.uniqueId}
+        className={styles.activityItem}
         onClick={() => !activity.isCompleted && onStartLearning(activity.id, activity.type, activity.sessionState, false)}
       >
         {getIconForSetType(activity.type)}
-        <div className="flex-1 ml-2">
-          <span className="font-medium text-xs">{activity.title}</span>
-          <div className="flex items-center mt-1">
-            <p className="text-[10px] text-gray-500 mr-2">
+        <div className={styles.activityContent}>
+          <span className={styles.activityTitle}>{activity.title}</span>
+          <div className={styles.activityDetails}>
+            <p className={styles.activityTime}>
               {relativeTime} 
             </p>
-            <Progress 
-              value={progressPercentage} 
-              className="w-24 h-2 mr-2" 
-            />
-            <span className="text-[10px] text-gray-500">
+            <div className={styles.progressWrapper}>
+              <div 
+                className={styles.activityProgress}
+                style={{ width: `${progressPercentage}%` }}
+              ></div>
+            </div>
+            <span className={styles.activityCount}>
               {activity.itemsStudied}/{activity.totalItems}
             </span>
           </div>
         </div>
-        <span className={`text-xs ${activity.isCompleted ? 'text-green-500' : 'text-blue-500'}`}>
+        <span className={`${styles.activityStatus} ${activity.isCompleted ? styles.completed : styles.inProgress}`}>
           {activity.isCompleted ? '完了' : '再開'}
         </span>
       </li>
@@ -207,7 +206,9 @@ const useRecentActivities = (userId, onStartLearning) => {
       prevActivities.map(activity => {
         if (activity.id === setId && activity.type === type) {
           let newItemsStudied = 0;
-          if (type === 'qa' || type === 'multiple-choice') {
+          if (type === 'classification') {
+            newItemsStudied = newSessionState.studiedItems ? newSessionState.studiedItems.length : 0;
+          } else if (type === 'qa' || type === 'multiple-choice') {
             newItemsStudied = newSessionState.studiedQuestions ? newSessionState.studiedQuestions.length : 0;
             if (newSessionState.results) {
               newItemsStudied = Math.max(newItemsStudied, newSessionState.results.length);

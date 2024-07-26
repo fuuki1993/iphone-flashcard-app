@@ -51,9 +51,13 @@ const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
         const allSets = await getSets(user.uid);
         
         const newQuizSets = {
-          flashcard: allSets.filter(set => set.type === 'flashcard'),
-          qa: allSets.filter(set => set.type === 'qa'),
-          'multiple-choice': allSets.filter(set => set.type === 'multiple-choice'),
+          flashcard: allSets.filter(set => set.type === 'flashcard' || set.type === 'qa'),
+          qa: allSets.filter(set => set.type === 'qa' || set.type === 'flashcard'),
+          'multiple-choice': allSets.filter(set => 
+            set.type === 'multiple-choice' || 
+            (set.type === 'qa' && set.qaItems && set.qaItems.length >= 4) || 
+            (set.type === 'flashcard' && set.cards && set.cards.length >= 4)
+          ),
           classification: allSets.filter(set => set.type === 'classification')
         };
   

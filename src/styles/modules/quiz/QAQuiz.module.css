@@ -1,41 +1,252 @@
 .container {
-    width: 100%;
-    max-width: 28rem;
-    margin: 0 auto;
-    padding: 0 1rem;
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0.5rem;
+  background-color: #f3f4f6;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.headerContent {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.title {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #1f2937;
+}
+
+.headerButtons {
+  display: flex;
+}
+
+.backButton,
+.shuffleButton,
+.finishButton {
+  margin-right: 0.5rem;
+}
+
+.quizCard {
+  width: 100%;
+  margin-bottom: 1rem;
+  background-color: #ffffff;
+}
+
+.questionTitle {
+  font-size: 1.125rem;
+  color: #1f2937;
+}
+
+.questionImage {
+  width: 100%;
+  margin-bottom: 1rem;
+  max-height: 12rem;
+  object-fit: contain;
+}
+
+.answerInput {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.25rem;
+}
+
+.cardFooter {
+  display: flex;
+  justify-content: space-between;
+}
+
+.submitButton {
+  width: 100%;
+}
+
+.resultContainer {
+  display: flex;
+  align-items: center;
+  font-size: 0.875rem;
+}
+
+.resultIcon {
+  margin-right: 0.5rem;
+}
+
+.correctIcon {
+  color: #10b981;
+}
+
+.incorrectIcon {
+  color: #ef4444;
+}
+
+.correctAnswer {
+  color: #1f2937;
+}
+
+.pagination {
+  text-align: center;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.loading, .error, .empty {
+  text-align: center;
+  color: #6b7280;
+  padding: 1rem;
+}
+
+.finalScoreContainer {
+  padding: 1rem;
+  max-width: 28rem;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.finalScoreCard {
+  margin-bottom: 1rem;
+  background-color: #ffffff;
+}
+
+.finalScoreTitle {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #1f2937;
+}
+
+.finalScoreText {
+  font-size: 1.125rem;
+  margin-bottom: 1rem;
+  color: #4b5563;
+}
+
+.finalScoreButtons {
+  display: flex;
+  justify-content: space-between;
+}
+
+/* レスポンシブデザイン */
+@media (min-width: 601px) and (max-width: 1023px) {
+  .container {
+    padding: 0.75rem;
+    max-width: 90%;    
   }
-  
-  .header {
-    margin-bottom: 1rem;
-  }
-  
-  .headerContent {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
+
   .title {
+    font-size: 1.5rem;
+  }
+
+  .questionTitle {
     font-size: 1.25rem;
-    font-weight: bold;
   }
-  
-  .quizCard {
-    width: 100%;
-    margin-bottom: 1rem;
-  }
-  
+
   .questionImage {
-    width: 100%;
-    margin-bottom: 1rem;
-    max-height: 12rem;
-    object-fit: contain;
+    max-height: 16rem;
   }
-  
-  .resultIcon {
-    margin-right: 0.5rem;
+}
+
+@media (min-width: 1024px) {
+  .container {
+    max-width: 900px;
   }
-  
-  .pagination {
-    text-align: center;
+
+  .title {
+    font-size: 1.75rem;
   }
+
+  .questionTitle {
+    font-size: 1.375rem;
+  }
+
+  .questionImage {
+    max-height: 20rem;
+  }
+}
+
+/* ダークモード対応 */
+:global(.dark) .container {
+  background-color: #111827;
+}
+
+:global(.dark) .title,
+:global(.dark) .questionTitle,
+:global(.dark) .finalScoreTitle {
+  color: #f3f4f6;
+}
+
+:global(.dark) .quizCard,
+:global(.dark) .finalScoreCard {
+  background-color: #1f2937;
+}
+
+:global(.dark) .answerInput {
+  background-color: #374151;
+  color: #f3f4f6;
+  border-color: #4b5563;
+}
+
+:global(.dark) .answerInput::placeholder {
+  color: #9ca3af;
+}
+
+:global(.dark) .correctAnswer,
+:global(.dark) .finalScoreText {
+  color: #d1d5db;
+}
+
+:global(.dark) .pagination,
+:global(.dark) .loading,
+:global(.dark) .error,
+:global(.dark) .empty {
+  color: #9ca3af;
+}
+
+:global(.dark) .correctIcon {
+  color: #34d399;
+}
+
+:global(.dark) .incorrectIcon {
+  color: #f87171;
+}
+
+:global(.dark) .submitButton {
+  background-color: #374151;
+  color: #f3f4f6;
+}
+
+:global(.dark) .submitButton:hover {
+  background-color: #4b5563;
+}
+
+:global(.dark) .headerContent {
+  color: #f3f4f6;
+}
+
+:global(.dark) .questionImage {
+  filter: brightness(0.8);
+}
+
+:global(.dark) .cardFooter {
+  border-color: #4b5563;
+}
+
+:global(.dark) .resultContainer {
+  color: #d1d5db;
+}
+
+:global(.dark) .finalScoreButtons button {
+  background-color: #374151;
+  color: #f3f4f6;
+}
+
+:global(.dark) .finalScoreButtons button:hover {
+  background-color: #4b5563;
+}
