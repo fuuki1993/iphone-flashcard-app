@@ -21,9 +21,9 @@ const QAEditScreen = ({ onBack, onSave }) => {
   const [setTitle, setSetTitle] = useState('');
   const [qaItems, setQAItems] = useState([]);
   const [errors, setErrors] = useState({});
-  const [previewIndex, setPreviewIndex] = useState(null);
   const [originalQAItems, setOriginalQAItems] = useState([]);
   const [user, setUser] = useState(null);
+  const [previewMode, setPreviewMode] = useState(false);
 
   useEffect(() => {
     const auth = getAuth();
@@ -56,7 +56,7 @@ const QAEditScreen = ({ onBack, onSave }) => {
           }
         } catch (error) {
           console.error("Error loading sets:", error);
-          setErrors({ ...errors, load: "セットの読み込み中にエラーが発生しました。" });
+          setErrors(prevErrors => ({ ...prevErrors, load: "セットの読み込み中にエラーが発生しました。" }));
         }
       }
     };
@@ -173,7 +173,6 @@ const QAEditScreen = ({ onBack, onSave }) => {
         const db = getFirestore();
         const setRef = doc(db, `users/${user.uid}/sets`, selectedSetId);
         
-        // 既存のセットデータを取得
         const existingSetDoc = await getDoc(setRef);
         const existingSetData = existingSetDoc.data() || {};
   
@@ -184,7 +183,6 @@ const QAEditScreen = ({ onBack, onSave }) => {
           type: 'qa',
         };
   
-        // createdAtとupdatedAtの処理
         if (!existingSetData.createdAt) {
           updatedSet.createdAt = serverTimestamp();
         } else {
@@ -216,8 +214,8 @@ const QAEditScreen = ({ onBack, onSave }) => {
     }
   }, [selectedSetId, setTitle, qaItems, validateForm, onSave, originalQAItems, deleteUnusedImages, user]);
 
-  const togglePreview = (index) => {
-    setPreviewIndex(previewIndex === index ? null : index);
+  const togglePreviewMode = () => {
+    setPreviewMode(!previewMode);
   };
 
   const handleDelete = useCallback(async () => {
@@ -231,7 +229,7 @@ const QAEditScreen = ({ onBack, onSave }) => {
           }
         }
 
-        await deleteSet(user.uid, selectedSetId);
+        const newProgress = await deleteSet(user.uid, selectedSetId);
         
         const updatedSets = await getSets(user.uid, 'qa');
         setSets(updatedSets);
@@ -284,38 +282,47 @@ const QAEditScreen = ({ onBack, onSave }) => {
           )}
         </div>
 
-        {qaItems && qaItems.length > 0 ? (
-          qaItems.map((item, index) => (
-            <Card key={`item-${index}`} className="mb-4 w-full sm:w-[calc(50%-0.5rem)] inline-block align-top">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-lg font-medium">問題 {index + 1}</CardTitle>
-                <div>
-                  <Button variant="ghost" size="icon" onClick={() => togglePreview(index)}>
-                    {previewIndex === index ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => removeQAItem(index)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {previewIndex === index ? (
-                  <div className={styles.previewContent}>
-                    <h2 className={styles.previewTitle}>{setTitle}</h2>
-                    <h3 className="font-bold mb-2">質問:</h3>
-                    <p>{item.question}</p>
+        <Button onClick={togglePreviewMode} className={styles.previewButton}>
+          {previewMode ? <EyeOff className={styles.previewButtonIcon} /> : <Eye className={styles.previewButtonIcon} />}
+          {previewMode ? 'プレビューを終了' : 'プレビュー'}
+        </Button>
+
+        {previewMode ? (
+          <div className={styles.previewContent}>
+            <h2 className={styles.previewTitle}>{setTitle}</h2>
+            <div className={styles.previewCategoriesContainer}>
+              {qaItems.map((item, index) => (
+                <div key={index} className={styles.previewCategory}>
+                  <div className={styles.previewCategoryHeader}>
+                    <h3 className={styles.previewCategoryTitle}>問題 {index + 1}</h3>
                     {item.image && <img src={item.image} alt="Question image" className={styles.previewImage} />}
-                    <h3 className="font-bold mt-4 mb-2">回答:</h3>
-                    <p>{item.answer}</p>
                   </div>
-                ) : (
-                  <>
+                  <p>{item.question}</p>
+                  <h4 className={styles.previewCategoryTitle}>回答:</h4>
+                  <p>{item.answer}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          qaItems && qaItems.length > 0 ? (
+            <div className={styles.categoriesGrid}>
+              {qaItems.map((item, index) => (
+                <Card key={`item-${index}`} className={styles.categoryCard}>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-lg font-medium">問題 {index + 1}</CardTitle>
+                    <div>
+                      <Button variant="ghost" size="icon" onClick={() => removeQAItem(index)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
                     <Textarea
                       placeholder="質問"
                       value={item.question}
                       onChange={(e) => updateQAItem(index, 'question', e.target.value)}
                       className={`${styles.mobileFriendlyInput} mb-2`}
-                      style={{ fontSize: '16px' }}
                     />
                     <Input
                       type="file"
@@ -329,22 +336,21 @@ const QAEditScreen = ({ onBack, onSave }) => {
                       value={item.answer}
                       onChange={(e) => updateQAItem(index, 'answer', e.target.value)}
                       className={`${styles.mobileFriendlyInput} mb-2`}
-                      style={{ fontSize: '16px' }}
                     />
-                  </>
-                )}
-              </CardContent>
-              <CardFooter>
-                {errors[`item${index}`] && <Alert variant="destructive"><AlertDescription>{errors[`item${index}`]}</AlertDescription></Alert>}
-              </CardFooter>
-            </Card>
-          ))
-        ) : (
-          <p>
-            {selectedSetId 
-              ? "このセットには問題がありません。新しい問題を追加してください。" 
-              : "セットを選択するか、新しい問題を追加してください。"}
-          </p>
+                  </CardContent>
+                  <CardFooter>
+                    {errors[`item${index}`] && <Alert variant="destructive"><AlertDescription>{errors[`item${index}`]}</AlertDescription></Alert>}
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <p>
+              {selectedSetId 
+                ? "このセットには問題がありません。新しい問題を追加してください。" 
+                : "セットを選択するか、新しい問題を追加してください。"}
+            </p>
+          )
         )}
 
         <div className={styles.fixedBottom}>

@@ -1,18 +1,20 @@
+'use client';
+
 import React, { useState, useCallback, useEffect } from 'react';
-import styles from '@/styles/modules/CommonCreationScreen.module.css';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/layout/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/form/input';
 import { Textarea } from '@/components/ui/form/textarea';
 import { Checkbox } from '@/components/ui/form/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
-import { ArrowLeft, Plus, Save, Trash2, Image, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Plus, Save, Trash2, Eye, EyeOff } from 'lucide-react';
 import { saveSet } from '@/utils/firebase/firestore';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { compressImage } from '@/utils/helpers/imageCompression';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, writeBatch, doc, collection, serverTimestamp } from "firebase/firestore";
+import { getFirestore, writeBatch, doc, serverTimestamp } from "firebase/firestore";
+import styles from '@/styles/modules/CommonCreationScreen.module.css';
 
 const MultipleChoiceCreationScreen = ({ onBack, onSave }) => {
   const [setTitle, setSetTitle] = useState('');
@@ -22,10 +24,10 @@ const MultipleChoiceCreationScreen = ({ onBack, onSave }) => {
     image: null 
   }]);
   const [errors, setErrors] = useState({});
-  const [previewIndex, setPreviewIndex] = useState(null);
-  const inputRef = useAutoScroll();
   const [user, setUser] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [previewMode, setPreviewMode] = useState(false);
+  const inputRef = useAutoScroll();
 
   useEffect(() => {
     const auth = getAuth();
@@ -174,10 +176,10 @@ const MultipleChoiceCreationScreen = ({ onBack, onSave }) => {
       setIsSaving(false);
     }
   }, [setTitle, questions, validateForm, onSave, user, isSaving]);
-  
-  const togglePreview = useCallback((index) => {
-    setPreviewIndex(prevIndex => prevIndex === index ? null : index);
-  }, []);
+
+  const togglePreviewMode = () => {
+    setPreviewMode(!previewMode);
+  };
 
   return (
     <div className={styles.creationScreenContainer}>
@@ -191,61 +193,69 @@ const MultipleChoiceCreationScreen = ({ onBack, onSave }) => {
 
         <div className="mb-6">
           <Input
+            ref={inputRef}
             placeholder="セットのタイトル"
             value={setTitle}
             onChange={(e) => setSetTitle(e.target.value)}
-            className={`${styles.mobileFriendlyInput} mb-2`}
-            style={{ fontSize: '16px' }}
+            className={`${styles.mobileFriendlyInput} ${styles.setTitle} mb-2`}
           />
           {errors.title && <Alert variant="destructive"><AlertDescription>{errors.title}</AlertDescription></Alert>}
         </div>
 
-        {questions.map((q, qIndex) => (
-          <Card key={qIndex} className="mb-4 w-full sm:w-[calc(50%-0.5rem)] inline-block align-top">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-lg font-medium">問題 {qIndex + 1}</CardTitle>
-              <div>
-                <Button variant="ghost" size="icon" onClick={() => togglePreview(qIndex)}>
-                  {previewIndex === qIndex ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-                <Button variant="ghost" size="icon" onClick={() => removeQuestion(qIndex)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {previewIndex === qIndex ? (
-                <div className={styles.previewContent}>
-                <h3 className={styles.previewTitle}>問題:</h3>
-                <p>{q.question}</p>
-                {q.image && <img src={q.image} alt="Question" className={styles.previewImage} />}
-                <h3 className={styles.previewTitle}>選択肢:</h3>
-                <ul className={styles.previewList}>
-                  {q.choices.map((choice, cIndex) => (
-                    <li key={cIndex} className={choice.isCorrect ? styles.choiceCorrect : ""}>
-                      {choice.text} {choice.isCorrect && "(正解)"}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : (
-                <>
+        <Button onClick={togglePreviewMode} className={styles.previewButton}>
+          {previewMode ? <EyeOff className={styles.previewButtonIcon} /> : <Eye className={styles.previewButtonIcon} />}
+          {previewMode ? 'プレビューを終了' : 'プレビュー'}
+        </Button>
+
+        {previewMode ? (
+          <div className={styles.previewContent}>
+            <h2 className={styles.previewTitle}>{setTitle}</h2>
+            <div className={styles.previewCategoriesContainer}>
+              {questions.map((q, qIndex) => (
+                <div key={qIndex} className={styles.previewCategory}>
+                  <div className={styles.previewCategoryHeader}>
+                    <h3 className={styles.previewCategoryTitle}>問題 {qIndex + 1}</h3>
+                    {q.image && <img src={q.image} alt="Question image" className={styles.previewImage} />}
+                  </div>
+                  <p>{q.question}</p>
+                  <h4 className={styles.previewCategoryTitle}>選択肢:</h4>
+                  <ul className={styles.previewList}>
+                    {q.choices.map((choice, cIndex) => (
+                      <li key={cIndex} className={`${styles.previewListItem} ${choice.isCorrect ? styles.choiceCorrect : ""}`}>
+                        {choice.text} {choice.isCorrect && "(正解)"}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className={styles.categoriesGrid}>
+            {questions.map((q, qIndex) => (
+              <Card key={`question-${qIndex}`} className={styles.categoryCard}>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-lg font-medium">問題 {qIndex + 1}</CardTitle>
+                  <div>
+                    <Button variant="ghost" size="icon" onClick={() => removeQuestion(qIndex)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
                   <Textarea
-                    ref={inputRef}
                     placeholder="問題文"
                     value={q.question}
                     onChange={(e) => updateQuestion(qIndex, 'question', e.target.value)}
                     className={`${styles.mobileFriendlyInput} mb-2`}
-                    style={{ fontSize: '16px' }}
                   />
                   <Input
-                    ref={inputRef}
                     type="file"
                     accept="image/*"
                     onChange={(e) => handleImageUpload(qIndex, e)}
-                    className={styles.mobileFriendlyInput}
+                    className={styles.imageInput}
                   />
-                  {q.image && <img src={q.image} alt="Uploaded" className={styles.previewImage} />}
+                  {q.image && <img src={q.image} alt="Uploaded image" className={styles.previewImage} />}
                   <h4 className="font-medium mt-4 mb-2">選択肢:</h4>
                   {q.choices.map((choice, cIndex) => (
                     <div key={cIndex} className={styles.checkboxContainer}>
@@ -261,7 +271,6 @@ const MultipleChoiceCreationScreen = ({ onBack, onSave }) => {
                           value={choice.text}
                           onChange={(e) => updateChoice(qIndex, cIndex, 'text', e.target.value)}
                           className={`${styles.mobileFriendlyInput} flex-grow mr-2`}
-                          style={{ fontSize: '16px' }}
                         />
                       </label>
                       <Button variant="ghost" size="icon" onClick={() => removeChoice(qIndex, cIndex)}>
@@ -272,26 +281,26 @@ const MultipleChoiceCreationScreen = ({ onBack, onSave }) => {
                   <Button onClick={() => addChoice(qIndex)} className={styles.addChoiceButton}>
                     <Plus className={styles.addChoiceButtonIcon} /> 選択肢を追加
                   </Button>
-                </>
-              )}
-            </CardContent>
-            <CardFooter>
-              {errors[`question${qIndex}`] && <Alert variant="destructive"><AlertDescription>{errors[`question${qIndex}`]}</AlertDescription></Alert>}
-              {errors[`question${qIndex}choices`] && <Alert variant="destructive"><AlertDescription>{errors[`question${qIndex}choices`]}</AlertDescription></Alert>}
-              {errors[`question${qIndex}correct`] && <Alert variant="destructive"><AlertDescription>{errors[`question${qIndex}correct`]}</AlertDescription></Alert>}
-            </CardFooter>
-          </Card>
-        ))}
-
-        <div className={styles.fixedBottom}>
-          <div className={styles.bottomButtonContainer}>
-            <Button onClick={addQuestion} className={`${styles.bottomButton} ${styles.addButton}`}>
-              <Plus className="mr-2 h-4 w-4" /> 問題を追加
-            </Button>
-            <Button onClick={handleSave} className={`${styles.bottomButton} ${styles.saveButton}`}>
-              <Save className="mr-2 h-4 w-4" /> 保存
-            </Button>
+                </CardContent>
+                <CardFooter>
+                  {errors[`question${qIndex}`] && <Alert variant="destructive"><AlertDescription>{errors[`question${qIndex}`]}</AlertDescription></Alert>}
+                  {errors[`question${qIndex}choices`] && <Alert variant="destructive"><AlertDescription>{errors[`question${qIndex}choices`]}</AlertDescription></Alert>}
+                  {errors[`question${qIndex}correct`] && <Alert variant="destructive"><AlertDescription>{errors[`question${qIndex}correct`]}</AlertDescription></Alert>}
+                </CardFooter>
+              </Card>
+            ))}
           </div>
+        )}
+      </div>
+
+      <div className={styles.fixedBottom}>
+        <div className={styles.bottomButtonContainer}>
+          <Button onClick={addQuestion} className={`${styles.bottomButton} ${styles.addButton}`}>
+            <Plus className="mr-2 h-4 w-4" /> 問題を追加
+          </Button>
+          <Button onClick={handleSave} className={`${styles.bottomButton} ${styles.saveButton}`}>
+            <Save className="mr-2 h-4 w-4" /> 保存
+          </Button>
         </div>
       </div>
     </div>

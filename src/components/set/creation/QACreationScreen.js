@@ -10,19 +10,19 @@ import { ArrowLeft, Plus, Save, Trash2, Image, Eye, EyeOff } from 'lucide-react'
 import { saveSet } from '@/utils/firebase/firestore';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { compressImage } from '@/utils/helpers/imageCompression';
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, writeBatch, doc, collection, serverTimestamp } from "firebase/firestore";
+import { getFirestore, writeBatch, doc, serverTimestamp } from "firebase/firestore";
 import styles from '@/styles/modules/CommonCreationScreen.module.css';
 
 const QACreationScreen = ({ onBack, onSave }) => {
   const [setTitle, setSetTitle] = useState('');
   const [qaItems, setQAItems] = useState([{ question: '', answer: '', image: null }]);
   const [errors, setErrors] = useState({});
-  const [previewIndex, setPreviewIndex] = useState(null);
-  const inputRef = useAutoScroll();
   const [user, setUser] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [previewMode, setPreviewMode] = useState(false);
+  const inputRef = useAutoScroll();
 
   useEffect(() => {
     const auth = getAuth();
@@ -63,7 +63,7 @@ const QACreationScreen = ({ onBack, onSave }) => {
 
   const handleImageUpload = useCallback(async (index, event) => {
     const file = event.target.files[0];
-    if (file) {
+    if (file && user) {
       try {
         const compressedImage = await compressImage(file);
         const storage = getStorage();
@@ -124,7 +124,9 @@ const QACreationScreen = ({ onBack, onSave }) => {
           }
           return item;
         })),
-        type: 'qa'
+        type: 'qa',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
       };
 
       const savedSet = await saveSet(newSet, user.uid);
@@ -139,9 +141,9 @@ const QACreationScreen = ({ onBack, onSave }) => {
     }
   }, [setTitle, qaItems, validateForm, onSave, user, isSaving]);
 
-  const togglePreview = useCallback((index) => {
-    setPreviewIndex(prevIndex => prevIndex === index ? null : index);
-  }, []);
+  const togglePreviewMode = () => {
+    setPreviewMode(!previewMode);
+  };
 
   return (
     <div className={styles.creationScreenContainer}>
@@ -155,7 +157,6 @@ const QACreationScreen = ({ onBack, onSave }) => {
 
         <div className="mb-6">
           <Input
-            ref={inputRef}
             placeholder="セットのタイトル"
             value={setTitle}
             onChange={(e) => setSetTitle(e.target.value)}
@@ -164,74 +165,80 @@ const QACreationScreen = ({ onBack, onSave }) => {
           {errors.title && <Alert variant="destructive"><AlertDescription>{errors.title}</AlertDescription></Alert>}
         </div>
 
-        {qaItems.map((item, index) => (
-          <Card key={index} className="mb-4 w-full sm:w-[calc(50%-0.5rem)] inline-block align-top">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-lg font-medium">問題 {index + 1}</CardTitle>
-              <div>
-                <Button variant="ghost" size="icon" onClick={() => togglePreview(index)}>
-                  {previewIndex === index ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-                <Button variant="ghost" size="icon" onClick={() => removeQAItem(index)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {previewIndex === index ? (
-                  <div className={styles.previewContent}>
-                  <h2 className={styles.previewTitle}>{setTitle}</h2>
-                  <h3 className="font-bold mb-2">質問:</h3>
+        <Button onClick={togglePreviewMode} className={styles.previewButton}>
+          {previewMode ? <EyeOff className={styles.previewButtonIcon} /> : <Eye className={styles.previewButtonIcon} />}
+          {previewMode ? 'プレビューを終了' : 'プレビュー'}
+        </Button>
+
+        {previewMode ? (
+          <div className={styles.previewContent}>
+            <h2 className={styles.previewTitle}>{setTitle}</h2>
+            <div className={styles.previewCategoriesContainer}>
+              {qaItems.map((item, index) => (
+                <div key={index} className={styles.previewCategory}>
+                  <div className={styles.previewCategoryHeader}>
+                    <h3 className={styles.previewCategoryTitle}>問題 {index + 1}</h3>
+                    {item.image && <img src={item.image} alt="Question image" className={styles.previewImage} />}
+                  </div>
                   <p>{item.question}</p>
-                  {item.image && <img src={item.image} alt="Question image" className={styles.previewImage} />}
-                  <h3 className="font-bold mt-4 mb-2">回答:</h3>
+                  <h4 className={styles.previewCategoryTitle}>回答:</h4>
                   <p>{item.answer}</p>
                 </div>
-              ) : (
-                <>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className={styles.categoriesGrid}>
+            {qaItems.map((item, index) => (
+              <Card key={`item-${index}`} className={styles.categoryCard}>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-lg font-medium">問題 {index + 1}</CardTitle>
+                  <div>
+                    <Button variant="ghost" size="icon" onClick={() => removeQAItem(index)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
                   <Textarea
-                    ref={inputRef}
                     placeholder="質問"
                     value={item.question}
                     onChange={(e) => updateQAItem(index, 'question', e.target.value)}
                     className={`${styles.mobileFriendlyInput} mb-2`}
-                    style={{ fontSize: '16px' }}
                   />
                   <Input
-                    ref={inputRef}
                     type="file"
                     accept="image/*"
                     onChange={(e) => handleImageUpload(index, e)}
                     className={styles.imageInput}
                   />
-                    {item.image && <img src={item.image} alt="Uploaded image" className={styles.previewImage} />}
-                    <Textarea
-                      placeholder="回答"
-                      value={item.answer}
-                      onChange={(e) => updateQAItem(index, 'answer', e.target.value)}
-                      className={`${styles.mobileFriendlyInput} mb-2`}
-                      style={{ fontSize: '16px' }}
-                    />
-                  </>
-                )}
-            </CardContent>
-            <CardFooter>
-              {errors[`item${index}`] && <Alert variant="destructive"><AlertDescription>{errors[`item${index}`]}</AlertDescription></Alert>}
-            </CardFooter>
-          </Card>
-        ))}
+                  {item.image && <img src={item.image} alt="Uploaded image" className={styles.previewImage} />}
+                  <Textarea
+                    placeholder="回答"
+                    value={item.answer}
+                    onChange={(e) => updateQAItem(index, 'answer', e.target.value)}
+                    className={`${styles.mobileFriendlyInput} mb-2`}
+                  />
+                </CardContent>
+                <CardFooter>
+                  {errors[`item${index}`] && <Alert variant="destructive"><AlertDescription>{errors[`item${index}`]}</AlertDescription></Alert>}
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className={styles.fixedBottom}>
-          <div className={styles.bottomButtonContainer}>
-            <Button onClick={addQAItem} className={`${styles.bottomButton} ${styles.addButton}`}>
-              <Plus className="mr-2 h-4 w-4" /> 問題を追加
-            </Button>
-            <Button onClick={handleSave} className={`${styles.bottomButton} ${styles.saveButton}`}>
-              <Save className="mr-2 h-4 w-4" /> 保存
-            </Button>
-          </div>
+        <div className={styles.bottomButtonContainer}>
+          <Button onClick={addQAItem} className={`${styles.bottomButton} ${styles.addButton}`}>
+            <Plus className="mr-2 h-4 w-4" /> 問題を追加
+          </Button>
+          <Button onClick={handleSave} className={`${styles.bottomButton} ${styles.saveButton}`}>
+            <Save className="mr-2 h-4 w-4" /> 保存
+          </Button>
         </div>
+      </div>
     </div>
   );
 };

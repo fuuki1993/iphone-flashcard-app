@@ -21,10 +21,9 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
   const [setTitle, setSetTitle] = useState('');
   const [cards, setCards] = useState([]);
   const [errors, setErrors] = useState({});
-  const [previewIndex, setPreviewIndex] = useState(null);
-  const [categoryImages, setCategoryImages] = useState(() => Array(10).fill(null));
   const [originalCards, setOriginalCards] = useState([]);
   const [user, setUser] = useState(null);
+  const [previewMode, setPreviewMode] = useState(false);
 
   useEffect(() => {
     const auth = getAuth();
@@ -57,7 +56,7 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
           }
         } catch (error) {
           console.error("Error loading sets:", error);
-          setErrors({ ...errors, load: "セットの読み込み中にエラーが発生しました。" });
+          setErrors(prevErrors => ({ ...prevErrors, load: "セットの読み込み中にエラーが発生しました。" }));
         }
       }
     };
@@ -108,6 +107,10 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
   };
 
   const handleImageUpload = useCallback(async (index, event) => {
+    if (!event || !event.target || !event.target.files) {
+      console.error("Invalid event object:", event);
+      return;
+    }
     const file = event.target.files[0];
     if (file && user) {
       try {
@@ -170,7 +173,6 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
         const db = getFirestore();
         const setRef = doc(db, `users/${user.uid}/sets`, selectedSetId);
         
-        // 既存のセットデータを取得
         const existingSetDoc = await getDoc(setRef);
         const existingSetData = existingSetDoc.data() || {};
   
@@ -181,7 +183,6 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
           type: 'flashcard',
         };
   
-        // createdAtとupdatedAtの処理
         if (!existingSetData.createdAt) {
           updatedSet.createdAt = serverTimestamp();
         } else {
@@ -213,14 +214,13 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
     }
   }, [selectedSetId, setTitle, cards, validateForm, onSave, originalCards, deleteUnusedImages, user]);
 
-  const togglePreview = (index) => {
-    setPreviewIndex(previewIndex === index ? null : index);
+  const togglePreviewMode = () => {
+    setPreviewMode(!previewMode);
   };
 
   const handleDelete = useCallback(async () => {
     if (window.confirm('このセットを削除してもよろしいですか？この操作は取り消せません。') && user) {
       try {
-        // 画像の削除処理
         const storage = getStorage();
         for (const card of cards) {
           if (card.image) {
@@ -229,17 +229,11 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
           }
         }
 
-        // セットとその関連データの削除
         const newProgress = await deleteSet(user.uid, selectedSetId);
         
-        // 進捗の更新（必要に応じて）
-        // 例: setProgress(newProgress);
-
-        // セットリストの更新
         const updatedSets = await getSets(user.uid, 'flashcard');
         setSets(updatedSets);
 
-        // 選択されたセットとタイトルをリセット
         setSelectedSetId('');
         setSetTitle('');
         setCards([]);
@@ -288,36 +282,41 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
           )}
         </div>
 
-        {cards && cards.length > 0 ? (
-          cards.map((card, index) => (
-            <Card key={`card-${index}`} className="mb-4 w-full sm:w-[calc(50%-0.5rem)] inline-block align-top">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-lg font-medium">カード {index + 1}</CardTitle>
-                <div>
-                  <Button variant="ghost" size="icon" onClick={() => togglePreview(index)}>
-                    {previewIndex === index ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => removeCard(index)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {previewIndex === index ? (
-                  <div className={styles.previewContent}>
-                    <h2 className={styles.previewTitle}>{setTitle}</h2>
-                    <div className={styles.previewCategory}>
-                      <h3 className={styles.previewCategoryTitle}>表面:</h3>
-                      <p>{card.front}</p>
-                      {card.image && <img src={card.image} alt="Card image" className={styles.previewImage} />}
-                    </div>
-                    <div className={styles.previewCategory}>
-                      <h3 className={styles.previewCategoryTitle}>裏面:</h3>
-                      <p>{card.back}</p>
-                    </div>
+        <Button onClick={togglePreviewMode} className={styles.previewButton}>
+          {previewMode ? <EyeOff className={styles.previewButtonIcon} /> : <Eye className={styles.previewButtonIcon} />}
+          {previewMode ? 'プレビューを終了' : 'プレビュー'}
+        </Button>
+
+        {previewMode ? (
+          <div className={styles.previewContent}>
+            <h2 className={styles.previewTitle}>{setTitle}</h2>
+            <div className={styles.previewCategoriesContainer}>
+              {cards.map((card, index) => (
+                <div key={index} className={styles.previewCategory}>
+                  <div className={styles.previewCategoryHeader}>
+                    <h3 className={styles.previewCategoryTitle}>カード {index + 1}</h3>
+                    {card.image && <img src={card.image} alt={`Card ${index + 1}`} className={styles.previewImage} />}
                   </div>
-                ) : (
-                  <>
+                  <p><strong>表面:</strong> {card.front}</p>
+                  <p><strong>裏面:</strong> {card.back}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          cards && cards.length > 0 ? (
+            <div className={styles.categoriesGrid}>
+              {cards.map((card, index) => (
+                <Card key={`card-${index}`} className={styles.categoryCard}>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-lg font-medium">カード {index + 1}</CardTitle>
+                    <div>
+                      <Button variant="ghost" size="icon" onClick={() => removeCard(index)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
                     <Textarea
                       placeholder="表面"
                       value={card.front}
@@ -328,7 +327,7 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
                       type="file"
                       accept="image/*"
                       onChange={(e) => handleImageUpload(index, e)}
-                      className={`${styles.mobileFriendlyInput} mb-2`}
+                      className={styles.imageInput}
                     />
                     {card.image && <img src={card.image} alt="Uploaded image" className={styles.previewImage} />}
                     <Textarea
@@ -337,20 +336,20 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
                       onChange={(e) => updateCard(index, 'back', e.target.value)}
                       className={`${styles.mobileFriendlyInput} mb-2`}
                     />
-                  </>
-                )}
-              </CardContent>
-              <CardFooter>
-                {errors[`card${index}`] && <Alert variant="destructive"><AlertDescription>{errors[`card${index}`]}</AlertDescription></Alert>}
-              </CardFooter>
-            </Card>
-          ))
-        ) : (
-          <p>
-            {selectedSetId 
-              ? "このセットにはカードがありません。新しいカードを追加してください。" 
-              : "セットを選択するか、新しいカードを追加してください。"}
-          </p>
+                  </CardContent>
+                  <CardFooter>
+                    {errors[`card${index}`] && <Alert variant="destructive"><AlertDescription>{errors[`card${index}`]}</AlertDescription></Alert>}
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <p>
+              {selectedSetId 
+                ? "このセットにはカードがありません。新しいカードを追加してください。" 
+                : "セットを選択するか、新しいカードを追加してください。"}
+            </p>
+          )
         )}
 
         <div className={styles.fixedBottom}>

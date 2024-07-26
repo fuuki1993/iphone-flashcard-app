@@ -6,23 +6,23 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/form/input';
 import { Textarea } from '@/components/ui/form/textarea';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
-import { ArrowLeft, Plus, Save, Trash2, Image, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Plus, Save, Trash2, Eye, EyeOff } from 'lucide-react';
 import { saveSet } from '@/utils/firebase/firestore';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { compressImage } from '@/utils/helpers/imageCompression';
 import { getStorage, ref, uploadBytes, getDownloadURL, getBlob, deleteObject } from "firebase/storage";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, writeBatch, doc, collection, serverTimestamp } from "firebase/firestore";
+import { getFirestore, writeBatch, doc, serverTimestamp } from "firebase/firestore";
 import styles from '@/styles/modules/CommonCreationScreen.module.css';
 
 const FlashcardCreationScreen = ({ onBack, onSave }) => {
   const [setTitle, setSetTitle] = useState('');
   const [cards, setCards] = useState([{ front: '', back: '', image: null }]);
   const [errors, setErrors] = useState({});
-  const [previewIndex, setPreviewIndex] = useState(null);
-  const inputRef = useAutoScroll();
   const [user, setUser] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [previewMode, setPreviewMode] = useState(false);
+  const inputRef = useAutoScroll();
 
   useEffect(() => {
     const auth = getAuth();
@@ -145,9 +145,9 @@ const FlashcardCreationScreen = ({ onBack, onSave }) => {
     }
   }, [setTitle, cards, validateForm, onSave, user, isSaving]);
 
-  const togglePreview = useCallback((index) => {
-    setPreviewIndex(prevIndex => prevIndex === index ? null : index);
-  }, []);
+  const togglePreviewMode = () => {
+    setPreviewMode(!previewMode);
+  };
 
   return (
     <div className={styles.creationScreenContainer}>
@@ -170,76 +170,79 @@ const FlashcardCreationScreen = ({ onBack, onSave }) => {
           {errors.title && <Alert variant="destructive"><AlertDescription>{errors.title}</AlertDescription></Alert>}
         </div>
 
-        {cards.map((card, index) => (
-          <Card key={index} className="mb-4 w-full sm:w-[calc(50%-0.5rem)] inline-block align-top">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-lg font-medium">カード {index + 1}</CardTitle>
-              <div>
-                <Button variant="ghost" size="icon" onClick={() => togglePreview(index)}>
-                  {previewIndex === index ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-                <Button variant="ghost" size="icon" onClick={() => removeCard(index)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {previewIndex === index ? (
-                  <div className={styles.previewContent}>
-                  <h2 className={styles.previewTitle}>{setTitle}</h2>
-                  <div className={styles.previewCategory}>
-                    <h3 className={styles.previewCategoryTitle}>表面:</h3>
-                    <p>{card.front}</p>
-                    {card.image && <img src={card.image} alt="Card image" className={styles.previewImage} />}
+        <Button onClick={togglePreviewMode} className={styles.previewButton}>
+          {previewMode ? <EyeOff className={styles.previewButtonIcon} /> : <Eye className={styles.previewButtonIcon} />}
+          {previewMode ? 'プレビューを終了' : 'プレビュー'}
+        </Button>
+
+        {previewMode ? (
+          <div className={styles.previewContent}>
+            <h2 className={styles.previewTitle}>{setTitle}</h2>
+            <div className={styles.previewCategoriesContainer}>
+              {cards.map((card, index) => (
+                <div key={index} className={styles.previewCategory}>
+                  <div className={styles.previewCategoryHeader}>
+                    <h3 className={styles.previewCategoryTitle}>カード {index + 1}</h3>
+                    {card.image && <img src={card.image} alt={`Card ${index + 1}`} className={styles.previewImage} />}
                   </div>
-                  <div className={styles.previewCategory}>
-                    <h3 className={styles.previewCategoryTitle}>裏面:</h3>
-                    <p>{card.back}</p>
-                  </div>
+                  <p><strong>表面:</strong> {card.front}</p>
+                  <p><strong>裏面:</strong> {card.back}</p>
                 </div>
-              ) : (
-                <>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className={styles.categoriesGrid}>
+            {cards.map((card, index) => (
+              <Card key={`card-${index}`} className={styles.categoryCard}>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-lg font-medium">カード {index + 1}</CardTitle>
+                  <div>
+                    <Button variant="ghost" size="icon" onClick={() => removeCard(index)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
                   <Textarea
-                    ref={inputRef}
                     placeholder="表面"
                     value={card.front}
                     onChange={(e) => updateCard(index, 'front', e.target.value)}
                     className={`${styles.mobileFriendlyInput} mb-2`}
                   />
                   <Input
-                    ref={inputRef}
                     type="file"
                     accept="image/*"
                     onChange={(e) => handleImageUpload(index, e)}
+                    className={styles.imageInput}
+                  />
+                  {card.image && <img src={card.image} alt="Uploaded image" className={styles.previewImage} />}
+                  <Textarea
+                    placeholder="裏面"
+                    value={card.back}
+                    onChange={(e) => updateCard(index, 'back', e.target.value)}
                     className={`${styles.mobileFriendlyInput} mb-2`}
                   />
-                    {card.image && <img src={card.image} alt="Uploaded image" className={styles.previewImage} />}
-                    <Textarea
-                      placeholder="裏面"
-                      value={card.back}
-                      onChange={(e) => updateCard(index, 'back', e.target.value)}
-                      className={`${styles.mobileFriendlyInput} mb-2`}
-                    />
-                  </>
-              )}
-            </CardContent>
-            <CardFooter>
-              {errors[`card${index}`] && <Alert variant="destructive"><AlertDescription>{errors[`card${index}`]}</AlertDescription></Alert>}
-            </CardFooter>
-          </Card>
-        ))}
+                </CardContent>
+                <CardFooter>
+                  {errors[`card${index}`] && <Alert variant="destructive"><AlertDescription>{errors[`card${index}`]}</AlertDescription></Alert>}
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className={styles.fixedBottom}>
-          <div className={styles.bottomButtonContainer}>
-            <Button onClick={addCard} className={`${styles.bottomButton} ${styles.addButton}`}>
-              <Plus className="mr-2 h-4 w-4" /> カードを追加
-            </Button>
-            <Button onClick={handleSave} className={`${styles.bottomButton} ${styles.saveButton}`}>
-              <Save className="mr-2 h-4 w-4" /> 保存
-            </Button>
-          </div>
+        <div className={styles.bottomButtonContainer}>
+          <Button onClick={addCard} className={`${styles.bottomButton} ${styles.addButton}`}>
+            <Plus className="mr-2 h-4 w-4" /> カードを追加
+          </Button>
+          <Button onClick={handleSave} className={`${styles.bottomButton} ${styles.saveButton}`}>
+            <Save className="mr-2 h-4 w-4" /> 保存
+          </Button>
         </div>
+      </div>
     </div>
   );
 };

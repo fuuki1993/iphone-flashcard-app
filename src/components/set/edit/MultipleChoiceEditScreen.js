@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/layout/card';
 import { Button } from '@/components/ui/button';
@@ -20,9 +22,9 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
   const [setTitle, setSetTitle] = useState('');
   const [questions, setQuestions] = useState([]);
   const [errors, setErrors] = useState({});
-  const [previewIndex, setPreviewIndex] = useState(null);
   const [originalQuestions, setOriginalQuestions] = useState([]);
   const [user, setUser] = useState(null);
+  const [previewMode, setPreviewMode] = useState(false);
 
   useEffect(() => {
     const auth = getAuth();
@@ -66,8 +68,8 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
     try {
       const set = await getSetById(user.uid, setId);
       setSetTitle(set.title);
-      setQuestions(set.questions);
-      setOriginalQuestions(set.questions);
+      setQuestions(set.questions || []);
+      setOriginalQuestions(set.questions || []);
       localStorage.setItem(`multiple-choiceSet_${setId}`, JSON.stringify(set));
     } catch (error) {
       console.error("Error loading set:", error);
@@ -99,44 +101,54 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
     }]);
   };
 
-  const updateQuestion = (index, field, value) => {
-    const updatedQuestions = questions.map((q, i) => 
-      i === index ? { ...q, [field]: value } : q
-    );
-    setQuestions(updatedQuestions);
-  };
+  const updateQuestion = useCallback((index, field, value) => {
+    setQuestions(prevQuestions => prevQuestions.map((question, i) => 
+      i === index ? { ...question, [field]: value } : question
+    ));
+  }, []);
 
   const removeQuestion = (index) => {
     setQuestions(questions.filter((_, i) => i !== index));
   };
 
-  const addChoice = (questionIndex) => {
-    const updatedQuestions = questions.map((q, i) => 
-      i === questionIndex ? { ...q, choices: [...q.choices, { text: '', isCorrect: false }] } : q
-    );
-    setQuestions(updatedQuestions);
-  };
+  const addChoice = useCallback((questionIndex) => {
+    setQuestions(prevQuestions => prevQuestions.map((question, i) => 
+      i === questionIndex 
+        ? { ...question, choices: [...question.choices, { text: '', isCorrect: false }] } 
+        : question
+    ));
+  }, []);
 
-  const updateChoice = (questionIndex, choiceIndex, field, value) => {
-    const updatedQuestions = questions.map((q, i) => 
-      i === questionIndex ? {
-        ...q,
-        choices: q.choices.map((c, j) => 
-          j === choiceIndex ? { ...c, [field]: value } : field === 'isCorrect' ? { ...c, isCorrect: false } : c
-        )
-      } : q
-    );
-    setQuestions(updatedQuestions);
-  };
+  const updateChoice = useCallback((questionIndex, choiceIndex, field, value) => {
+    setQuestions(prevQuestions => prevQuestions.map((question, i) => 
+      i === questionIndex 
+        ? {
+            ...question,
+            choices: question.choices.map((choice, j) => 
+              j === choiceIndex 
+                ? { ...choice, [field]: value } 
+                : field === 'isCorrect' 
+                  ? { ...choice, isCorrect: false } 
+                  : choice
+            )
+          } 
+        : question
+    ));
+  }, []);
 
-  const removeChoice = (questionIndex, choiceIndex) => {
-    const updatedQuestions = questions.map((q, i) => 
-      i === questionIndex ? { ...q, choices: q.choices.filter((_, j) => j !== choiceIndex) } : q
-    );
-    setQuestions(updatedQuestions);
-  };
+  const removeChoice = useCallback((questionIndex, choiceIndex) => {
+    setQuestions(prevQuestions => prevQuestions.map((question, i) => 
+      i === questionIndex 
+        ? { ...question, choices: question.choices.filter((_, j) => j !== choiceIndex) } 
+        : question
+    ));
+  }, []);
 
   const handleImageUpload = useCallback(async (index, event) => {
+    if (!event || !event.target || !event.target.files) {
+      console.error("Invalid event object:", event);
+      return;
+    }
     const file = event.target.files[0];
     if (file && user) {
       try {
@@ -155,25 +167,25 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
     }
   }, [selectedSetId, updateQuestion, user]);
 
-  const validateForm = () => {
+  const validateForm = useCallback(() => {
     const newErrors = {};
     if (!setTitle.trim()) {
       newErrors.title = 'セットタイトルを入力してください。';
     }
-    questions.forEach((q, index) => {
-      if (!q.question.trim()) {
+    questions.forEach((question, index) => {
+      if (!question.question.trim()) {
         newErrors[`question${index}`] = '問題文を入力してください。';
       }
-      if (q.choices.filter(c => c.text.trim()).length < 2) {
+      if (question.choices.filter(choice => choice.text.trim()).length < 2) {
         newErrors[`question${index}choices`] = '少なくとも2つの選択肢を入力してください。';
       }
-      if (!q.choices.some(c => c.isCorrect)) {
+      if (!question.choices.some(choice => choice.isCorrect)) {
         newErrors[`question${index}correct`] = '正解を選択してください。';
       }
     });
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
+  }, [setTitle, questions]);
 
   const deleteUnusedImages = useCallback(async (originalQuestions, updatedQuestions) => {
     const storage = getStorage();
@@ -184,8 +196,8 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
       throw new Error("User not authenticated");
     }
 
-    const originalImageUrls = originalQuestions.map(q => q.image).filter(Boolean);
-    const updatedImageUrls = updatedQuestions.map(q => q.image).filter(Boolean);
+    const originalImageUrls = originalQuestions.map(question => question.image).filter(Boolean);
+    const updatedImageUrls = updatedQuestions.map(question => question.image).filter(Boolean);
 
     for (const imageUrl of originalImageUrls) {
       if (!updatedImageUrls.includes(imageUrl)) {
@@ -205,7 +217,6 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
         const db = getFirestore();
         const setRef = doc(db, `users/${user.uid}/sets`, selectedSetId);
         
-        // 既存のセットデータを取得
         const existingSetDoc = await getDoc(setRef);
         const existingSetData = existingSetDoc.data() || {};
   
@@ -216,7 +227,6 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
           type: 'multiple-choice',
         };
   
-        // createdAtとupdatedAtの処理
         if (!existingSetData.createdAt) {
           updatedSet.createdAt = serverTimestamp();
         } else {
@@ -248,6 +258,10 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
     }
   }, [selectedSetId, setTitle, questions, validateForm, onSave, originalQuestions, deleteUnusedImages, user]);
 
+  const togglePreviewMode = () => {
+    setPreviewMode(!previewMode);
+  };
+
   const handleDelete = useCallback(async () => {
     if (window.confirm('このセットを削除してもよろしいですか？この操作は取り消せません。') && user) {
       try {
@@ -258,6 +272,7 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
             await deleteObject(imageRef);
           }
         }
+
         const newProgress = await deleteSet(user.uid, selectedSetId);
         
         const updatedSets = await getSets(user.uid, 'multiple-choice');
@@ -269,13 +284,12 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
 
         setErrors({});
         alert('セットが正常に削除されました。');
-        onBack();
       } catch (error) {
         console.error("Error deleting set:", error);
         setErrors(prevErrors => ({ ...prevErrors, delete: "セットの削除中にエラーが発生しました。" }));
       }
     }
-  }, [selectedSetId, questions, onBack, user]);
+  }, [selectedSetId, questions, user]);
 
   return (
     <div className={styles.editScreenContainer}>
@@ -293,8 +307,8 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
               <SelectValue placeholder="編集するセットを選択" />
             </SelectTrigger>
             <SelectContent>
-              {sets.map(set => (
-                <SelectItem key={set.id} value={set.id}>{set.title}</SelectItem>
+              {sets.map((set, index) => (
+                <SelectItem key={`${set.id}-${index}`} value={set.id.toString()}>{set.title}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -302,8 +316,7 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
             placeholder="セットのタイトル"
             value={setTitle}
             onChange={(e) => setSetTitle(e.target.value)}
-            className={`${styles.mobileFriendlyInput} mb-2`}
-            style={{ fontSize: '16px' }}
+            className={`${styles.mobileFriendlyInput} ${styles.setTitle} mb-2`}
           />
           {errors.title && <Alert variant="destructive"><AlertDescription>{errors.title}</AlertDescription></Alert>}
           {selectedSetId && (
@@ -313,86 +326,103 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
           )}
         </div>
 
-        {questions.map((q, qIndex) => (
-          <Card key={qIndex} className="mb-4 w-full sm:w-[calc(50%-0.5rem)] inline-block align-top">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-lg font-medium">問題 {qIndex + 1}</CardTitle>
-              <div>
-                <Button variant="ghost" size="icon" onClick={() => setPreviewIndex(previewIndex === qIndex ? null : qIndex)}>
-                  {previewIndex === qIndex ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-                <Button variant="ghost" size="icon" onClick={() => removeQuestion(qIndex)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {previewIndex === qIndex ? (
-                <div className={styles.previewContent}>
-                  <h3 className={styles.previewTitle}>問題:</h3>
+        <Button onClick={togglePreviewMode} className={styles.previewButton}>
+          {previewMode ? <EyeOff className={styles.previewButtonIcon} /> : <Eye className={styles.previewButtonIcon} />}
+          {previewMode ? 'プレビューを終了' : 'プレビュー'}
+        </Button>
+
+        {previewMode ? (
+          <div className={styles.previewContent}>
+            <h2 className={styles.previewTitle}>{setTitle}</h2>
+            <div className={styles.previewCategoriesContainer}>
+              {questions.map((q, qIndex) => (
+                <div key={qIndex} className={styles.previewCategory}>
+                  <div className={styles.previewCategoryHeader}>
+                    <h3 className={styles.previewCategoryTitle}>問題 {qIndex + 1}</h3>
+                    {q.image && <img src={q.image} alt="Question image" className={styles.previewImage} />}
+                  </div>
                   <p>{q.question}</p>
-                  {q.image && <img src={q.image} alt="Question" className={styles.previewImage} />}
-                  <h3 className={styles.previewTitle}>選択肢:</h3>
+                  <h4 className={styles.previewCategoryTitle}>選択肢:</h4>
                   <ul className={styles.previewList}>
                     {q.choices.map((choice, cIndex) => (
-                      <li key={cIndex} className={choice.isCorrect ? styles.choiceCorrect : ""}>
+                      <li key={cIndex} className={`${styles.previewListItem} ${choice.isCorrect ? styles.choiceCorrect : ""}`}>
                         {choice.text} {choice.isCorrect && "(正解)"}
                       </li>
                     ))}
                   </ul>
                 </div>
-              ) : (
-                <>
-                  <Textarea
-                    placeholder="問題文"
-                    value={q.question}
-                    onChange={(e) => updateQuestion(qIndex, 'question', e.target.value)}
-                    className={`${styles.mobileFriendlyInput} mb-2`}
-                    style={{ fontSize: '16px' }}
-                  />
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleImageUpload(qIndex, e)}
-                    className={styles.mobileFriendlyInput}
-                  />
-                  {q.image && <img src={q.image} alt="Uploaded" className={styles.previewImage} />}
-                  <h4 className="font-medium mt-4 mb-2">選択肢:</h4>
-                  {q.choices.map((choice, cIndex) => (
-                    <div key={cIndex} className={styles.checkboxContainer}>
-                      <Checkbox
-                        id={`choice-${qIndex}-${cIndex}`}
-                        checked={choice.isCorrect}
-                        onCheckedChange={(checked) => updateChoice(qIndex, cIndex, 'isCorrect', checked)}
-                        className={styles.customCheckbox}
-                      />
-                      <label htmlFor={`choice-${qIndex}-${cIndex}`} className={styles.checkboxLabel}>
-                        <Input
-                          placeholder={`選択肢 ${cIndex + 1}`}
-                          value={choice.text}
-                          onChange={(e) => updateChoice(qIndex, cIndex, 'text', e.target.value)}
-                          className={`${styles.mobileFriendlyInput} flex-grow mr-2`}
-                          style={{ fontSize: '16px' }}
-                        />
-                      </label>
-                      <Button variant="ghost" size="icon" onClick={() => removeChoice(qIndex, cIndex)}>
+              ))}
+            </div>
+          </div>
+        ) : (
+          questions && questions.length > 0 ? (
+            <div className={styles.categoriesGrid}>
+              {questions.map((q, qIndex) => (
+                <Card key={`question-${qIndex}`} className={styles.categoryCard}>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-lg font-medium">問題 {qIndex + 1}</CardTitle>
+                    <div>
+                      <Button variant="ghost" size="icon" onClick={() => removeQuestion(qIndex)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
-                  ))}
-                  <Button onClick={() => addChoice(qIndex)} className={styles.addChoiceButton}>
-                    <Plus className={styles.addChoiceButtonIcon} /> 選択肢を追加
-                  </Button>
-                </>
-              )}
-            </CardContent>
-            <CardFooter>
-              {errors[`question${qIndex}`] && <Alert variant="destructive"><AlertDescription>{errors[`question${qIndex}`]}</AlertDescription></Alert>}
-              {errors[`question${qIndex}choices`] && <Alert variant="destructive"><AlertDescription>{errors[`question${qIndex}choices`]}</AlertDescription></Alert>}
-              {errors[`question${qIndex}correct`] && <Alert variant="destructive"><AlertDescription>{errors[`question${qIndex}correct`]}</AlertDescription></Alert>}
-            </CardFooter>
-          </Card>
-        ))}
+                  </CardHeader>
+                  <CardContent>
+                    <Textarea
+                      placeholder="問題文"
+                      value={q.question}
+                      onChange={(e) => updateQuestion(qIndex, 'question', e.target.value)}
+                      className={`${styles.mobileFriendlyInput} mb-2`}
+                    />
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleImageUpload(qIndex, e)}
+                      className={styles.imageInput}
+                    />
+                    {q.image && <img src={q.image} alt="Uploaded image" className={styles.previewImage} />}
+                    <h4 className="font-medium mt-4 mb-2">選択肢:</h4>
+                    {q.choices.map((choice, cIndex) => (
+                      <div key={cIndex} className={styles.checkboxContainer}>
+                        <Checkbox
+                          id={`choice-${qIndex}-${cIndex}`}
+                          checked={choice.isCorrect}
+                          onCheckedChange={(checked) => updateChoice(qIndex, cIndex, 'isCorrect', checked)}
+                          className={styles.customCheckbox}
+                        />
+                        <label htmlFor={`choice-${qIndex}-${cIndex}`} className={styles.checkboxLabel}>
+                          <Input
+                            placeholder={`選択肢 ${cIndex + 1}`}
+                            value={choice.text}
+                            onChange={(e) => updateChoice(qIndex, cIndex, 'text', e.target.value)}
+                            className={`${styles.mobileFriendlyInput} flex-grow mr-2`}
+                          />
+                        </label>
+                        <Button variant="ghost" size="icon" onClick={() => removeChoice(qIndex, cIndex)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button onClick={() => addChoice(qIndex)} className={styles.addChoiceButton}>
+                      <Plus className={styles.addChoiceButtonIcon} /> 選択肢を追加
+                    </Button>
+                  </CardContent>
+                  <CardFooter>
+                    {errors[`question${qIndex}`] && <Alert variant="destructive"><AlertDescription>{errors[`question${qIndex}`]}</AlertDescription></Alert>}
+                    {errors[`question${qIndex}choices`] && <Alert variant="destructive"><AlertDescription>{errors[`question${qIndex}choices`]}</AlertDescription></Alert>}
+                    {errors[`question${qIndex}correct`] && <Alert variant="destructive"><AlertDescription>{errors[`question${qIndex}correct`]}</AlertDescription></Alert>}
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <p>
+              {selectedSetId 
+                ? "このセットには問題がありません。新しい問題を追加してください。" 
+                : "セットを選択するか、新しい問題を追加してください。"}
+            </p>
+          )
+        )}
 
         <div className={styles.fixedBottom}>
           <div className={styles.bottomButtonContainer}>
