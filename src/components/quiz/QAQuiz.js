@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/layout/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/form/input';
@@ -20,8 +20,17 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTod
     calculateScore,
     handleShuffle,
     handleSubmit,
-    handleFinish
+    handleFinish,
+    handleKeyPress,
   } = useQAQuiz(setId, title, quizType, sessionState, setTodayStudyTime, onFinish);
+
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (inputRef.current && !showAnswer) {
+      inputRef.current.focus();
+    }
+  }, [currentQuestionIndex, showAnswer]);
 
   if (isLoading) return <div className={styles.loading}>読み込み中...</div>;
   if (error) return <div className={styles.error}>{error}</div>;
@@ -40,8 +49,8 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTod
           <CardContent>
             <p className={styles.finalScoreText}>最終スコア: {finalScore}%</p>
             <div className={styles.finalScoreButtons}>
-              <Button onClick={handleShuffle}>もう一度挑戦</Button>
-              <Button onClick={handleFinish}>終了</Button>
+              <Button onClick={handleShuffle} className={styles.finalScoreButton}>もう一度挑戦</Button>
+              <Button onClick={handleFinish} className={styles.finalScoreButton}>終了</Button>
             </div>
           </CardContent>
         </Card>
@@ -81,8 +90,10 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTod
             placeholder="回答を入力"
             value={userAnswer}
             onChange={(e) => setUserAnswer(e.target.value)}
+            onKeyPress={handleKeyPress}
             disabled={showAnswer}
             className={styles.answerInput}
+            ref={inputRef}
           />
         </CardContent>
         <CardFooter className={styles.cardFooter}>

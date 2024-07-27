@@ -154,14 +154,14 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
           ) : (
             <div className={styles.resultsContainer}>
               <div className={styles.buttonContainer}>
-                <Button onClick={handleRestart} className={isWideScreen ? '' : styles.rotatedButton}>
-                  <span className={isWideScreen ? '' : styles.rotatedText}>もう一度挑戦</span>
+                <Button onClick={handleRestart} className={`${styles.resultButton} ${isWideScreen ? styles.wideScreenButton : styles.rotatedButton}`}>
+                  <span className={isWideScreen ? styles.wideScreenButtonText : styles.rotatedText}>もう一度挑戦</span>
                 </Button>
-                <Button onClick={handleFinish} className={isWideScreen ? '' : styles.rotatedButton}>
-                  <span className={isWideScreen ? '' : styles.rotatedText}>終了</span>
+                <Button onClick={handleFinish} className={`${styles.resultButton} ${isWideScreen ? styles.wideScreenButton : styles.rotatedButton}`}>
+                  <span className={isWideScreen ? styles.wideScreenButtonText : styles.rotatedText}>終了</span>
                 </Button>
               </div>
-              <h2 className={isWideScreen ? '' : styles.finalScore}>最終スコア: {quizData.score}%</h2>
+              <h2 className={`${styles.finalScore} ${isWideScreen ? styles.wideScreenFinalScore : ''}`}>最終スコア: {quizData.score}%</h2>
             </div>
           )}
         </CardContent>

@@ -19,8 +19,9 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
     handleFinish,
     handleShuffle,
     handleSelect,
-    handleSubmit
-  } = useMultipleChoiceQuiz(setId, title, sessionState, onFinish, setTodayStudyTime, updateProgress);
+    handleSubmit,
+    correctAnswersCount,
+  } = useMultipleChoiceQuiz(setId, title, quizType, sessionState, setTodayStudyTime, onFinish, updateProgress);
 
   if (isLoading) {
     return <div className={styles.loadingMessage}>読み込み中...</div>;
@@ -75,6 +76,11 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
       <Card className={styles.questionCard}>
         <CardHeader>
           <CardTitle className={styles.questionTitle}>{currentQuestion.question}</CardTitle>
+          {correctAnswersCount[currentQuestionIndex] > 1 && (
+            <p className={styles.multipleAnswersHint}>
+              （複数の正解があります。{correctAnswersCount[currentQuestionIndex]}つ選んでください）
+            </p>
+          )}
         </CardHeader>
         <CardContent>
           {currentQuestion.image && (
@@ -84,10 +90,15 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
             {currentQuestion.choices.map((choice, index) => (
               <Button
                 key={index}
-                variant={selectedAnswers.includes(index) ? "default" : "outline"}
-                className={`${styles.choiceButton} ${showResult && choice.isCorrect ? styles.correctChoice : ''}`}
+                variant="outline"
+                className={`${styles.choiceButton} ${
+                  showResult && choice.isCorrect ? styles.correctChoice : ''
+                } ${
+                  showResult && selectedAnswers.includes(index) && !choice.isCorrect ? styles.incorrectChoice : ''
+                }`}
                 onClick={() => !showResult && handleSelect(index)}
                 disabled={showResult}
+                data-state={selectedAnswers.includes(index) ? "checked" : "unchecked"}
               >
                 {choice.text}
               </Button>

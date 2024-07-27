@@ -52,6 +52,7 @@ export const useClassificationQuiz = (setId, sessionState, onFinish, setTodayStu
   const [correctAnswers, setCorrectAnswers] = useState({});
   const [incorrectAnswers, setIncorrectAnswers] = useState({});
   const [categoryImages, setCategoryImages] = useState({});
+  const [results, setResults] = useState([]);
 
   /**
    * =============================================
@@ -110,6 +111,7 @@ export const useClassificationQuiz = (setId, sessionState, onFinish, setTodayStu
       setIncorrectAnswers(sessionState.incorrectAnswers || {});
       setCategoryImages(sessionState.categoryImages || {});
       startTimeRef.current = new Date(sessionState.startTime || new Date());
+      setResults(sessionState.results || new Array(set.categories.flatMap(c => c.items).length).fill(null));
     } else if (set && set.categories) {
       const newItems = set.categories.flatMap(c => 
         c.items.map((item, index) => ({ 
@@ -153,6 +155,7 @@ export const useClassificationQuiz = (setId, sessionState, onFinish, setTodayStu
       setStudiedItems(new Set());
       setCorrectAnswers({});
       setIncorrectAnswers({});
+      setResults(new Array(newItems.length).fill(null));
     }
   }, [sessionState, shuffleArray]);
 
@@ -173,6 +176,7 @@ export const useClassificationQuiz = (setId, sessionState, onFinish, setTodayStu
             incorrectAnswers,
             categoryImages,
             startTime: startTimeRef.current.toISOString(),
+            results,
           };
 
           await saveSessionState(user.uid, setId, 'classification', stateToSave);
@@ -182,7 +186,7 @@ export const useClassificationQuiz = (setId, sessionState, onFinish, setTodayStu
       }
     };
     saveState();
-  }, [user, setId, quizData, shuffledItems, shuffledCategories, classifiedItems, currentItemIndex, unclassifiedItems, studiedItems, correctAnswers, incorrectAnswers, categoryImages]);
+  }, [user, setId, quizData, shuffledItems, shuffledCategories, classifiedItems, currentItemIndex, unclassifiedItems, studiedItems, correctAnswers, incorrectAnswers, categoryImages, results]);
 
   /**
    * =============================================
@@ -276,6 +280,14 @@ export const useClassificationQuiz = (setId, sessionState, onFinish, setTodayStu
           }));
         }
 
+        // results の更新
+        setResults(prevResults => {
+          const newResults = [...prevResults];
+          const itemIndex = updatedItems.findIndex(item => item.id === active.id);
+          newResults[itemIndex] = isCorrect;
+          return newResults;
+        });
+
         return {
           ...prev,
           items: updatedItems,
@@ -346,6 +358,7 @@ export const useClassificationQuiz = (setId, sessionState, onFinish, setTodayStu
           setCorrectAnswers({});
           setIncorrectAnswers({});
           setCategoryImages(newCategoryImages);
+          setResults(new Array(newItems.length).fill(null));
         } else {
           throw new Error('無効なデータ構造です');
         }
@@ -365,23 +378,24 @@ export const useClassificationQuiz = (setId, sessionState, onFinish, setTodayStu
    */
   const handleFinish = useCallback(async () => {
     if (!user) return;
-    const score = quizData.score;
     const endTime = new Date();
     const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
     const newItemsStudied = studiedItems.size - (sessionState?.studiedItems?.length || 0);
-    const isNewSession = !sessionState;
     
+    const correctItems = results.filter(Boolean).length;
+    const incorrectItems = results.filter(result => result === false).length;
+    const score = Math.round((correctItems / results.length) * 100);
+
     const studyHistoryEntry = {
       setId,
-      title: quizData.title || 'Untitled Quiz',
       type: 'classification',
       score,
       date: endTime.toISOString(),
       studyDuration,
       itemsStudied: newItemsStudied,
-      isNewSession,
-      correctAnswers: Object.fromEntries(Object.entries(correctAnswers).map(([k, v]) => [k, Array.from(v)])),
-      incorrectAnswers: Object.fromEntries(Object.entries(incorrectAnswers).map(([k, v]) => [k, Array.from(v)]))
+      correctItems,
+      incorrectItems,
+      totalItems: results.length
     };
 
     try {
@@ -395,7 +409,8 @@ export const useClassificationQuiz = (setId, sessionState, onFinish, setTodayStu
       // セッション状態の更新
       const sessionStateRef = doc(db, `users/${user.uid}/sessionStates`, `${setId}_classification`);
       batch.set(sessionStateRef, {
-        completedItems: studiedItems.size,
+        results,
+        studiedItems: Array.from(studiedItems),
         lastStudyDate: endTime
       }, { merge: true });
 
@@ -406,18 +421,18 @@ export const useClassificationQuiz = (setId, sessionState, onFinish, setTodayStu
       onFinish(score, studyDuration, newItemsStudied);
       if (typeof updateProgress === 'function') {
         updateProgress(setId, {
-          totalItems: quizData.items.length,
+          totalItems: results.length,
           completedItems: studiedItems.size,
-          correctItems: Object.values(correctAnswers).flat().length,
-          incorrectItems: Object.values(incorrectAnswers).flat().length,
+          correctItems,
+          incorrectItems,
         });
       }
     } catch (error) {
       console.error("学習履歴の保存中にエラーが発生しました:", error);
       setError("学習履歴の保存中にエラーが発生しました。後でもう一度お試しください。");
     }
-  }, [user, setId, quizData, onFinish, setTodayStudyTime, studiedItems, sessionState, startTimeRef, updateProgress, correctAnswers, incorrectAnswers]);
-
+  }, [user, setId, onFinish, setTodayStudyTime, studiedItems, sessionState, startTimeRef, updateProgress, results]);
+  
   /**
    * =============================================
    * 副作用
@@ -467,5 +482,8 @@ export const useClassificationQuiz = (setId, sessionState, onFinish, setTodayStu
     handleDragEnd,
     handleRestart,
     handleFinish,
+    results,
+    completedItems: studiedItems.size,
+    totalItems: results.length,
   };
 };

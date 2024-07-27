@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/layout/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/form/input';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
-import { ArrowLeft, Plus, Save, Trash2, Eye, EyeOff, Upload } from 'lucide-react';
+import { ArrowLeft, Plus, Save, Trash2, Eye, EyeOff, Upload, Image, X } from 'lucide-react';
 import { saveSet } from '@/utils/firebase/firestore';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { compressImage } from '@/utils/helpers/imageCompression';
@@ -21,6 +21,7 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
   const [user, setUser] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const inputRef = useAutoScroll();
+  const fileInputRefs = useRef([]);
 
   useEffect(() => {
     const auth = getAuth();
@@ -87,9 +88,14 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
     setCategories(updatedCategories);
   };
 
-  const handleImageUpload = useCallback(async (categoryIndex, event) => {
-    const file = event.target.files[0];
-    if (file && user) {
+  const handleImageUpload = useCallback(async (categoryIndex, file) => {
+    if (!user) {
+      console.error("User is not authenticated");
+      setErrors(prevErrors => ({ ...prevErrors, image: "ユーザー認証が必要です。" }));
+      return;
+    }
+
+    if (file) {
       try {
         const compressedImage = await compressImage(file);
         const storage = getStorage();
@@ -108,6 +114,29 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
       }
     }
   }, [categories, user]);
+
+  const handleDrop = useCallback((e, categoryIndex) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      handleImageUpload(categoryIndex, file);
+    }
+  }, [handleImageUpload]);
+
+  const handleDragOver = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleDragEnter = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleAreaClick = useCallback((categoryIndex) => {
+    fileInputRefs.current[categoryIndex].click();
+  }, []);
 
   const validateForm = useCallback(() => {
     const newErrors = {};
@@ -154,6 +183,10 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
   const togglePreviewMode = () => {
     setPreviewMode(!previewMode);
   };
+
+  const removeImage = useCallback((categoryIndex) => {
+    updateCategory(categoryIndex, 'image', null);
+  }, [updateCategory]);
 
   return (
     <div className={styles.creationScreenContainer}>
@@ -216,13 +249,42 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
                     onChange={(e) => updateCategory(categoryIndex, 'name', e.target.value)}
                     className={`${styles.mobileFriendlyInput} mb-2`}
                   />
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleImageUpload(categoryIndex, e)}
-                    className={styles.imageInput}
-                  />
-                  {category.image && <img src={category.image} alt="Uploaded image" className={styles.previewImage} />}
+                  <div
+                    onDrop={(e) => handleDrop(e, categoryIndex)}
+                    onDragOver={handleDragOver}
+                    onDragEnter={handleDragEnter}
+                    onClick={() => handleAreaClick(categoryIndex)}
+                    className="relative border-2 border-dashed border-gray-300 p-4 rounded-md cursor-pointer"
+                  >
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleImageUpload(categoryIndex, e.target.files[0])}
+                      className="hidden"
+                      ref={el => fileInputRefs.current[categoryIndex] = el}
+                    />
+                    {category.image ? (
+                      <div className="relative">
+                        <img src={category.image} alt="Uploaded image" className={styles.previewImage} />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeImage(categoryIndex);
+                          }}
+                          className="absolute top-2 right-2 bg-white rounded-full"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="text-center text-gray-500">
+                        <Image className="mx-auto h-12 w-12 text-gray-400" />
+                        <p className="mt-2">画像をドラッグ＆ドロップするか、クリックして選択してください</p>
+                      </div>
+                    )}
+                  </div>
                   <h4 className="font-medium mt-4 mb-2">項目:</h4>
                   {category.items.map((item, itemIndex) => (
                     <div key={itemIndex} className="flex mb-2">

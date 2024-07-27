@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/layout/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/form/input';
 import { Textarea } from '@/components/ui/form/textarea';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
-import { ArrowLeft, Plus, Save, Trash2, Image, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Plus, Save, Trash2, Image, Eye, EyeOff, X } from 'lucide-react';
 import { saveSet } from '@/utils/firebase/firestore';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { compressImage } from '@/utils/helpers/imageCompression';
@@ -23,6 +23,7 @@ const QACreationScreen = ({ onBack, onSave }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
   const inputRef = useAutoScroll();
+  const fileInputRefs = useRef([]);
 
   useEffect(() => {
     const auth = getAuth();
@@ -61,9 +62,14 @@ const QACreationScreen = ({ onBack, onSave }) => {
     setQAItems(prevItems => prevItems.filter((_, i) => i !== index));
   }, []);
 
-  const handleImageUpload = useCallback(async (index, event) => {
-    const file = event.target.files[0];
-    if (file && user) {
+  const handleImageUpload = useCallback(async (index, file) => {
+    if (!user) {
+      console.error("User is not authenticated");
+      setErrors(prevErrors => ({ ...prevErrors, image: "ユーザー認証が必要です。" }));
+      return;
+    }
+
+    if (file) {
       try {
         const compressedImage = await compressImage(file);
         const storage = getStorage();
@@ -78,7 +84,30 @@ const QACreationScreen = ({ onBack, onSave }) => {
         setErrors(prevErrors => ({ ...prevErrors, image: "画像のアップロード中にエラーが発生しました。" }));
       }
     }
-  }, [updateQAItem, user]);
+  }, [user, updateQAItem]);
+
+  const handleDrop = useCallback((e, index) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      handleImageUpload(index, file);
+    }
+  }, [handleImageUpload]);
+
+  const handleDragOver = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleDragEnter = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleAreaClick = useCallback((index) => {
+    fileInputRefs.current[index].click();
+  }, []);
 
   const validateForm = useCallback(() => {
     const newErrors = {};
@@ -145,6 +174,10 @@ const QACreationScreen = ({ onBack, onSave }) => {
     setPreviewMode(!previewMode);
   };
 
+  const removeImage = useCallback((index) => {
+    updateQAItem(index, 'image', null);
+  }, [updateQAItem]);
+
   return (
     <div className={styles.creationScreenContainer}>
       <div className={styles.scrollableContent}>
@@ -206,13 +239,42 @@ const QACreationScreen = ({ onBack, onSave }) => {
                     onChange={(e) => updateQAItem(index, 'question', e.target.value)}
                     className={`${styles.mobileFriendlyInput} mb-2`}
                   />
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleImageUpload(index, e)}
-                    className={styles.imageInput}
-                  />
-                  {item.image && <img src={item.image} alt="Uploaded image" className={styles.previewImage} />}
+                  <div
+                    onDrop={(e) => handleDrop(e, index)}
+                    onDragOver={handleDragOver}
+                    onDragEnter={handleDragEnter}
+                    onClick={() => handleAreaClick(index)}
+                    className="relative border-2 border-dashed border-gray-300 p-4 rounded-md cursor-pointer mb-2"
+                  >
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleImageUpload(index, e.target.files[0])}
+                      className="hidden"
+                      ref={el => fileInputRefs.current[index] = el}
+                    />
+                    {item.image ? (
+                      <div className="relative">
+                        <img src={item.image} alt="Uploaded image" className={styles.previewImage} />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeImage(index);
+                          }}
+                          className="absolute top-2 right-2 bg-white rounded-full"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="text-center text-gray-500">
+                        <Image className="mx-auto h-12 w-12 text-gray-400" />
+                        <p className="mt-2">画像をドラッグ＆ドロップするか、クリックして選択してください</p>
+                      </div>
+                    )}
+                  </div>
                   <Textarea
                     placeholder="回答"
                     value={item.answer}

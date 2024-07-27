@@ -231,7 +231,7 @@
 }
 
 /* レスポンシブデザイン */
-@media (max-width: 480px) {
+@media (max-width: 600px) {
   .container {
     padding: 0.5rem;
   }
@@ -256,9 +256,13 @@
   .bottomButtonContainer {
     max-width: 100%;
   }
+
+  .categoriesGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
-@media (min-width: 481px) and (max-width: 768px) {
+@media (min-width: 601px) and (max-width: 1023px) {
   .container {
     max-width: 90%;
     padding: 1rem;
@@ -271,16 +275,20 @@
   .bottomButtonContainer {
     max-width: 90%;
   }
+
+  .categoriesGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
-@media (min-width: 769px) {
+@media (min-width: 1024px) {
   .container {
-    max-width: 800px;
+    max-width: 1200px;
     padding: 1.5rem;
   }
 
   .creationScreenContainer {
-    max-width: 800px;
+    max-width: 1200px;
   }
 
   .title {
@@ -301,11 +309,11 @@
   }
 
   .bottomButtonContainer {
-    max-width: 800px;
+    max-width: 1200px;
   }
 
   .categoriesGrid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 

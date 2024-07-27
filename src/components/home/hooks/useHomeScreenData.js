@@ -9,8 +9,6 @@ import {
   getAllSets, 
   getSessionState, 
   getStudyHistory, 
-  getUserMaxProgress, 
-  updateUserMaxProgress, 
   getCurrentProgress, 
   updateCurrentProgress,
   calculateCurrentProgress
@@ -21,13 +19,14 @@ import {
  * @description ホーム画面のデータを管理するカスタムフック
  * @param {string} userId - ユーザーID
  * @param {number} externalDailyGoal - 外部から設定される日次目標
+ * @param {Array} recentActivities - useRecentActivitiesから取得した最近の活動データ
+ * @param {function} calculateTotalStudiedItems - useRecentActivitiesから取得した勉強済みの問題数の合計を計算する関数
  */
-const useHomeScreenData = (userId, externalDailyGoal) => {
+const useHomeScreenData = (userId, externalDailyGoal, recentActivities, calculateTotalStudiedItems) => {
   // ----------------------------------------
   // ステート管理
   // ----------------------------------------
   const [currentProgress, setCurrentProgress] = useState(0);
-  const [maxProgress, setMaxProgress] = useState(0);
   const [streak, setStreak] = useState(0);
   const [studyHistory, setStudyHistory] = useState([]);
   const [dailyGoal, setDailyGoal] = useState(externalDailyGoal);
@@ -62,16 +61,25 @@ const useHomeScreenData = (userId, externalDailyGoal) => {
     sets.forEach(set => {
       if (set.type === 'flashcard') {
         flashcardSets.add(set.title);
-        flashcardItems += set.cards ? set.cards.length : 0;
+        const itemCount = set.cards ? set.cards.length : 0;
+        flashcardItems += itemCount;
+        if (itemCount >= 4) {
+          multipleChoiceItems += itemCount;
+        }
       } else if (set.type === 'qa') {
         qaSets.add(set.title);
-        qaItems += set.qaItems ? set.qaItems.length : 0;
+        const itemCount = set.qaItems ? set.qaItems.length : 0;
+        qaItems += itemCount;
+        if (itemCount >= 4) {
+          multipleChoiceItems += itemCount;
+        }
       }
     });
 
     console.log('After first pass:');
     console.log('- Flashcard items:', flashcardItems);
     console.log('- QA items:', qaItems);
+    console.log('- Multiple-choice items:', multipleChoiceItems);
 
     // Second pass: Adjust counts based on set title presence
     sets.forEach(set => {
@@ -91,6 +99,7 @@ const useHomeScreenData = (userId, externalDailyGoal) => {
     console.log('After second pass:');
     console.log('- Flashcard items:', flashcardItems);
     console.log('- QA items:', qaItems);
+    console.log('- Multiple-choice items:', multipleChoiceItems);
 
     // Count other types
     sets.forEach(set => {
@@ -119,35 +128,17 @@ const useHomeScreenData = (userId, externalDailyGoal) => {
 
   /**
    * @function calculateCompletedItems
-   * @description 完了したアイテム数を計算する
+   * @description recentActivitiesから完了したアイテム数を計算する
    */
-  const calculateCompletedItems = useCallback(async (userId, sets) => {
-    let completedItems = 0;
-    for (const set of sets) {
-      const sessionState = await getSessionState(userId, set.id, set.type);
-      if (sessionState) {
-        switch (set.type) {
-          case 'flashcard':
-            completedItems += sessionState.studiedCards ? sessionState.studiedCards.length : 0;
-            console.log(`Flashcard set "${set.title}": ${sessionState.studiedCards ? sessionState.studiedCards.length : 0} completed items`);
-            break;
-          case 'qa':
-          case 'multiple-choice':
-            completedItems += sessionState.studiedQuestions ? sessionState.studiedQuestions.length : 0;
-            console.log(`${set.type === 'qa' ? 'QA' : 'Multiple-choice'} set "${set.title}": ${sessionState.studiedQuestions ? sessionState.studiedQuestions.length : 0} completed items`);
-            break;
-          case 'classification':
-            completedItems += sessionState.studiedItems ? sessionState.studiedItems.length : 0;
-            console.log(`Classification set "${set.title}": ${sessionState.studiedItems ? sessionState.studiedItems.length : 0} completed items`);
-            break;
-          default:
-            console.log(`Unknown set type for "${set.title}"`);
-        }
-      }
+  const calculateCompletedItems = useCallback(() => {
+    if (typeof calculateTotalStudiedItems !== 'function') {
+      console.error('calculateTotalStudiedItems is not a function');
+      return 0;
     }
-    console.log('Total completed items:', completedItems);
+    const completedItems = calculateTotalStudiedItems();
+    console.log('完了した問題数:', completedItems);
     return completedItems;
-  }, []);
+  }, [calculateTotalStudiedItems]);
 
   /**
    * @function calculateStreak
@@ -191,25 +182,25 @@ const useHomeScreenData = (userId, externalDailyGoal) => {
         throw new Error('ユーザーが認証されていません');
       }
       
+      // すべてのセットを取得
+      const allSets = await getAllSets(userId);
+      
+      // 総問題数を計算
+      const totalItems = calculateTotalItems(allSets);
+      console.log('総問題数:', totalItems);
+      
+      // 完了したアイテム数を計算
+      const completedItems = calculateCompletedItems();
+      console.log('完了した問題数:', completedItems);
+      
       // 現在の進捗を計算
-      const newCurrentProgress = await calculateCurrentProgress(userId);
-      
-      // 最大進捗を取得
-      const userMaxProgress = await getUserMaxProgress(userId);
-      
-      console.log('Current progress:', newCurrentProgress.toFixed(2) + '%');
-      console.log('Max progress:', userMaxProgress.toFixed(2) + '%');
+      const newCurrentProgress = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
+      console.log('現在の進捗:', newCurrentProgress.toFixed(2) + '%');
       
       // 現在の進捗を更新
       await updateCurrentProgress(userId, newCurrentProgress);
       
-      // 最大進捗を更新（必要な場合）
-      if (newCurrentProgress > userMaxProgress) {
-        await updateUserMaxProgress(userId, newCurrentProgress);
-      }
-      
       setCurrentProgress(newCurrentProgress);
-      setMaxProgress(Math.max(newCurrentProgress, userMaxProgress));
       
       const studyHistoryData = await getStudyHistory(userId);
       console.log('Raw Study History Data:', studyHistoryData);
@@ -218,7 +209,6 @@ const useHomeScreenData = (userId, externalDailyGoal) => {
       today.setHours(0, 0, 0, 0);
 
       // 最新のセッションデータを取得
-      const allSets = await getAllSets(userId);
       let latestSessionDuration = 0;
       for (const set of allSets) {
         const sessionState = await getSessionState(userId, set.id, set.type);
@@ -250,11 +240,11 @@ const useHomeScreenData = (userId, externalDailyGoal) => {
       const newStreak = await calculateStreak(userId);
       setStreak(newStreak);
     } catch (error) {
-      console.error("Error loading data:", error);
+      console.error("データの読み込み中にエラーが発生しました:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [userId]);
+  }, [userId, calculateTotalItems, calculateCompletedItems, recentActivities]);
 
   // ----------------------------------------
   // 副作用
@@ -262,7 +252,7 @@ const useHomeScreenData = (userId, externalDailyGoal) => {
   // データ読み込み
   useEffect(() => {
     loadData();
-  }, [loadData]);
+  }, [loadData, recentActivities]);
 
   // 目標達成の判定
   useEffect(() => {
@@ -279,7 +269,6 @@ const useHomeScreenData = (userId, externalDailyGoal) => {
   // ----------------------------------------
   return {
     currentProgress,
-    maxProgress,
     streak,
     studyHistory,
     dailyGoal,

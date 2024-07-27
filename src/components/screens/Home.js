@@ -511,7 +511,9 @@ export default function Home() {
   return (
     <div className={`${styles.container} ${darkMode ? styles.darkMode : ''}`}>
       <main className={styles.main}>
-        {renderScreen()}
+        <div className={styles.contentWrapper}>
+          {renderScreen()}
+        </div>
       </main>
     </div>
   );

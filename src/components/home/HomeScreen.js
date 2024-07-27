@@ -49,11 +49,10 @@ const Header = ({ onOpenSettings }) => (
 /**
  * ユーザーの進捗状況を表示するカード
  * @param {number} streak - 継続日数
- * @param {number} maxProgress - 最大進捗率
  * @param {number} currentProgress - 現在の進捗率
  * @param {Function} handleShowStatistics - 統計画面を表示する関数
  */
-const ProgressCard = ({ streak, maxProgress, currentProgress, handleShowStatistics }) => (
+const ProgressCard = ({ streak, currentProgress, handleShowStatistics }) => (
   <Card className={styles.progressCard}>
     <CardContent className={styles.progressCardContent}>
       <div className={styles.streakInfo}>
@@ -71,12 +70,8 @@ const ProgressCard = ({ streak, maxProgress, currentProgress, handleShowStatisti
           詳細
         </Button>
       </div>
-      <p className={styles.progressLabel}>最大の進捗</p>
-      <Progress value={maxProgress || 0} className="w-full h-2 bg-gray-600" indicatorClassName="bg-white" />
-      <p className={styles.progressPercentage}>{(maxProgress || 0).toFixed(1)}%</p>
-      
-      <p className={styles.progressLabel}>現在の進捗</p>
-      <Progress value={currentProgress || 0} className="w-full h-2 bg-gray-600" indicatorClassName="bg-blue-500" />
+      <p className={styles.progressLabel}>全体の進捗</p>
+      <Progress value={currentProgress || 0} className="w-full h-2 bg-gray-600" indicatorClassName="bg-white" />
       <p className={styles.progressPercentage}>{(currentProgress || 0).toFixed(1)}%</p>
     </CardContent>
   </Card>
@@ -238,8 +233,8 @@ const HomeScreen = ({
   const { isUpdateDialogOpen, updateContents, closeUpdateDialog } = useUpdateNotification(userId);
 
   // 並列データ取得
-  const homeScreenData = useHomeScreenData(userId, dailyGoal, refreshTrigger);
   const recentActivitiesData = useRecentActivities(userId, onStartLearning, cachedRecentActivities, setCachedRecentActivities);
+  const homeScreenData = useHomeScreenData(userId, dailyGoal, refreshTrigger, recentActivitiesData.calculateTotalStudiedItems);
   const scheduledEventsData = useScheduledEvents(cachedScheduledEvents, setCachedScheduledEvents);
 
   // 統計画面の表示を切り替える関数
@@ -274,7 +269,6 @@ const HomeScreen = ({
       <Header onOpenSettings={onOpenSettings} />
       <ProgressCard 
         streak={homeScreenData.streak} 
-        maxProgress={homeScreenData.maxProgress}
         currentProgress={homeScreenData.currentProgress}
         handleShowStatistics={handleShowStatistics} 
       />

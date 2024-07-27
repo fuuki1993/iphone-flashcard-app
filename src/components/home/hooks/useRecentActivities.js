@@ -16,6 +16,7 @@ import styles from '../../../styles/modules/recentActivities.module.css';
  */
 const useRecentActivities = (userId, onStartLearning) => {
   const [recentActivities, setRecentActivities] = useState([]);
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   // ----------------------------------------
   // ユーティリティ関数
@@ -42,10 +43,11 @@ const useRecentActivities = (userId, onStartLearning) => {
    * タイムスタンプを相対時間に変換
    */
   const formatRelativeTime = useCallback((timestamp) => {
+    const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
     const now = new Date();
-    const date = timestamp instanceof Timestamp ? timestamp.toDate() : new Date(timestamp);
     const diffInSeconds = Math.floor((now - date) / 1000);
 
+    if (diffInSeconds < 0) return '今さっき';
     if (diffInSeconds < 60) return '今さっき';
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}分前`;
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}時間前`;
@@ -85,8 +87,8 @@ const useRecentActivities = (userId, onStartLearning) => {
       const flattenedActivities = recentActivities.flat().filter(Boolean);
 
       const sortedActivities = flattenedActivities.sort((a, b) => {
-        const dateA = a.timestamp instanceof Timestamp ? a.timestamp.toDate() : new Date(a.timestamp);
-        const dateB = b.timestamp instanceof Timestamp ? b.timestamp.toDate() : new Date(b.timestamp);
+        const dateA = a.timestamp instanceof Date ? a.timestamp : new Date(a.timestamp);
+        const dateB = b.timestamp instanceof Date ? b.timestamp : new Date(b.timestamp);
         return dateB - dateA;
       });
 
@@ -132,22 +134,33 @@ const useRecentActivities = (userId, onStartLearning) => {
       }
     }
   
-    let latestActivity = setStudyHistory[0] || null;
-  
-    // lastStudyDateを使用して最新の学習時間を取得
-    const lastStudyDate = sessionState.lastStudyDate || (latestActivity ? latestActivity.lastStudyDate : new Date());
-
+    let lastStudyDate;
+    if (sessionState.lastStudyDate) {
+      lastStudyDate = sessionState.lastStudyDate instanceof Timestamp
+        ? sessionState.lastStudyDate.toDate()
+        : new Date(sessionState.lastStudyDate);
+    } else if (sessionState.updatedAt) {
+      lastStudyDate = sessionState.updatedAt instanceof Timestamp
+        ? sessionState.updatedAt.toDate()
+        : new Date(sessionState.updatedAt);
+    } else {
+      const latestActivity = setStudyHistory[0];
+      lastStudyDate = latestActivity ? new Date(latestActivity.lastStudyDate) : new Date();
+    }
+    
     const isCompleted = totalItems > 0 && totalItems === totalItemsStudied;
     
+    console.log(`セット "${set.title}" (${type}): ${totalItemsStudied}/${totalItems} 問題完了`);
+
     return { 
       ...set, 
       sessionState: sessionState, 
-      timestamp: lastStudyDate, // lastStudyDateを使用
+      timestamp: lastStudyDate,
       type: type,
       isCompleted,
       itemsStudied: totalItemsStudied,
       totalItems: totalItems,
-      uniqueId: `${set.id}-${type}` // 一意のIDを追加
+      uniqueId: `${set.id}-${type}`
     };
   };
 
@@ -216,6 +229,7 @@ const useRecentActivities = (userId, onStartLearning) => {
           } else {
             newItemsStudied = newSessionState.studiedItems || 0;
           }
+          console.log(`クイズ終了: セット "${activity.title}" (${type}): ${newItemsStudied}/${activity.totalItems} 問題完了`);
           return {
             ...activity,
             sessionState: newSessionState,
@@ -235,13 +249,29 @@ const useRecentActivities = (userId, onStartLearning) => {
     loadRecentActivities();
   }, [loadRecentActivities]);
 
+  // 時間を定期的に更新する
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000); // 1分ごとに更新
+
+    return () => clearInterval(timer);
+  }, []);
+
   // ----------------------------------------
   // 返却値
   // ----------------------------------------
+  const calculateTotalStudiedItems = useCallback(() => {
+    return recentActivities.reduce((total, activity) => {
+      return total + (activity.itemsStudied || 0);
+    }, 0);
+  }, [recentActivities]);
+
   return {
     recentActivities,
     renderActivityItem,
-    onFinishQuiz
+    onFinishQuiz,
+    calculateTotalStudiedItems
   };
 };
 

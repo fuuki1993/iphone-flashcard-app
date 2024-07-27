@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
-  DialogFooter
+  DialogDescription
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/form/input";
@@ -20,10 +20,26 @@ const AddEventModal = ({ isOpen, onClose, onSave, onDelete, editingEvent }) => {
 
   useEffect(() => {
     if (editingEvent) {
-      setTitle(editingEvent.title);
-      const eventDate = new Date(editingEvent.date);
-      setDate(eventDate.toISOString().split('T')[0]);
-      setTime(eventDate.toTimeString().slice(0, 5));
+      setTitle(editingEvent.title || '');
+      if (editingEvent.date) {
+        try {
+          const eventDate = new Date(editingEvent.date);
+          if (!isNaN(eventDate.getTime())) {
+            setDate(eventDate.toISOString().split('T')[0]);
+            setTime(eventDate.toTimeString().slice(0, 5));
+          } else {
+            setDate('');
+            setTime('');
+          }
+        } catch (error) {
+          console.error('Invalid date:', error);
+          setDate('');
+          setTime('');
+        }
+      } else {
+        setDate('');
+        setTime('');
+      }
     } else {
       setTitle('');
       setDate('');
@@ -32,13 +48,24 @@ const AddEventModal = ({ isOpen, onClose, onSave, onDelete, editingEvent }) => {
   }, [editingEvent]);
 
   const handleSave = () => {
-    const eventDate = new Date(`${date}T${time}`);
-    onSave({ id: editingEvent?.id, title, date: eventDate });
+    if (!title) {
+      alert('タイトルを入力してください。');
+      return;
+    }
+    let eventDate = null;
+    if (date && time) {
+      eventDate = new Date(`${date}T${time}`);
+    }
+    onSave({
+      id: editingEvent ? editingEvent.id : null,
+      title,
+      date: eventDate ? eventDate.toISOString() : null,
+    });
     onClose();
   };
 
   const handleDelete = () => {
-    if (editingEvent) {
+    if (editingEvent && editingEvent.id) {
       onDelete(editingEvent.id);
       onClose();
     }

@@ -4,7 +4,11 @@
 }
 
 .main {
-  @apply flex flex-col items-center justify-between max-w-4xl mx-auto;
+  @apply flex flex-col items-center justify-between w-full;
+}
+
+.contentWrapper {
+  @apply w-full max-w-[1200px] mx-auto;
 }
 
 .darkMode {

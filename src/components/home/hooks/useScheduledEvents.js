@@ -4,13 +4,11 @@
  * =============================================
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 
-/**
- * @hook useScheduledEvents
- * @description スケジュールされたイベントを管理するカスタムフック
- * @returns {Object} イベント管理に関する状態と関数
- */
+const STORAGE_KEY_PREFIX = 'scheduledEvents_';
+
 const useScheduledEvents = () => {
   // ----------------------------------------
   // ステート定義
@@ -18,6 +16,45 @@ const useScheduledEvents = () => {
   const [scheduledEvents, setScheduledEvents] = useState([]);
   const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
+  const [user, setUser] = useState(null);
+
+  // ----------------------------------------
+  // ユーザー認証状態の監視
+  // ----------------------------------------
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // ----------------------------------------
+  // ローカルストレージからデータを読み込む
+  // ----------------------------------------
+  useEffect(() => {
+    if (user) {
+      const storageKey = `${STORAGE_KEY_PREFIX}${user.uid}`;
+      const storedEvents = localStorage.getItem(storageKey);
+      if (storedEvents) {
+        setScheduledEvents(JSON.parse(storedEvents));
+      } else {
+        setScheduledEvents([]);
+      }
+    } else {
+      setScheduledEvents([]);
+    }
+  }, [user]);
+
+  // ----------------------------------------
+  // ローカルストレージにデータを保存する関数
+  // ----------------------------------------
+  const saveEventsToStorage = useCallback((events) => {
+    if (user) {
+      const storageKey = `${STORAGE_KEY_PREFIX}${user.uid}`;
+      localStorage.setItem(storageKey, JSON.stringify(events));
+    }
+  }, [user]);
 
   // ----------------------------------------
   // イベント操作関数
@@ -44,25 +81,36 @@ const useScheduledEvents = () => {
    * @param {Object} newEvent - 保存するイベント
    */
   const handleSaveEvent = useCallback((newEvent) => {
-    setScheduledEvents(prevEvents => {
-      if (newEvent.id) {
-        return prevEvents.map(event => 
-          event.id === newEvent.id ? newEvent : event
-        );
-      } else {
-        return [...prevEvents, { ...newEvent, id: Date.now() }];
-      }
-    });
-    scheduleNotification(newEvent);
-  }, []);
+    if (user) {
+      setScheduledEvents(prevEvents => {
+        let updatedEvents;
+        if (newEvent.id) {
+          updatedEvents = prevEvents.map(event => 
+            event.id === newEvent.id ? newEvent : event
+          );
+        } else {
+          updatedEvents = [...prevEvents, { ...newEvent, id: Date.now() }];
+        }
+        saveEventsToStorage(updatedEvents);
+        return updatedEvents;
+      });
+      scheduleNotification(newEvent);
+    }
+  }, [user, saveEventsToStorage]);
 
   /**
    * イベントを削除する
    * @param {number} eventId - 削除するイベントのID
    */
   const handleDeleteEvent = useCallback((eventId) => {
-    setScheduledEvents(prevEvents => prevEvents.filter(event => event.id !== eventId));
-  }, []);
+    if (user) {
+      setScheduledEvents(prevEvents => {
+        const updatedEvents = prevEvents.filter(event => event.id !== eventId);
+        saveEventsToStorage(updatedEvents);
+        return updatedEvents;
+      });
+    }
+  }, [user, saveEventsToStorage]);
 
   // ----------------------------------------
   // 通知関連関数

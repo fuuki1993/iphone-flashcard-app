@@ -34,6 +34,7 @@
 .score {
   font-size: 1.125rem;
   font-weight: bold;
+  color: #1f2937;
 }
 
 .quizCard {
@@ -94,11 +95,15 @@
   transform: rotate(90deg);
   width: 8rem;
   height: 3rem;
+  background-color: #f0f0f0;
+  color: #333333;
+  border: 1px solid #cccccc;
 }
 
 .rotatedText {
   display: inline-block;
   font-size: 0.875rem;
+  color: #333333;
 }
 
 .finalScore {
@@ -106,6 +111,34 @@
   font-weight: bold;
   transform: rotate(90deg);
   white-space: nowrap;
+  color: #1f2937;
+}
+
+.resultButton {
+  /* 既存のrotatedButtonのスタイルを継承 */
+  transform: rotate(90deg);
+  width: 8rem;
+  height: 3rem;
+  background-color: #f0f0f0;
+  color: #333333;
+  border: 1px solid #cccccc;
+}
+
+.wideScreenButton {
+  transform: none;
+  width: auto;
+  padding: 0.5rem 1rem;
+}
+
+.wideScreenButtonText {
+  transform: none;
+  font-size: 0.875rem;
+  color: #333333;
+}
+
+.wideScreenFinalScore {
+  transform: none;
+  margin-left: 1rem;
 }
 
 /* レスポンシブデザイン */
@@ -139,12 +172,18 @@
   }
 
   .rotatedButton {
-    width: 6rem;
-    height: 2.5rem;
+    transform: rotate(90deg);
+    width: 8rem;
+    height: 3rem;
+    background-color: #f0f0f0;
+    color: #333333;
+    border: 1px solid #cccccc;
   }
-
+  
   .rotatedText {
-    font-size: 0.75rem;
+    display: inline-block;
+    font-size: 0.875rem;
+    color: #333333;
   }
 
   .finalScore {
@@ -180,6 +219,10 @@
   }
 
   .rotatedButton, .rotatedText, .finalScore {
+    transform: none;
+  }
+
+  .wideScreenButton, .wideScreenButtonText, .wideScreenFinalScore {
     transform: none;
   }
 
@@ -267,5 +310,19 @@
 }
 
 :global(.dark) .finalScore {
+  color: #f3f4f6;
+}
+
+:global(.dark) .resultButton {
+  background-color: #374151;
+  color: #f3f4f6;
+  border-color: #4b5563;
+}
+
+:global(.dark) .resultButton:hover {
+  background-color: #4b5563;
+}
+
+:global(.dark) .wideScreenButtonText {
   color: #f3f4f6;
 }

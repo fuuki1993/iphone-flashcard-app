@@ -1,7 +1,7 @@
 .container {
   padding: 0.75rem;
   width: 100%;
-  max-width: 100%;
+  max-width: 1200px;
   margin-left: auto;
   margin-right: auto;
   background-color: #f3f4f6;
@@ -325,7 +325,7 @@
 .editScreenContainer {
   padding: 1rem;
   width: 100%;
-  max-width: 800px;
+  max-width: 100%;
   margin: 0 auto;
   background-color: #f3f4f6;
 }
@@ -337,9 +337,15 @@
   width: 100%;
 }
 
-@media (min-width: 641px) {
+@media (min-width: 601px) and (max-width: 1023px) {
   .categoriesGrid {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .categoriesGrid {
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
@@ -347,7 +353,7 @@
   width: 100%;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 600px) {
   .container {
     padding: 0.5rem;
   }
@@ -372,9 +378,15 @@
   .bottomButtonContainer {
     max-width: 100%;
   }
+
+  .editScreenContainer,
+  .creationScreenContainer {
+    max-width: 100%;
+    padding: 0.5rem;
+  }
 }
 
-@media (min-width: 481px) and (max-width: 768px) {
+@media (min-width: 601px) and (max-width: 1023px) {
   .container {
     max-width: 90%;
     padding: 1rem;
@@ -383,22 +395,36 @@
   .editScreenContainer,
   .creationScreenContainer {
     max-width: 90%;
+    padding: 1rem;
   }
 
   .bottomButtonContainer {
     max-width: 90%;
   }
-}
 
-@media (min-width: 769px) {
-  .container {
-    max-width: 800px;
-    padding: 1.5rem;
+  .title {
+    font-size: 1.125rem;
   }
 
+  .mobileFriendlyInput {
+    font-size: 0.9rem;
+  }
+
+  .bottomButton {
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container,
   .editScreenContainer,
-  .creationScreenContainer {
-    max-width: 800px;
+  .creationScreenContainer,
+  .bottomButtonContainer {
+    max-width: 1200px;
+    padding: 1.5rem;
+    margin-left: auto;
+    margin-right: auto;
   }
 
   .title {
@@ -416,10 +442,6 @@
 
   .fixedBottom {
     padding: 1rem;
-  }
-
-  .bottomButtonContainer {
-    max-width: 800px;
   }
 }
 

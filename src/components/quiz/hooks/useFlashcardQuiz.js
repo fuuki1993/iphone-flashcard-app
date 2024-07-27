@@ -31,6 +31,7 @@ export const useFlashcardQuiz = (setId, sessionState, onFinish, setTodayStudyTim
   const [error, setError] = useState(null);
   const startTimeRef = useRef(new Date());
   const [studiedCards, setStudiedCards] = useState(new Set());
+  const [results, setResults] = useState([]);
 
   /**
    * =============================================
@@ -191,52 +192,60 @@ export const useFlashcardQuiz = (setId, sessionState, onFinish, setTodayStudyTim
    * @description クイズを終了し、結果を保存する
    */
   const handleFinish = useCallback(async () => {
-    if (user) {
-      const endTime = new Date();
-      const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
-      const newCardsStudied = studiedCards.size - (sessionState?.studiedCards?.length || 0);
-      const isNewSession = !sessionState;
-      
-      const studyHistoryEntry = {
-        setId,
-        type: 'flashcard',
-        date: endTime.toISOString(),
-        studyDuration,
-        cardsStudied: studiedCards.size,
-        totalCards: shuffledCards.length,
-        isNewSession
-      };
-      
-      try {
-        const db = getFirestore();
-        const batch = writeBatch(db);
+    if (!user) return;
+    const endTime = new Date();
+    const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
+    const newCardsStudied = studiedCards.size - (sessionState?.studiedCards?.length || 0);
+    
+    const correctCards = results.filter(Boolean).length;
+    const incorrectCards = results.filter(result => result === false).length;
+    const score = Math.round((correctCards / shuffledCards.length) * 100);
 
-        // 学習履歴の保存
-        const studyHistoryRef = doc(db, `users/${user.uid}/studyHistory`, `${setId}_${Date.now()}`);
-        batch.set(studyHistoryRef, studyHistoryEntry);
+    const studyHistoryEntry = {
+      setId,
+      type: 'flashcard',
+      score,
+      date: endTime.toISOString(),
+      studyDuration,
+      cardsStudied: newCardsStudied,
+      correctCards,
+      incorrectCards,
+      totalCards: shuffledCards.length
+    };
 
-        // セッション状態の更新
-        const sessionStateRef = doc(db, `users/${user.uid}/sessionStates`, `${setId}_flashcard`);
-        batch.set(sessionStateRef, {
+    try {
+      const db = getFirestore();
+      const batch = writeBatch(db);
+
+      // 学習履歴の保存
+      const studyHistoryRef = doc(db, `users/${user.uid}/studyHistory`, `${setId}_${Date.now()}`);
+      batch.set(studyHistoryRef, studyHistoryEntry);
+
+      // セッション状態の更新
+      const sessionStateRef = doc(db, `users/${user.uid}/sessionStates`, `${setId}_flashcard`);
+      batch.set(sessionStateRef, {
+        results,
+        studiedCards: Array.from(studiedCards),
+        lastStudyDate: endTime
+      }, { merge: true });
+
+      // バッチ処理を実行
+      await batch.commit();
+      
+      setTodayStudyTime(prevTime => prevTime + studyDuration);
+      onFinish(score, studyDuration, newCardsStudied);
+      if (typeof updateOverallProgress === 'function') {
+        updateOverallProgress(setId, {
+          totalItems: shuffledCards.length,
           completedItems: studiedCards.size,
-          lastStudyDate: endTime
-        }, { merge: true });
-
-        // バッチ処理を実行
-        await batch.commit();
-        
-        setTodayStudyTime(prevTime => prevTime + studyDuration);
-        onFinish(studiedCards.size, studyDuration, newCardsStudied);
-        if (typeof updateOverallProgress === 'function') {
-          updateOverallProgress(studiedCards.size, shuffledCards.length);
-        } else {
-          console.error('updateOverallProgress is not a function');
-        }
-      } catch (error) {
-        console.error("Error saving study history:", error);
+          correctItems: correctCards,
+          incorrectItems: incorrectCards,
+        });
       }
+    } catch (error) {
+      console.error("Error saving study history:", error);
     }
-  }, [setId, onFinish, setTodayStudyTime, studiedCards, user, sessionState, startTimeRef, shuffledCards, updateOverallProgress]);
+  }, [setId, onFinish, setTodayStudyTime, studiedCards, user, sessionState, startTimeRef, shuffledCards, updateOverallProgress, results]);
 
   // Helper function to convert set data to flashcards
   const convertToFlashcards = (set) => {

@@ -301,11 +301,13 @@ export const deleteStudyHistoryEntry = async (userId, entryId) => {
 export const saveSessionState = async (userId, setId, setType, state) => {
   try {
     const docRef = doc(db, `users/${userId}/${SESSION_STATES_COLLECTION}`, `${setId}_${setType}`);
+    const now = serverTimestamp();
     await setDoc(docRef, { 
       setId, 
       setType, 
       state, 
-      updatedAt: serverTimestamp() 
+      lastStudyDate: now,
+      updatedAt: now
     });
   } catch (error) {
     console.error("Error saving session state:", error);
@@ -325,7 +327,12 @@ export const getSessionState = async (userId, setId, setType) => {
     const docRef = doc(db, `users/${userId}/${SESSION_STATES_COLLECTION}`, `${setId}_${setType}`);
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
-      return docSnap.data().state;
+      const data = docSnap.data();
+      return {
+        ...data.state,
+        lastStudyDate: data.lastStudyDate || null,
+        updatedAt: data.updatedAt || null
+      };
     } else {
       return null;
     }
@@ -798,6 +805,7 @@ const calculateCompletedItems = async (userId, sets) => {
   }
   return completedItems;
 };
+
 
 /**
  * 同期されていないデータのみをサーバーと同期する

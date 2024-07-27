@@ -2,15 +2,16 @@
   width: 100%;
   max-width: 100%;
   margin: 0 auto;
-  padding: 0.5rem;
+  padding: 1rem;
   background-color: #f3f4f6;
+  transition: background-color 0.3s ease;
 }
 
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .headerContent {
@@ -21,63 +22,113 @@
 }
 
 .title {
-  font-size: 1.25rem;
+  font-size: 1.5rem;
   font-weight: bold;
   color: #1f2937;
+  transition: color 0.3s ease;
 }
 
 .headerButtons {
   display: flex;
+  gap: 0.5rem;
 }
 
-.backButton,
-.shuffleButton,
-.finishButton {
-  margin-right: 0.5rem;
+.iconButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  background-color: transparent;
+  color: #1f2937;
+  border: none;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.iconButton:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  transform: scale(1.05);
 }
 
 .quizCard {
   width: 100%;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
   background-color: #ffffff;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.quizCard:hover {
+  box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
 }
 
 .questionTitle {
-  font-size: 1.125rem;
+  font-size: 1.25rem;
   color: #1f2937;
+  margin-bottom: 1rem;
+  padding: 1rem 1rem 0;
 }
 
 .questionImage {
   width: 100%;
+  max-height: 16rem;
+  object-fit: cover;
   margin-bottom: 1rem;
-  max-height: 12rem;
-  object-fit: contain;
 }
 
 .answerInput {
   width: 100%;
-  padding: 0.5rem;
-  border: 1px solid #d1d5db;
+  padding: 0.75rem;
+  border: 2px solid #d1d5db;
   border-radius: 0.25rem;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.answerInput:focus {
+  border-color: #3b82f6;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
 }
 
 .cardFooter {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background-color: #f9fafb;
 }
 
 .submitButton {
-  width: 100%;
+  padding: 0.75rem 1.5rem;
+  background-color: #3b82f6;
+  color: #ffffff;
+  border: none;
+  border-radius: 0.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.submitButton:hover {
+  background-color: #2563eb;
+  transform: translateY(-1px);
 }
 
 .resultContainer {
   display: flex;
   align-items: center;
-  font-size: 0.875rem;
+  font-size: 1rem;
 }
 
 .resultIcon {
   margin-right: 0.5rem;
+  font-size: 1.25rem;
 }
 
 .correctIcon {
@@ -90,84 +141,154 @@
 
 .correctAnswer {
   color: #1f2937;
+  font-weight: 600;
 }
 
 .pagination {
   text-align: center;
-  font-size: 0.875rem;
+  font-size: 1rem;
   color: #6b7280;
+  margin-top: 1.5rem;
 }
 
 .loading, .error, .empty {
   text-align: center;
   color: #6b7280;
-  padding: 1rem;
+  padding: 2rem;
+  font-size: 1.25rem;
 }
 
 .finalScoreContainer {
-  padding: 1rem;
-  max-width: 28rem;
+  padding: 2rem;
+  max-width: 32rem;
   margin: 0 auto;
   width: 100%;
 }
 
 .finalScoreCard {
-  margin-bottom: 1rem;
   background-color: #ffffff;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+  text-align: center;
 }
 
 .finalScoreTitle {
-  font-size: 1.5rem;
+  font-size: 2rem;
   font-weight: bold;
   color: #1f2937;
+  margin-bottom: 1rem;
 }
 
 .finalScoreText {
-  font-size: 1.125rem;
-  margin-bottom: 1rem;
+  font-size: 1.25rem;
+  margin-bottom: 2rem;
   color: #4b5563;
 }
 
 .finalScoreButtons {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.finalScoreButton {
+  padding: 0.75rem 1.5rem;
+  background-color: #3b82f6;
+  color: #ffffff;
+  border: none;
+  border-radius: 0.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.finalScoreButton:hover {
+  background-color: #2563eb;
+  transform: translateY(-1px);
 }
 
 /* レスポンシブデザイン */
-@media (min-width: 601px) and (max-width: 1023px) {
+@media (min-width: 640px) {
   .container {
-    padding: 0.75rem;
-    max-width: 90%;    
+    padding: 1.5rem;
   }
 
-  .title {
-    font-size: 1.5rem;
+  .quizCard {
+    border-radius: 0.75rem;
   }
 
   .questionTitle {
-    font-size: 1.25rem;
+    font-size: 1.5rem;
+  }
+
+  .answerInput {
+    font-size: 1.125rem;
+  }
+
+  .submitButton,
+  .finalScoreButton {
+    font-size: 1.125rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .container {
+    padding: 2rem;
+  }
+
+  .title {
+    font-size: 2rem;
+  }
+
+  .questionTitle {
+    font-size: 1.5rem;
+    text-align: center;
   }
 
   .questionImage {
-    max-height: 16rem;
+    max-height: 24rem;
+  }
+
+  .finalScoreContainer {
+    padding: 3rem;
+  }
+
+  .finalScoreTitle {
+    font-size: 2.5rem;
+  }
+
+  .finalScoreText {
+    font-size: 1.5rem;
   }
 }
 
 @media (min-width: 1024px) {
   .container {
-    max-width: 900px;
+    max-width: 1200px;
+    padding: 3rem;
   }
 
-  .title {
-    font-size: 1.75rem;
+  .quizCard {
+    margin-bottom: 2rem;
   }
 
   .questionTitle {
-    font-size: 1.375rem;
+    font-size: 1.75rem;
+    text-align: center;
   }
 
   .questionImage {
-    max-height: 20rem;
+    max-height: 32rem;
+  }
+
+  .answerInput {
+    font-size: 1.25rem;
+  }
+
+  .submitButton,
+  .finalScoreButton {
+    font-size: 1.25rem;
   }
 }
 
@@ -185,6 +306,7 @@
 :global(.dark) .quizCard,
 :global(.dark) .finalScoreCard {
   background-color: #1f2937;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
 }
 
 :global(.dark) .answerInput {
@@ -195,6 +317,11 @@
 
 :global(.dark) .answerInput::placeholder {
   color: #9ca3af;
+}
+
+:global(.dark) .answerInput:focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.3);
 }
 
 :global(.dark) .correctAnswer,
@@ -209,44 +336,39 @@
   color: #9ca3af;
 }
 
-:global(.dark) .correctIcon {
-  color: #34d399;
+:global(.dark) .cardFooter {
+  background-color: #2d3748;
 }
 
-:global(.dark) .incorrectIcon {
-  color: #f87171;
+:global(.dark) .submitButton,
+:global(.dark) .finalScoreButton {
+  background-color: #60a5fa;
+  color: #1f2937;
 }
 
-:global(.dark) .submitButton {
-  background-color: #374151;
+:global(.dark) .submitButton:hover,
+:global(.dark) .finalScoreButton:hover {
+  background-color: #93c5fd;
+}
+
+:global(.dark) .iconButton {
   color: #f3f4f6;
 }
 
-:global(.dark) .submitButton:hover {
-  background-color: #4b5563;
-}
-
-:global(.dark) .headerContent {
-  color: #f3f4f6;
+:global(.dark) .iconButton:hover {
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 :global(.dark) .questionImage {
   filter: brightness(0.8);
 }
 
-:global(.dark) .cardFooter {
-  border-color: #4b5563;
+/* ダークモード対応 */
+:global(.dark) .finalScoreButton {
+  background-color: #60a5fa;
+  color: #1f2937;
 }
 
-:global(.dark) .resultContainer {
-  color: #d1d5db;
-}
-
-:global(.dark) .finalScoreButtons button {
-  background-color: #374151;
-  color: #f3f4f6;
-}
-
-:global(.dark) .finalScoreButtons button:hover {
-  background-color: #4b5563;
+:global(.dark) .finalScoreButton:hover {
+  background-color: #93c5fd;
 }
