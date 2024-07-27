@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/layout/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/layout/card';
 import { Progress } from '@/components/ui/feedback/progress';
-import { Settings, PlusCircle, BookOpen, Trophy, BarChart2, Clock, Calendar } from 'lucide-react';
+import { Settings, PlusCircle, BookOpen, Trophy, BarChart2, Clock, Calendar, Share2 } from 'lucide-react';
 import AddEventModal from '../schedule/AddEventModal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import AdminUpdateForm from '../admin/AdminUpdateForm';
@@ -33,13 +33,19 @@ const StatisticsScreen = lazy(() => import('../statistics/StatisticsScreen'));
 /**
  * アプリのヘッダーを表示する
  * @param {Function} onOpenSettings - 設定を開く関数
+ * @param {Function} onOpenShare - 共有画面を開く関数
  */
-const Header = ({ onOpenSettings }) => (
+const Header = ({ onOpenSettings, onOpenShare }) => (
   <div className={styles.header}>
     <h1 className={styles.title}>暗記アプリ</h1>
-    <Button variant="ghost" size="sm" onClick={onOpenSettings}>
-      <Settings className="text-gray-600 h-5 w-5" />
-    </Button>
+    <div className={styles.headerButtons}>
+      <Button variant="ghost" size="sm" onClick={onOpenShare}>
+        <Share2 className="text-gray-600 h-5 w-5" />
+      </Button>
+      <Button variant="ghost" size="sm" onClick={onOpenSettings}>
+        <Settings className="text-gray-600 h-5 w-5" />
+      </Button>
+    </div>
   </div>
 );
 
@@ -209,7 +215,8 @@ const HomeScreen = ({
   onSignOut,
   userId,
   dailyGoal,
-  setDailyGoal
+  setDailyGoal,
+  navigateTo
 }) => {
   const [showStatistics, setShowStatistics] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -218,7 +225,6 @@ const HomeScreen = ({
   const [cachedHomeScreenData, setCachedHomeScreenData] = useLocalStorage('homeScreenData', null);
   const [cachedRecentActivities, setCachedRecentActivities] = useLocalStorage('recentActivities', null);
   const [cachedScheduledEvents, setCachedScheduledEvents] = useLocalStorage('scheduledEvents', null);
-
 
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -246,6 +252,10 @@ const HomeScreen = ({
     setShowStatistics(false);
   }, []);
 
+  const handleOpenShare = useCallback(() => {
+    navigateTo('share');
+  }, [navigateTo]);
+
   // 統計画面の表示
   if (showStatistics) {
     return (
@@ -266,7 +276,7 @@ const HomeScreen = ({
 
   return (
     <div className={styles.container}>
-      <Header onOpenSettings={onOpenSettings} />
+      <Header onOpenSettings={onOpenSettings} onOpenShare={handleOpenShare} />
       <ProgressCard 
         streak={homeScreenData.streak} 
         currentProgress={homeScreenData.currentProgress}

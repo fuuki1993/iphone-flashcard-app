@@ -22,6 +22,9 @@ import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import AuthScreen from '../auth/AuthScreen';
 import SignOut from '../auth/SignOut';
 import styles from '@/styles/modules/Home.module.css';
+import { lazy } from 'react';
+
+const ShareScreen = lazy(() => import('../share/ShareScreen'));
 
 export default function Home() {
   const { hashPath, push, isReady } = useHashRouter();
@@ -134,6 +137,9 @@ export default function Home() {
       case 'studyHistory':
         setCurrentScreen('studyHistory');
         break;
+      case 'share':
+        setCurrentScreen('share');
+        break;
       default:
         setCurrentScreen('home');
     }
@@ -217,9 +223,9 @@ export default function Home() {
     setStudyHistory(prevHistory => prevHistory.filter(entry => entry.id !== entryId));
   };
 
-  const navigateTo = (screen, subPath = '') => {
-    push(subPath ? `${screen}/${subPath}` : screen);
-  };
+  const navigateTo = useCallback((screen) => {
+    setCurrentScreen(screen);
+  }, []);
 
   const handleCreateSet = () => {
     navigateTo('createEditSet');
@@ -279,12 +285,12 @@ export default function Home() {
 
   const handleSelectType = (type) => {
     setCurrentSetType(type);
-    navigateTo(type, 'creation');
+    setCurrentScreen(`${type}Creation`);
   };
   
   const handleEditType = (type) => {
     setCurrentSetType(type);
-    navigateTo(type, 'edit');
+    setCurrentScreen(`${type}Edit`);
   };
 
   const handleSave = (data) => {
@@ -315,6 +321,10 @@ export default function Home() {
     navigateTo('studyHistory');
   };
 
+  const handleOpenShare = useCallback(() => {
+    navigateTo('share');
+  }, [navigateTo]);
+
   const renderScreen = useCallback(() => {
     if (loading) {
       return <div>Loading...</div>;
@@ -333,6 +343,7 @@ export default function Home() {
               onStartLearning={handleStartLearning}
               onShowStatistics={handleShowStatistics}
               onOpenSettings={handleOpenSettings}
+              onOpenShare={handleOpenShare}
               overallProgress={overallProgress}
               setOverallProgress={setOverallProgress}
               streak={streak}
@@ -350,6 +361,7 @@ export default function Home() {
                 });
               }}
               userId={user.uid}
+              navigateTo={navigateTo}
             />
           </>
         );
@@ -499,6 +511,8 @@ export default function Home() {
             onBack={() => navigateTo('statistics')}
           />
         );
+      case 'share':
+        return <ShareScreen onBack={() => navigateTo('home')} user={user} />;
       default:
         return <div>Unknown screen: {currentScreen}</div>;
     }

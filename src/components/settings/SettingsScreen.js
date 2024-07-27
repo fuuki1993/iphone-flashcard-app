@@ -50,6 +50,8 @@ const SettingsScreen = ({ onBack, userId, dailyGoal, setDailyGoal, darkMode, set
       if (user) {
         if (user.displayName !== displayName) {
           await updateUserProfile({ displayName });
+          // 表示名をユーザー設定にも保存
+          await updateUserSettings(userId, { displayName });
         }
         if (user.email !== email) {
           await updateUserEmail(email);
@@ -66,7 +68,8 @@ const SettingsScreen = ({ onBack, userId, dailyGoal, setDailyGoal, darkMode, set
 
       await updateUserSettings(userId, {
         dailyGoal: localDailyGoal,
-        darkMode: localDarkMode
+        darkMode: localDarkMode,
+        displayName // 表示名も保存
       });
 
       setDailyGoal(localDailyGoal);

@@ -461,6 +461,150 @@ export const updateDarkModeSetting = async (userId, darkMode) => {
   await setDoc(userDoc, { darkMode }, { merge: true });
 };
 
+/**
+ * ユーザーの表示名を取得する
+ * @param {string} userId - ユーザーID
+ * @returns {Promise<string>} ユーザーの表示名
+ */
+export const getUserDisplayName = async (userId) => {
+  try {
+    const userSettingsRef = doc(db, `users/${userId}/${SETTINGS_COLLECTION}`, 'userSettings');
+    const docSnap = await getDoc(userSettingsRef);
+    if (docSnap.exists()) {
+      return docSnap.data().displayName || '';
+    } else {
+      return '';
+    }
+  } catch (error) {
+    console.error('Error getting user display name:', error);
+    throw error;
+  }
+};
+
+//=============================================================================
+// 共有関連の関数
+//=============================================================================
+// セットを公開する
+export const publishSet = async (userId, setId) => {
+  try {
+    const setRef = doc(db, `users/${userId}/${SETS_COLLECTION}`, setId);
+    await updateDoc(setRef, { isPublished: true });
+    
+    // 公開セットコレクションにコピーを作成
+    const publicSetRef = doc(collection(db, 'publicSets'));
+    const setData = await getDoc(setRef);
+    await setDoc(publicSetRef, {
+      ...setData.data(),
+      originalAuthorId: userId,
+      publishedAt: serverTimestamp()
+    });
+    
+    console.log(`Set published successfully. Public set ID: ${publicSetRef.id}`);
+    return publicSetRef.id;
+  } catch (error) {
+    console.error("Error publishing set:", error);
+    throw error;
+  }
+};
+
+// セットの公開を解除する
+export const unpublishSet = async (userId, setId) => {
+  try {
+    const setRef = doc(db, `users/${userId}/${SETS_COLLECTION}`, setId);
+    await updateDoc(setRef, { isPublished: false });
+    
+    // 公開セットコレクションから削除
+    const publicSetsRef = collection(db, 'publicSets');
+    const q = query(publicSetsRef, where("originalAuthorId", "==", userId), where("id", "==", setId));
+    const querySnapshot = await getDocs(q);
+    querySnapshot.forEach(async (doc) => {
+      await deleteDoc(doc.ref);
+    });
+  } catch (error) {
+    console.error("Error unpublishing set:", error);
+    throw error;
+  }
+};
+
+// 公開されたセットを取得する
+export const getPublishedSets = async () => {
+  try {
+    const publicSetsRef = collection(db, 'publicSets');
+    const q = query(publicSetsRef, orderBy("publishedAt", "desc"));
+    const querySnapshot = await getDocs(q);
+    const publishedSets = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    console.log('Retrieved published sets:', publishedSets);
+    publishedSets.forEach(set => {
+      console.log(`Set ID: ${set.id}, Title: ${set.title}, Data:`, set);
+    });
+    return publishedSets;
+  } catch (error) {
+    console.error("Error getting published sets:", error);
+    throw error;
+  }
+};
+
+// 公開されたセットをコピーする
+export const copyPublishedSet = async (userId, publishedSetId) => {
+  try {
+    console.log(`Attempting to copy published set with ID: ${publishedSetId}`);
+    
+    // 全ての公開セットを取得
+    const allPublicSets = await getAllPublicSets();
+    console.log('All public sets:', allPublicSets);
+    
+    // IDに基づいてセットを検索
+    const publicSetData = allPublicSets.find(set => set.id === publishedSetId);
+    
+    if (publicSetData) {
+      console.log('Found public set data:', publicSetData);
+      
+      const newSetData = {
+        cards: publicSetData.cards,
+        title: publicSetData.title,
+        type: publicSetData.type,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        isPublished: false,
+        originalAuthorId: publicSetData.originalAuthorId
+      };
+
+      const newSetRef = doc(collection(db, `users/${userId}/${SETS_COLLECTION}`));
+      await setDoc(newSetRef, {
+        ...newSetData,
+        id: newSetRef.id
+      });
+
+      return newSetRef.id;
+    } else {
+      console.log('All public sets:', allPublicSets);
+      throw new Error(`公開されたセットが見つかりません。ID: ${publishedSetId}`);
+    }
+  } catch (error) {
+    console.error(`Error copying published set (ID: ${publishedSetId}):`, error);
+    throw error;
+  }
+};
+
+// すべての公開セットを取得する補助関数
+const getAllPublicSets = async () => {
+  const publicSetsRef = collection(db, 'publicSets');
+  const snapshot = await getDocs(publicSetsRef);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+};
+
+export const debugPublicSets = async () => {
+  try {
+    const publicSetsRef = collection(db, 'publicSets');
+    const snapshot = await getDocs(publicSetsRef);
+    console.log('Debug: All public sets:', snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    return true;
+  } catch (error) {
+    console.error('Debug: Error fetching public sets:', error);
+    return false;
+  }
+};
+
 //=============================================================================
 // 日付関連の関数
 //=============================================================================
