@@ -60,7 +60,6 @@ const Header = ({ onOpenSettings, onOpenShare }) => (
  * @param {Function} handleShowStatistics - 統計画面を表示する関数
  */
 const ProgressCard = ({ streak, currentProgress, handleShowStatistics }) => {
-  console.log('ProgressCard props:', { streak, currentProgress });
   return (
     <Card className={styles.progressCard}>
       <CardContent className={styles.progressCardContent}>
@@ -181,7 +180,6 @@ const ScheduledEventsTab = ({ scheduledEvents, handleEditEvent, formatEventDate,
  */
 const DailyGoalCard = ({ todayStudyTimeMinutes, dailyGoal, isGoalAchieved }) => {
   const progressValue = Math.min((todayStudyTimeMinutes / dailyGoal) * 100, 100);
-  console.log('DailyGoalCard:', { todayStudyTimeMinutes, dailyGoal, progressValue });
 
   return (
     <Card className={styles.dailyGoalCard}>
@@ -276,7 +274,6 @@ const HomeScreen = ({
       if (userId) {
         const time = await calculateTodayStudyTime(userId);
         setTodayStudyTime(time);
-        console.log('Fetched today study time (seconds):', time);
       }
     };
     fetchTodayStudyTime();
@@ -284,10 +281,6 @@ const HomeScreen = ({
 
   // メモ化されたコンポーネント
   const MemoizedProgressCard = useMemo(() => {
-    console.log('MemoizedProgressCard rendering with:', {
-      streak: homeScreenData.streak,
-      currentProgress: homeScreenData.currentProgress
-    });
     return (
       <ProgressCard 
         streak={homeScreenData.streak} 
@@ -312,6 +305,14 @@ const HomeScreen = ({
   // スケルトンローディングの改善
   if (homeScreenData.isLoading || recentActivitiesData.isLoading || scheduledEventsData.isLoading) {
     return <SkeletonLoading />;
+  }
+
+  if (showStatistics) {
+    return (
+      <Suspense fallback={<div>統計データを読み込み中...</div>}>
+        <StatisticsScreen onBack={handleBackFromStatistics} userId={userId} />
+      </Suspense>
+    );
   }
 
   return (

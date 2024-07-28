@@ -79,12 +79,14 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTod
 
       <Card className={styles.quizCard}>
         <CardHeader>
-          <CardTitle className={styles.questionTitle}>{currentQuestion.question}</CardTitle>
+          <CardTitle className={styles.questionTitle}>
+            <QuestionContent
+              question={currentQuestion.question}
+              image={currentQuestion.image}
+            />
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          {currentQuestion.image && (
-            <img src={currentQuestion.image} alt="Question" className={styles.questionImage} />
-          )}
           <Input
             type="text"
             placeholder="回答を入力"
@@ -118,5 +120,21 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTod
     </div>
   );
 };
+
+const QuestionContent = ({ question, image }) => (
+  <div className={styles.questionContent}>
+    {question && <p className={styles.questionText}>{question}</p>}
+    {image && (
+      <div className={styles.imageContainer}>
+        <img 
+          src={image} 
+          alt="Question image" 
+          className={styles.questionImage}
+        />
+      </div>
+    )}
+    {!question && !image && <p className={styles.emptyContent}>質問がありません</p>}
+  </div>
+);
 
 export default QAQuiz;

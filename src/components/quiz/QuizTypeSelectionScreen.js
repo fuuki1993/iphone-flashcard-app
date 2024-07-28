@@ -61,8 +61,6 @@ const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
           classification: allSets.filter(set => set.type === 'classification')
         };
   
-        console.log('Loaded quiz sets:', newQuizSets); // デバッグ用ログ
-  
         setQuizSets(newQuizSets);
   
         // 各タイプの最初のセットをデフォルトで選択

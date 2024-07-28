@@ -38,31 +38,24 @@ const StatisticsScreen = ({ onBack, userId, refreshTrigger }) => {
               
               // 総学習時間の計算
               const totalStudyTime = studyHistory.reduce((total, entry) => {
-                console.log('Entry study duration:', entry.studyDuration);
                 return total + (entry.studyDuration || 0);
               }, 0);
-              console.log('Total study time:', totalStudyTime);
               
               // 週間学習時間の計算
               const weeklyStudyTime = calculateWeeklyStudyTime(studyHistory);
-              console.log('Weekly study time:', weeklyStudyTime);
               
               // 今日の学習カード数の計算
               const today = new Date().toDateString();
               const todayStudiedCards = studyHistory
                 .filter(entry => new Date(entry.date).toDateString() === today)
                 .reduce((total, entry) => {
-                  console.log('Today\'s entry cards studied:', entry.cardsStudied);
                   return total + (entry.cardsStudied || 0);
                 }, 0);
-              console.log('Today\'s studied cards:', todayStudiedCards);
 
               // 前週比の計算
               const totalStudyTimeComparison = calculateComparison(studyHistory, 'studyDuration');
-              console.log('Total study time comparison:', totalStudyTimeComparison);
               
               const todayStudiedCardsComparison = calculateComparison(studyHistory, 'cardsStudied');
-              console.log('Today\'s studied cards comparison:', todayStudiedCardsComparison);
 
               const newStatistics = {
                 ...userStats,
@@ -77,14 +70,12 @@ const StatisticsScreen = ({ onBack, userId, refreshTrigger }) => {
               setCachedStatistics({ data: newStatistics, timestamp: Date.now() });
             } else {
               // ユーザー統計情報が取得できなかった場合の処理
-              console.log('ユーザー統計情報が利用できません');
               setStatistics({
                 ...statistics,
                 error: '統計情報を取得できませんでした。'
               });
             }
           } catch (error) {
-            console.error('Failed to fetch user statistics:', error);
             setStatistics({
               ...statistics,
               error: '統計情報の取得に失敗しました。しばらくしてからもう一度お試しください。'
@@ -104,17 +95,14 @@ const StatisticsScreen = ({ onBack, userId, refreshTrigger }) => {
     const weeklyData = studyHistory
       .filter(entry => {
         const entryDate = new Date(entry.date);
-        console.log('Entry date:', entryDate, 'Is within last week:', entryDate >= oneWeekAgo);
         return entryDate >= oneWeekAgo;
       })
       .reduce((acc, entry) => {
         const dayOfWeek = new Date(entry.date).getDay();
         acc[dayOfWeek] += entry.studyDuration;
-        console.log('Day of week:', dayOfWeek, 'Study duration:', entry.studyDuration);
         return acc;
       }, Array(7).fill(0));
 
-    console.log('Calculated weekly study time:', weeklyData);
     return weeklyData;
   };
 
@@ -131,11 +119,8 @@ const StatisticsScreen = ({ onBack, userId, refreshTrigger }) => {
       .filter(entry => new Date(entry.date) >= twoWeeksAgo && new Date(entry.date) < oneWeekAgo)
       .reduce((total, entry) => total + (entry[field] || 0), 0);
 
-    console.log(`Comparison for ${field}:`, { thisWeekTotal, lastWeekTotal });
-
     if (lastWeekTotal === 0) return 0;
     const comparison = ((thisWeekTotal - lastWeekTotal) / lastWeekTotal) * 100;
-    console.log(`${field} comparison result:`, comparison);
     return comparison;
   };
 

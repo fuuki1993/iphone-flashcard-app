@@ -253,9 +253,9 @@ export const useFlashcardQuiz = (setId, sessionState, onFinish, setTodayStudyTim
       return set.cards;
     } else if (set.type === 'qa') {
       return set.qaItems.map(item => ({
-        front: item.question,
-        back: item.answer,
-        image: item.image
+        front: item.question || '',
+        back: item.answer || '',
+        image: item.image || null
       }));
     } else {
       throw new Error('Invalid set type');

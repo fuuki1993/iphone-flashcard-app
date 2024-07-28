@@ -75,7 +75,12 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
 
       <Card className={styles.questionCard}>
         <CardHeader>
-          <CardTitle className={styles.questionTitle}>{currentQuestion.question}</CardTitle>
+          <CardTitle className={styles.questionTitle}>
+            <QuestionContent
+              question={currentQuestion.question}
+              image={currentQuestion.image}
+            />
+          </CardTitle>
           {correctAnswersCount[currentQuestionIndex] > 1 && (
             <p className={styles.multipleAnswersHint}>
               （複数の正解があります。{correctAnswersCount[currentQuestionIndex]}つ選んでください）
@@ -83,9 +88,6 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
           )}
         </CardHeader>
         <CardContent>
-          {currentQuestion.image && (
-            <img src={currentQuestion.image} alt="Question" className={styles.questionImage} />
-          )}
           <div className={styles.choiceGrid}>
             {currentQuestion.choices.map((choice, index) => (
               <Button
@@ -127,5 +129,21 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
     </div>
   );
 };
+
+const QuestionContent = ({ question, image }) => (
+  <div className={styles.questionContent}>
+    {question && <p className={styles.questionText}>{question}</p>}
+    {image && (
+      <div className={styles.imageContainer}>
+        <img 
+          src={image} 
+          alt="Question image" 
+          className={styles.questionImage}
+        />
+      </div>
+    )}
+    {!question && !image && <p className={styles.emptyContent}>質問がありません</p>}
+  </div>
+);
 
 export default MultipleChoiceQuiz;

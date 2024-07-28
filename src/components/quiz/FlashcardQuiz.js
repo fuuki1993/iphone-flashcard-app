@@ -97,15 +97,21 @@ const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState,
 // フラッシュカードの内容を表示するコンポーネント
 const FlashcardContent = ({ content, image, isFront }) => (
   <div className={`${styles.flashcardContent} ${isFront ? styles.frontContent : styles.backContent}`}>
-    <p className={styles.contentText}>{content}</p>
-    {image && isFront && (
-      <div className={styles.imageContainer}>
-        <img 
-          src={image} 
-          alt="Flashcard image" 
-          className={styles.contentImage}
-        />
-      </div>
+    {(content || image) ? (
+      <>
+        {content && <p className={styles.contentText}>{content}</p>}
+        {image && isFront && (
+          <div className={styles.imageContainer}>
+            <img 
+              src={image} 
+              alt="Flashcard image" 
+              className={styles.contentImage}
+            />
+          </div>
+        )}
+      </>
+    ) : (
+      <p className={styles.emptyContent}>コンテンツがありません</p>
     )}
   </div>
 );

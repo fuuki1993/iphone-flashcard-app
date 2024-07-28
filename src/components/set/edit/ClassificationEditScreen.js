@@ -194,7 +194,7 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
       if (!category.name.trim() && !category.image) {
         newErrors[`category${index}`] = 'カテゴリー名または画像を入力してください。';
       }
-      if (category.items.filter(item => item.trim()).length === 0) {
+      if (category.items.length === 0 || category.items.every(item => !item.trim())) {
         newErrors[`category${index}items`] = '少なくとも1つの項目を入力してください。';
       }
     });
@@ -230,7 +230,7 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
     if (validateForm() && user && user.uid) {
       try {
         const db = getFirestore();
-        const setRef = doc(db, `users/${user.uid}/sets`, selectedSetId);
+        const setRef = doc(db, 'users', user.uid, 'sets', selectedSetId);
         
         const existingSetDoc = await getDoc(setRef);
         const existingSetData = existingSetDoc.data() || {};

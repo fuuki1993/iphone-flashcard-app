@@ -153,8 +153,6 @@ const useRecentActivities = (userId, onStartLearning) => {
     }
     
     const isCompleted = totalItems > 0 && totalItems === totalItemsStudied;
-    
-    console.log(`セット "${set.title}" (${type}): ${totalItemsStudied}/${totalItems} 問題完了`);
 
     return { 
       ...set, 
@@ -233,7 +231,6 @@ const useRecentActivities = (userId, onStartLearning) => {
           } else {
             newItemsStudied = newSessionState.studiedItems || 0;
           }
-          console.log(`クイズ終了: セット "${activity.title}" (${type}): ${newItemsStudied}/${activity.totalItems} 問題完了`);
           return {
             ...activity,
             sessionState: newSessionState,

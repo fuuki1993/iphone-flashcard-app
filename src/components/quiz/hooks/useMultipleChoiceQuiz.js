@@ -48,20 +48,19 @@ export const useMultipleChoiceQuiz = (setId, title, quizType, sessionState, setT
   const convertToUnifiedFormat = useCallback((set) => {
     if (set.type === 'qa' && Array.isArray(set.qaItems)) {
       return set.qaItems.map(item => ({
-        question: item.question,
+        question: item.question || '',
         answer: item.answer,
         image: item.image
       }));
     } else if (set.type === 'flashcard' && Array.isArray(set.cards)) {
       return set.cards.map(card => ({
-        question: card.front,
+        question: card.front || '',
         answer: card.back,
         image: card.image
       }));
     } else if (Array.isArray(set.questions)) {
-      // 'multiple-choice' タイプまたは他の未知のタイプの場合
       return set.questions.map(question => ({
-        question: question.question,
+        question: question.question || '',
         answer: question.answer || (question.choices && question.choices.find(c => c.isCorrect)?.text),
         image: question.image,
         choices: question.choices
@@ -96,7 +95,7 @@ export const useMultipleChoiceQuiz = (setId, title, quizType, sessionState, setT
       ].sort(() => 0.5 - Math.random());
 
       return {
-        question: item.question,
+        question: item.question || '',
         choices: choices,
         image: item.image,
         correctAnswersCount: correctAnswers.length
@@ -139,7 +138,7 @@ export const useMultipleChoiceQuiz = (setId, title, quizType, sessionState, setT
             setResults(sessionState.results);
           } else {
             const shuffledWithChoices = convertedQuestions.map(question => 
-              question && Array.isArray(question.choices) ? shuffleQuestionAndChoices(question) : null
+              question && (question.question || question.image) && Array.isArray(question.choices) ? shuffleQuestionAndChoices(question) : null
             ).filter(q => q !== null);
             const shuffled = shuffleArray(shuffledWithChoices);
             setShuffledQuestions(shuffled);
@@ -167,7 +166,7 @@ export const useMultipleChoiceQuiz = (setId, title, quizType, sessionState, setT
           const convertedQuestions = convertToMultipleChoice(unifiedItems);
           setQuestions(convertedQuestions);
           const shuffledWithChoices = convertedQuestions.map(question => 
-            question && Array.isArray(question.choices) ? shuffleQuestionAndChoices(question) : null
+            question && (question.question || question.image) && Array.isArray(question.choices) ? shuffleQuestionAndChoices(question) : null
           ).filter(q => q !== null);
           const shuffled = shuffleArray(shuffledWithChoices);
           setShuffledQuestions(shuffled);

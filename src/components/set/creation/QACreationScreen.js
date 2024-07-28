@@ -115,8 +115,8 @@ const QACreationScreen = ({ onBack, onSave }) => {
       newErrors.title = 'セットタイトルを入力してください。';
     }
     qaItems.forEach((item, index) => {
-      if (!item.question.trim() || !item.answer.trim()) {
-        newErrors[`item${index}`] = '質問と回答を入力してください。';
+      if (!item.question.trim() && !item.answer.trim() && !item.image) {
+        newErrors[`item${index}`] = '質問または回答、もしくは画像を入力してください。';
       }
     });
     setErrors(newErrors);

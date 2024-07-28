@@ -100,38 +100,30 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
         <CardContent className={styles.quizCardContent}>
           {!quizData.showResults ? (
             <DndContext
-              sensors={sensors}
-              onDragStart={handleDragStart}
-              onDragOver={handleDragOver}
-              onDragEnd={handleDragEnd}
-            >
-              <div className={styles.gridContainer}>
-                {shuffledCategories.map((category, index) => (
-                  <DroppableCategory
-                    key={category.name || `category-${index}`}
-                    category={category}
-                    isActive={hoveredCategory === category.name}
-                    feedbackColor={tempFeedback[category.name] || categoryFeedback[category.name]}
-                    style={{
-                      gridColumn: gridOrder[index].col,
-                      gridRow: gridOrder[index].row,
-                    }}
-                    isWideScreen={isWideScreen}
-                  >
-                    <h3>{category.name}</h3>
-                    {categoryImages[category.name] && (
-                      <img 
-                        src={categoryImages[category.name]} 
-                        alt={`Category ${category.name}`} 
-                        className={styles.categoryImage}
-                      />
-                    )}
-                  </DroppableCategory>
-                ))}
+            sensors={sensors}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
+          >
+            <div className={styles.gridContainer}>
+              {shuffledCategories.map((category, index) => (
+                <DroppableCategory
+                  key={category.name || category.id || `category-${index}`}
+                  category={{...category, index}} // indexを追加
+                  isActive={hoveredCategory === (category.name || category.id || `category-${index}`)}
+                  feedbackColor={tempFeedback[category.name || category.id || `category-${index}`] || categoryFeedback[category.name || category.id || `category-${index}`]}
+                  style={{
+                    gridColumn: gridOrder[index].col,
+                    gridRow: gridOrder[index].row,
+                  }}
+                  isWideScreen={isWideScreen}
+                />
+              ))}
                 <div className={styles.itemContainer}>
-                  {unclassifiedItems[currentItemIndex] && (
+                  {!activeId && unclassifiedItems[currentItemIndex] && (
                     <SortableContext items={unclassifiedItems[currentItemIndex] ? [unclassifiedItems[currentItemIndex]] : []} strategy={verticalListSortingStrategy}>
                       <SortableItem 
+                        key={unclassifiedItems[currentItemIndex].id || `item-${currentItemIndex}`}
                         id={unclassifiedItems[currentItemIndex].id || `item-${currentItemIndex}`}
                         isDragging={unclassifiedItems[currentItemIndex].id === activeId}
                         isClassified={false}

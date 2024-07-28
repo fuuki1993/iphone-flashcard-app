@@ -9,7 +9,6 @@ export function useHashRouter() {
   useEffect(() => {
     const handleHashChange = () => {
       const newHash = window.location.hash.slice(1);
-      console.log('Hash changed to:', newHash); // デバッグ用ログ
       setHashPath(newHash);
     };
 
@@ -23,7 +22,6 @@ export function useHashRouter() {
   }, []);
 
   const push = (path) => {
-    console.log('Pushing path:', path); // デバッグ用ログ
     if (typeof window !== 'undefined') {
       window.location.hash = path;
     }

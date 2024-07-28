@@ -147,10 +147,10 @@ const MultipleChoiceCreationScreen = ({ onBack, onSave }) => {
       newErrors.title = 'セットタイトルを入力してください。';
     }
     questions.forEach((q, index) => {
-      if (!q.question.trim()) {
-        newErrors[`question${index}`] = '問題文を入力してください。';
+      if (!q.question.trim() && !q.image) {
+        newErrors[`question${index}`] = '問題文または画像を入力してください。';
       }
-      if (q.choices.filter(c => c.text.trim()).length < 2) {
+      if (q.choices.length < 2) {
         newErrors[`question${index}choices`] = '少なくとも2つの選択肢を入力してください。';
       }
       if (!q.choices.some(c => c.isCorrect)) {

@@ -115,8 +115,8 @@ const FlashcardCreationScreen = ({ onBack, onSave }) => {
       newErrors.title = 'セットタイトルを入力してください。';
     }
     cards.forEach((card, index) => {
-      if (!card.front.trim() || !card.back.trim()) {
-        newErrors[`card${index}`] = 'カードの表面と裏面を入力してください。';
+      if (!card.front.trim() && !card.back.trim() && !card.image) {
+        newErrors[`card${index}`] = 'カードの表面または裏面、もしくは画像を入力してください。';
       }
     });
     setErrors(newErrors);

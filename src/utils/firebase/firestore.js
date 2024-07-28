@@ -67,8 +67,6 @@ export const getSets = async (userId, type = null) => {
     const querySnapshot = await getDocs(q);
     const sets = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-    console.log('Retrieved sets:', sets); // デバッグ用ログ
-
     if (type) {
       return sets.filter(set => set.type === type);
     }
@@ -265,7 +263,6 @@ export const getStudyHistory = async (userId) => {
       };
     });
 
-    console.log('Fetched study history from Firestore:', studyHistory);
     return studyHistory;
   } catch (error) {
     console.error("Error fetching study history:", error);
@@ -716,8 +713,6 @@ export const calculateTodayStudyTime = async (userId) => {
       return total + (data.studyDuration || 0);
     }, 0);
 
-    console.log('Today study time (seconds):', todayStudyTime);
-    console.log('Study history entries:', querySnapshot.docs.map(doc => doc.data()));
     return todayStudyTime;
   } catch (error) {
     console.error("Error calculating today's study time:", error);

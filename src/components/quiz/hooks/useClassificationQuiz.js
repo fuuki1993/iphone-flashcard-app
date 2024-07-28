@@ -115,7 +115,7 @@ export const useClassificationQuiz = (setId, sessionState, onFinish, setTodayStu
     } else if (set && set.categories) {
       const newItems = set.categories.flatMap(c => 
         c.items.map((item, index) => ({ 
-          id: `${c.name}-${index}`, 
+          id: `${c.name || c.id || `category-${index}`}-${index}`, 
           content: item, 
           category: null, 
           isClassified: false 
@@ -123,15 +123,17 @@ export const useClassificationQuiz = (setId, sessionState, onFinish, setTodayStu
       );
       const shuffledItems = shuffleArray(newItems);
       const shuffledCategories = shuffleArray([...set.categories]);
-      const newCorrectClassification = set.categories.reduce((acc, cat) => {
-        acc[cat.name] = cat.items;
+      const newCorrectClassification = set.categories.reduce((acc, cat, index) => {
+        const categoryId = cat.name || cat.id || `category-${index}`;
+        acc[categoryId] = cat.items;
         return acc;
       }, {});
 
       // カテゴリーの画像URLを保存
-      const newCategoryImages = set.categories.reduce((acc, cat) => {
+      const newCategoryImages = set.categories.reduce((acc, cat, index) => {
+        const categoryId = cat.name || cat.id || `category-${index}`;
         if (cat.image) {
-          acc[cat.name] = cat.image;
+          acc[categoryId] = cat.image;
         }
         return acc;
       }, {});
@@ -253,15 +255,16 @@ export const useClassificationQuiz = (setId, sessionState, onFinish, setTodayStu
         const isCorrect = prev.correctClassification[over.id]?.includes(updatedItems.find(i => i.id === active.id).content);
         setTempFeedback(prevFeedback => ({
           ...prevFeedback,
-          [over.id]: isCorrect ? 'bg-green-200' : 'bg-red-200'
+          [over.id]: isCorrect ? 'green' : 'red'
         }));
 
         const newUnclassifiedItems = updatedItems.filter(item => !item.isClassified);
         setUnclassifiedItems(newUnclassifiedItems);
 
+        // 現在のアイテムインデックスを更新
         setCurrentItemIndex(prevIndex => {
           if (newUnclassifiedItems.length > 0) {
-            return (prevIndex + 1) % newUnclassifiedItems.length;
+            return prevIndex >= newUnclassifiedItems.length ? 0 : prevIndex;
           }
           return 0;
         });
@@ -317,7 +320,7 @@ export const useClassificationQuiz = (setId, sessionState, onFinish, setTodayStu
         if (set && Array.isArray(set.categories)) {
           const newItems = set.categories.flatMap(c => 
             c.items.map((item, index) => ({ 
-              id: `${c.name}-${index}`, 
+              id: `${c.name || c.id || `category-${index}`}-${index}`, 
               content: item, 
               category: null, 
               isClassified: false 
@@ -325,15 +328,17 @@ export const useClassificationQuiz = (setId, sessionState, onFinish, setTodayStu
           );
           const shuffled = shuffleArray(newItems);
           const shuffledCategories = shuffleArray([...set.categories]);
-          const newCorrectClassification = set.categories.reduce((acc, cat) => {
-            acc[cat.name] = cat.items;
+          const newCorrectClassification = set.categories.reduce((acc, cat, index) => {
+            const categoryId = cat.name || cat.id || `category-${index}`;
+            acc[categoryId] = cat.items;
             return acc;
           }, {});
 
           // カテゴリーの画像URLを保存
-          const newCategoryImages = set.categories.reduce((acc, cat) => {
+          const newCategoryImages = set.categories.reduce((acc, cat, index) => {
+            const categoryId = cat.name || cat.id || `category-${index}`;
             if (cat.image) {
-              acc[cat.name] = cat.image;
+              acc[categoryId] = cat.image;
             }
             return acc;
           }, {});

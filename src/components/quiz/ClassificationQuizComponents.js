@@ -40,27 +40,38 @@ SortableItem.displayName = 'SortableItem';
 
 // ドロップ可能なカテゴリーコンポーネント
 export const DroppableCategory = memo(({ category, isActive, feedbackColor, style, isWideScreen }) => {
-  // useDroppableフックを使用してドロップ機能を追加
-  const { setNodeRef } = useDroppable({
-    id: category.name,
-    data: { category: category.name },
+  const { setNodeRef, isOver } = useDroppable({
+    id: category.name || category.id || `category-${category.index}`,
+    data: { category: category.name || category.id || `category-${category.index}` },
   });
 
-  // クラス名をメモ化
   const className = useMemo(() => `
     ${styles.droppableCategory}
     ${feedbackColor ? styles[feedbackColor] : ''}
     ${isActive ? styles.active : ''}
+    ${isOver ? styles.isOver : ''}
     ${isWideScreen ? styles.wideScreenCategory : ''}
-  `, [feedbackColor, isActive, isWideScreen]);
+  `, [feedbackColor, isActive, isOver, isWideScreen]);
 
   return (
     <div ref={setNodeRef} className={className} style={style}>
       <div className={`${styles.categoryContent} ${isWideScreen ? styles.wideScreenCategoryContent : ''}`}>
         {category.image && (
-          <img src={category.image} alt={category.name} className={`${styles.categoryImage} ${isWideScreen ? styles.wideScreenCategoryImage : ''}`} />
+          <img 
+            src={category.image} 
+            alt={category.name || "Category image"} 
+            className={`${styles.categoryImage} ${isWideScreen ? styles.wideScreenCategoryImage : ''}`}
+            draggable="false"
+          />
         )}
-        <h3 className={`${styles.categoryName} ${isWideScreen ? styles.wideScreenCategoryName : ''}`}>{category.name}</h3>
+        {category.name && (
+          <h3 className={`${styles.categoryName} ${isWideScreen ? styles.wideScreenCategoryName : ''}`}>
+            {category.name}
+          </h3>
+        )}
+        {!category.name && !category.image && (
+          <div className={styles.placeholderCategory}>カテゴリー</div>
+        )}
       </div>
     </div>
   );

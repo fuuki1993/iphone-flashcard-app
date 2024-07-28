@@ -197,14 +197,14 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
     if (!setTitle.trim()) {
       newErrors.title = 'セットタイトルを入力してください。';
     }
-    questions.forEach((question, index) => {
-      if (!question.question.trim()) {
-        newErrors[`question${index}`] = '問題文を入力してください。';
+    questions.forEach((q, index) => {
+      if (!q.question.trim() && !q.image) {
+        newErrors[`question${index}`] = '問題文または画像を入力してください。';
       }
-      if (question.choices.filter(choice => choice.text.trim()).length < 2) {
+      if (q.choices.length < 2) {
         newErrors[`question${index}choices`] = '少なくとも2つの選択肢を入力してください。';
       }
-      if (!question.choices.some(choice => choice.isCorrect)) {
+      if (!q.choices.some(c => c.isCorrect)) {
         newErrors[`question${index}correct`] = '正解を選択してください。';
       }
     });
