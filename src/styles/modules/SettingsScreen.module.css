@@ -4,7 +4,8 @@
   max-width: 390px;
   margin-left: auto;
   margin-right: auto;
-  background-color: #f3f4f6;
+  background-color: var(--background);
+  transition: background-color 0.3s ease;
 }
 
 .header {
@@ -16,8 +17,9 @@
 .title {
   font-size: 1.125rem;
   font-weight: bold;
-  color: #1f2937;
+  color: var(--text);
   margin-left: 0.5rem;
+  transition: color 0.3s ease;
 }
 
 .formGroup {
@@ -34,7 +36,7 @@
   display: block;
   font-size: 0.75rem;
   font-weight: 500;
-  color: #6b7280;
+  color: var(--secondary);
   margin-bottom: 0.25rem;
 }
 
@@ -47,7 +49,7 @@
   left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
-  color: #9ca3af;
+  color: var(--secondary);
 }
 
 .input {
@@ -55,9 +57,11 @@
   width: 100%;
   height: 2.5rem;
   font-size: 0.875rem;
-  background-color: white;
-  border: 1px solid #d1d5db;
+  background-color: var(--background);
+  border: 1px solid var(--border);
   border-radius: 0.25rem;
+  color: var(--text);
+  transition: border-color 0.3s ease, background-color 0.3s ease, color 0.3s ease;
 }
 
 .switchGroup {
@@ -69,7 +73,7 @@
 
 .switchLabel {
   font-size: 0.875rem;
-  color: #1f2937;
+  color: var(--text);
 }
 
 .switch {
@@ -92,7 +96,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #ccc;
+  background-color: var(--secondary);
   transition: .4s;
   border-radius: 1.5rem;
 }
@@ -104,17 +108,17 @@
   width: 1.25rem;
   left: 0.125rem;
   bottom: 0.125rem;
-  background-color: white;
+  background-color: var(--background);
   transition: .4s;
   border-radius: 50%;
 }
 
 input:checked + .slider {
-  background-color: #2196F3;
+  background-color: var(--accent);
 }
 
 input:focus + .slider {
-  box-shadow: 0 0 1px #2196F3;
+  box-shadow: 0 0 1px var(--accent);
 }
 
 input:checked + .slider:before {
@@ -130,40 +134,37 @@ input:checked + .slider:before {
 .button {
   width: 100%;
   height: 2.5rem;
-  background-color: #374151;
-  color: white;
+  background-color: var(--secondary);
+  color: var(--background);
   font-size: 0.875rem;
   border-radius: 0.25rem;
+  transition: background-color 0.3s ease, transform 0.2s ease;
 }
 
 .button:hover {
-  background-color: #4b5563;
+  background-color: var(--accent);
+  transform: translateY(-2px);
 }
 
 /* レスポンシブデザイン */
-/* 600px未満 */
-@media (max-width: 480px) {
+@media (max-width: 600px) {
   .container {
     padding: 0.5rem;
+    max-width: 100%;
   }
 
   .title {
     font-size: 1rem;
   }
 
-  .input {
+  .input, .button {
     height: 2.25rem;
-  }
-
-  .button {
-    height: 2.25rem;
+    font-size: 0.75rem;
   }
 }
 
-/* 600px以上1024px未満 */
-@media (min-width: 481px) and (max-width: 768px) {
+@media (min-width: 601px) {
   .container {
-    padding: 1rem;
     max-width: 600px;
   }
 
@@ -176,79 +177,37 @@ input:checked + .slider:before {
   }
 }
 
-/* 1024px以上 */
-@media (min-width: 769px) {
+@media (min-width: 1024px) {
   .container {
-    padding: 1.5rem;
     max-width: 800px;
+    padding: 1rem;
   }
 
   .title {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
   }
 
-  .formGroup {
-    gap: 1.25rem;
-  }
-
-  .input {
-    height: 3rem;
-    font-size: 1rem;
-  }
-
-  .button {
+  .input, .button {
     height: 3rem;
     font-size: 1rem;
   }
 }
 
-/* ダークモード対応 */
-:global(.dark) .container {
-  background-color: #111827;
+/* アニメーション */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-:global(.dark) .title {
-  color: #f3f4f6;
+.fadeIn {
+  animation: fadeIn 0.5s ease-out;
 }
 
-:global(.dark) .label {
-  color: #9ca3af;
+@keyframes slideIn {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
-:global(.dark) .input {
-  background-color: #1f2937;
-  border-color: #4b5563;
-  color: #f3f4f6;
-}
-
-:global(.dark) .icon {
-  color: #6b7280;
-}
-
-:global(.dark) .errorMessage {
-  color: #f87171;
-}
-
-:global(.dark) .button {
-  background-color: #4b5563;
-}
-
-:global(.dark) .button:hover {
-  background-color: #6b7280;
-}
-
-:global(.dark) .switchLabel {
-  color: #f3f4f6;
-}
-
-:global(.dark) .slider {
-  background-color: #4b5563;
-}
-
-:global(.dark) input:checked + .slider {
-  background-color: #3b82f6;
-}
-
-:global(.dark) input:focus + .slider {
-  box-shadow: 0 0 1px #3b82f6;
+.slideIn {
+  animation: slideIn 0.5s ease-out;
 }

@@ -3,7 +3,8 @@
   width: 100%;
   max-width: 390px;
   margin: 0 auto;
-  background-color: #f3f4f6;
+  background-color: var(--background);
+  transition: background-color var(--transition-speed) ease;
 }
 
 .header {
@@ -16,7 +17,13 @@
 .title {
   font-size: 1.125rem;
   font-weight: bold;
-  color: #1f2937;
+  color: var(--text);
+  transition: color var(--transition-speed) ease;
+}
+
+.headerButtons {
+  display: flex;
+  gap: 0.5rem;
 }
 
 .buttonGroup {
@@ -27,6 +34,15 @@
 .shuffleButton,
 .finishButton {
   margin-left: 0.5rem;
+  background-color: var(--secondary);
+  color: var(--background);
+  transition: background-color var(--transition-speed) ease, color var(--transition-speed) ease;
+}
+
+.backButton:hover,
+.shuffleButton:hover,
+.finishButton:hover {
+  background-color: var(--accent);
 }
 
 .choiceGrid {
@@ -36,7 +52,8 @@
 }
 
 .correctChoice {
-  background-color: #e6ffea;
+  background-color: var(--accent);
+  color: var(--background);
 }
 
 .footer {
@@ -52,7 +69,8 @@
 .pagination {
   text-align: center;
   margin-top: 1rem;
-  color: #6b7280;
+  color: var(--secondary);
+  transition: color var(--transition-speed) ease;
 }
 
 .loadingMessage,
@@ -60,7 +78,8 @@
 .emptyMessage {
   text-align: center;
   padding: 1rem;
-  color: #6b7280;
+  color: var(--secondary);
+  transition: color var(--transition-speed) ease;
 }
 
 .quizEndContainer {
@@ -72,19 +91,22 @@
 
 .quizEndCard {
   margin-bottom: 1rem;
-  background-color: white;
+  background-color: var(--background);
+  transition: background-color var(--transition-speed) ease;
 }
 
 .quizEndTitle {
   font-size: 1.5rem;
   font-weight: bold;
-  color: #1f2937;
+  color: var(--text);
+  transition: color var(--transition-speed) ease;
 }
 
 .finalScore {
   font-size: 1.25rem;
   margin-bottom: 1rem;
-  color: #4b5563;
+  color: var(--secondary);
+  transition: color var(--transition-speed) ease;
 }
 
 .quizEndButtons {
@@ -94,30 +116,32 @@
 
 .quizEndButtons button {
   padding: 0.75rem 1.5rem;
-  background-color: #3b82f6;
-  color: #ffffff;
+  background-color: var(--secondary);
+  color: var(--background);
   border: none;
   border-radius: 0.25rem;
   font-size: 1rem;
   font-weight: 600;
-  transition: all 0.3s ease;
+  transition: all var(--transition-speed) ease;
 }
 
 .quizEndButtons button:hover {
-  background-color: #2563eb;
-  transform: translateY(-1px);
+  background-color: var(--accent);
+  transform: translateY(-2px);
 }
 
 .questionCard {
-  background-color: white;
+  background-color: var(--background);
   margin-bottom: 1rem;
   border-radius: 0.5rem;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1), 0 6px 20px rgba(0,0,0,0.05);
+  transition: background-color var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
 }
 
 .questionTitle {
   font-size: 1.125rem;
-  color: #1f2937;
+  color: var(--text);
+  transition: color var(--transition-speed) ease;
 }
 
 .questionContent {
@@ -130,6 +154,8 @@
 .questionText {
   text-align: center;
   margin-bottom: 1rem;
+  color: var(--text);
+  transition: color var(--transition-speed) ease;
 }
 
 .imageContainer {
@@ -150,22 +176,25 @@
   text-align: left;
   width: 100%;
   padding: 0.75rem;
-  border: 2px solid #d1d5db;
+  border: 2px solid var(--border);
   border-radius: 0.25rem;
-  transition: all 0.3s ease;
+  transition: all var(--transition-speed) ease;
   font-size: 0.875rem;
   position: relative;
   overflow: hidden;
+  background-color: var(--background);
+  color: var(--text);
 }
 
 .choiceButton:hover {
-  background-color: #f3f4f6;
-  border-color: #9ca3af;
+  background-color: var(--secondary);
+  border-color: var(--accent);
 }
 
 .choiceButton[data-state="checked"] {
-  background-color: #e0f2fe;
-  border-color: #3b82f6;
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: var(--background);
 }
 
 .choiceButton[data-state="checked"]::after {
@@ -174,37 +203,40 @@
   right: 0.5rem;
   top: 50%;
   transform: translateY(-50%);
-  color: #3b82f6;
+  color: var(--background);
   font-weight: bold;
 }
 
 .correctChoice {
-  background-color: #d1fae5 !important;
-  border-color: #10b981 !important;
+  background-color: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: var(--background) !important;
 }
 
 .incorrectChoice {
-  background-color: #fee2e2 !important;
+  background-color: #ef4444 !important;
   border-color: #ef4444 !important;
+  color: var(--background) !important;
 }
 
 .submitButton {
   width: 100%;
   margin-top: 1rem;
-  background-color: #3b82f6;
-  color: white;
+  background-color: var(--secondary);
+  color: var(--background);
   font-weight: 600;
   padding: 0.5rem 1rem;
   border-radius: 0.25rem;
-  transition: background-color 0.3s ease;
+  transition: background-color var(--transition-speed) ease, transform 0.2s ease;
 }
 
 .submitButton:hover {
-  background-color: #2563eb;
+  background-color: var(--accent);
+  transform: translateY(-2px);
 }
 
 .submitButton:disabled {
-  background-color: #9ca3af;
+  background-color: var(--border);
   cursor: not-allowed;
 }
 
@@ -223,7 +255,8 @@
 
 .correctAnswer {
   font-size: 0.875rem;
-  color: #4b5563;
+  color: var(--secondary);
+  transition: color var(--transition-speed) ease;
 }
 
 /* レスポンシブデザイン */
@@ -300,7 +333,7 @@
 
 @media (min-width: 1024px) {
   .container {
-    max-width: 1200px;
+    max-width: 900px;
     padding: 2rem;
   }
 
@@ -340,100 +373,21 @@
   }
 }
 
-/* ダークモード対応 */
-:global(.dark) .container {
-  background-color: #111827;
+/* アニメーション */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-:global(.dark) .title,
-:global(.dark) .quizEndTitle,
-:global(.dark) .questionTitle {
-  color: #f3f4f6;
+.fadeIn {
+  animation: fadeIn 0.5s ease-out;
 }
 
-:global(.dark) .loadingMessage,
-:global(.dark) .errorMessage,
-:global(.dark) .emptyMessage,
-:global(.dark) .pagination {
-  color: #9ca3af;
+@keyframes slideIn {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
-:global(.dark) .backButton {
-  color: #d1d5db;
-}
-
-:global(.dark) .correctChoice {
-  background-color: #065f46;
-}
-
-:global(.dark) .finalScore,
-:global(.dark) .correctAnswer {
-  color: #d1d5db;
-}
-
-:global(.dark) .questionCard,
-:global(.dark) .quizEndCard {
-  background-color: #1f2937;
-}
-
-:global(.dark) .choiceButton {
-  border-color: #4b5563;
-}
-
-:global(.dark) .choiceButton:hover {
-  background-color: #374151;
-  border-color: #6b7280;
-}
-
-:global(.dark) .choiceButton[data-state="checked"] {
-  background-color: #1e40af;
-  border-color: #60a5fa;
-}
-
-:global(.dark) .choiceButton[data-state="checked"]::after {
-  color: #60a5fa;
-}
-
-:global(.dark) .correctChoice {
-  background-color: #065f46 !important;
-  border-color: #34d399 !important;
-}
-
-:global(.dark) .incorrectChoice {
-  background-color: #7f1d1d !important;
-  border-color: #f87171 !important;
-}
-
-:global(.dark) .submitButton {
-  background-color: #3b82f6;
-  color: #f3f4f6;
-}
-
-:global(.dark) .submitButton:hover {
-  background-color: #2563eb;
-}
-
-:global(.dark) .submitButton:disabled {
-  background-color: #4b5563;
-}
-
-:global(.dark) .correctIcon {
-  color: #34d399;
-}
-
-:global(.dark) .incorrectIcon {
-  color: #f87171;
-}
-
-:global(.dark) .questionImage {
-  filter: brightness(0.8);
-}
-
-:global(.dark) .quizEndButtons button {
-  background-color: #60a5fa;
-  color: #1f2937;
-}
-
-:global(.dark) .quizEndButtons button:hover {
-  background-color: #93c5fd;
+.slideIn {
+  animation: slideIn 0.5s ease-out;
 }

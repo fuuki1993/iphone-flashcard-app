@@ -5,7 +5,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getAllSets, getSessionState, getStudyHistory } from '../../../utils/firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
-import { Book, Globe, Code, Calendar } from 'lucide-react';
+import { FlipHorizontal, MessageCircleQuestion, ListChecks, Combine } from 'lucide-react';
 import { Progress } from '../../ui/feedback/progress';
 import styles from '../../../styles/modules/recentActivities.module.css';
 
@@ -28,15 +28,15 @@ const useRecentActivities = (userId, onStartLearning) => {
   const getIconForSetType = useCallback((type) => {
     switch (type) {
       case 'flashcard':
-        return <Book className="mr-3 text-blue-500" size={24} />;
+        return <FlipHorizontal className="mr-3 text-gray-700" size={24} />;
       case 'qa':
-        return <Globe className="mr-3 text-green-500" size={24} />;
+        return <MessageCircleQuestion className="mr-3 text-gray-700" size={24} />;
       case 'multiple-choice':
-        return <Code className="mr-3 text-purple-500" size={24} />;
+        return <ListChecks className="mr-3 text-gray-700" size={24} />;
       case 'classification':
-        return <Calendar className="mr-3 text-red-500" size={24} />;
+        return <Combine className="mr-3 text-gray-700" size={24} />;
       default:
-        return <Book className="mr-3 text-blue-500" size={24} />;
+        return <FlipHorizontal className="mr-3 text-gray-700" size={24} />;
     }
   }, []);
 

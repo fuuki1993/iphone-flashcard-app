@@ -5,8 +5,9 @@
   width: 100vw;
   padding: 0.75rem;
   overflow: hidden;
-  background-color: #f9fafb; /* より明るい背景色 */
+  background-color: var(--background);
   margin: 0 auto;
+  transition: background-color var(--transition-speed) ease;
 }
 
 .header {
@@ -19,7 +20,8 @@
 .title {
   font-size: 1.125rem;
   font-weight: bold;
-  color: #1f2937;
+  color: var(--text);
+  transition: color var(--transition-speed) ease;
 }
 
 .headerButtons {
@@ -29,19 +31,26 @@
 
 .shuffleButton, .finishButton {
   margin-right: 0.5rem;
+  transition: background-color var(--transition-speed) ease, transform 0.2s ease;
+}
+
+.shuffleButton:hover, .finishButton:hover {
+  transform: translateY(-2px);
 }
 
 .score {
   font-size: 1.125rem;
   font-weight: bold;
-  color: #1f2937;
+  color: var(--text);
+  transition: color var(--transition-speed) ease;
 }
 
 .quizCard {
   flex-grow: 1;
   overflow: hidden;
-  background-color: #ffffff; /* カードの背景を白に */
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); /* 軽いシャドウを追加 */
+  background-color: var(--background);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  transition: background-color var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
 }
 
 .quizCardContent {
@@ -95,15 +104,21 @@
   transform: rotate(90deg);
   width: 8rem;
   height: 3rem;
-  background-color: #f0f0f0;
-  color: #333333;
-  border: 1px solid #cccccc;
+  background-color: var(--secondary);
+  color: var(--background);
+  border: 1px solid var(--border);
+  transition: background-color var(--transition-speed) ease, color var(--transition-speed) ease, border-color var(--transition-speed) ease;
+}
+
+.rotatedButton:hover {
+  background-color: var(--accent);
 }
 
 .rotatedText {
   display: inline-block;
   font-size: 0.875rem;
-  color: #333333;
+  color: var(--text);
+  transition: color var(--transition-speed) ease;
 }
 
 .finalScore {
@@ -111,7 +126,8 @@
   font-weight: bold;
   transform: rotate(90deg);
   white-space: nowrap;
-  color: #1f2937;
+  color: var(--text);
+  transition: color var(--transition-speed) ease;
 }
 
 .resultButton {
@@ -119,9 +135,14 @@
   transform: rotate(90deg);
   width: 8rem;
   height: 3rem;
-  background-color: #f0f0f0;
-  color: #333333;
-  border: 1px solid #cccccc;
+  background-color: var(--secondary);
+  color: var(--background);
+  border: 1px solid var(--border);
+  transition: background-color var(--transition-speed) ease, color var(--transition-speed) ease, border-color var(--transition-speed) ease;
+}
+
+.resultButton:hover {
+  background-color: var(--accent);
 }
 
 .wideScreenButton {
@@ -133,7 +154,8 @@
 .wideScreenButtonText {
   transform: none;
   font-size: 0.875rem;
-  color: #333333;
+  color: var(--text);
+  transition: color var(--transition-speed) ease;
 }
 
 .wideScreenFinalScore {
@@ -148,11 +170,7 @@
     padding: 0.5rem;
   }
 
-  .title {
-    font-size: 1rem;
-  }
-
-  .score {
+  .title, .score {
     font-size: 1rem;
   }
 
@@ -175,15 +193,17 @@
     transform: rotate(90deg);
     width: 8rem;
     height: 3rem;
-    background-color: #f0f0f0;
-    color: #333333;
-    border: 1px solid #cccccc;
+    background-color: var(--secondary);
+    color: var(--background);
+    border: 1px solid var(--border);
+    transition: background-color var(--transition-speed) ease, color var(--transition-speed) ease, border-color var(--transition-speed) ease;
   }
   
   .rotatedText {
     display: inline-block;
     font-size: 0.875rem;
-    color: #333333;
+    color: var(--text);
+    transition: color var(--transition-speed) ease;
   }
 
   .finalScore {
@@ -270,59 +290,30 @@
 
 /* ダークモード対応 */
 :global(.dark) .container {
-  background-color: #111827; /* より暗い背景色 */
+  background-color: var(--background);
 }
 
-:global(.dark) .title {
-  color: #f3f4f6;
-}
-
-:global(.dark) .dragOverlay {
-  background-color: #374151; /* ドラッグ中のオーバーレイをより明るいグレーに */
-  border-color: #4b5563;
-  color: #f3f4f6; /* テキスト色を明るいグレーに */
+:global(.dark) .title,
+:global(.dark) .score,
+:global(.dark) .finalScore,
+:global(.dark) .rotatedText,
+:global(.dark) .wideScreenButtonText {
+  color: var(--text);
 }
 
 :global(.dark) .quizCard {
-  background-color: #1f2937; /* カードの背景をより暗いグレーに */
-  box-shadow: 0 1px 3px 0 rgba(255, 255, 255, 0.1), 0 1px 2px 0 rgba(255, 255, 255, 0.06); /* ダークモード用のシャドウ */
+  background-color: var(--background);
+  box-shadow: 0 1px 3px 0 rgba(255, 255, 255, 0.1), 0 1px 2px 0 rgba(255, 255, 255, 0.06);
 }
 
-:global(.dark) .score {
-  color: #f3f4f6;
-}
-
-:global(.dark) .quizCardContent {
-  background-color: #1f2937;
-}
-
-:global(.dark) .rotatedButton {
-  background-color: #374151;
-  color: #f3f4f6;
-}
-
-:global(.dark) .rotatedButton:hover {
-  background-color: #4b5563;
-}
-
-:global(.dark) .rotatedText {
-  color: #f3f4f6;
-}
-
-:global(.dark) .finalScore {
-  color: #f3f4f6;
-}
-
+:global(.dark) .rotatedButton,
 :global(.dark) .resultButton {
-  background-color: #374151;
-  color: #f3f4f6;
-  border-color: #4b5563;
+  background-color: var(--secondary);
+  color: var(--background);
+  border-color: var(--border);
 }
 
+:global(.dark) .rotatedButton:hover,
 :global(.dark) .resultButton:hover {
-  background-color: #4b5563;
-}
-
-:global(.dark) .wideScreenButtonText {
-  color: #f3f4f6;
+  background-color: var(--accent);
 }

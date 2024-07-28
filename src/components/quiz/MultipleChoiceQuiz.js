@@ -59,15 +59,15 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <Button variant="ghost" size="icon" onClick={onBack} className={styles.backButton}>
+        <Button variant="ghost" size="icon" onClick={onBack}>
           <ArrowLeft />
         </Button>
         <h2 className={styles.title}>多肢選択問題</h2>
-        <div className={styles.buttonGroup}>
+        <div className={styles.headerButtons}>
           <Button variant="ghost" size="icon" onClick={handleShuffle} className={styles.shuffleButton}>
             <Shuffle />
           </Button>
-          <Button variant="ghost" size="icon" onClick={handleFinish} className={styles.finishButton}>
+          <Button variant="ghost" size="icon" onClick={handleFinish}>
             終了
           </Button>
         </div>

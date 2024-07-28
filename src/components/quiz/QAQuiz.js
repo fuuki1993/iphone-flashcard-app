@@ -61,19 +61,17 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTod
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <div className={styles.headerContent}>
-          <Button variant="ghost" size="icon" onClick={onBack} className={styles.backButton}>
-            <ArrowLeft />
+        <Button variant="ghost" size="icon" onClick={onBack}>
+          <ArrowLeft />
+        </Button>
+        <h2 className={styles.title}>一問一答</h2>
+        <div className={styles.headerButtons}>
+          <Button variant="ghost" size="icon" onClick={handleShuffle} className={styles.shuffleButton}>
+            <Shuffle />
           </Button>
-          <h2 className={styles.title}>一問一答</h2>
-          <div className={styles.headerButtons}>
-            <Button variant="ghost" size="icon" onClick={handleShuffle} className={styles.shuffleButton}>
-              <Shuffle />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={handleFinish} className={styles.finishButton}>
-              終了
-            </Button>
-          </div>
+          <Button variant="ghost" size="icon" onClick={handleFinish}>
+            終了
+          </Button>
         </div>
       </div>
 

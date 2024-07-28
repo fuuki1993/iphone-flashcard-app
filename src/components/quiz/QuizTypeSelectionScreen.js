@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/layout/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/form/select';
-import { ArrowLeft, BookOpen, List, CheckSquare, Layers, Play } from 'lucide-react';
+import { ArrowLeft, FlipHorizontal, MessageCircleQuestion, ListChecks, Combine, Play } from 'lucide-react';
 import { getSets, clearSessionState } from '@/utils/firebase/firestore';
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import styles from '@/styles/modules/QuizTypeSelectionScreen.module.css';
@@ -111,10 +111,10 @@ const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
   }, [selectedSets, prefetchQuizData]);
 
   const quizTypes = [
-    { id: 'flashcard', title: 'フラッシュカード', icon: BookOpen, description: '表と裏のある単語カードスタイル' },
-    { id: 'qa', title: '一問一答', icon: List, description: '質問と回答のペアで学習' },
-    { id: 'multiple-choice', title: '多肢選択', icon: CheckSquare, description: '複数の選択肢から正解を選ぶ' },
-    { id: 'classification', title: '分類', icon: Layers, description: '項目をカテゴリーに分類' },
+    { id: 'flashcard', title: 'フラッシュカード', icon: FlipHorizontal, description: '表と裏のある単語カードスタイル' },
+    { id: 'qa', title: '一問一答', icon: MessageCircleQuestion, description: '質問と回答のペアで学習' },
+    { id: 'multiple-choice', title: '多肢選択', icon: ListChecks, description: '複数の選択肢から正解を選ぶ' },
+    { id: 'classification', title: '分類', icon: Combine, description: '項目をカテゴリーに分類' },
   ];
 
   const handleSetSelection = useCallback((quizType, setId) => {

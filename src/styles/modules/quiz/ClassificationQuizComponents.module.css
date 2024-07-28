@@ -6,17 +6,18 @@
   border-radius: 0.25rem;
   font-size: 1.5rem;
   font-weight: 600;
-  background-color: #ffffff;
-  color: #1f2937;
+  background-color: var(--background);
+  color: var(--text);
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
   white-space: nowrap;
   max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: background-color var(--transition-speed) ease, color var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
 }
 
 .classified {
-  background-color: #e5e7eb;
+  background-color: var(--secondary);
 }
 
 .dragging {
@@ -29,11 +30,11 @@
   align-items: center;
   justify-content: center;
   border-radius: 0.25rem;
-  transition: all 0.3s ease;
+  transition: all var(--transition-speed) ease;
   width: 100%;
   height: 100%;
-  background-color: #f3f4f6;
-  border: 1px solid #d1d5db;
+  background-color: var(--background);
+  border: 1px solid var(--border);
   overflow: hidden;
   position: relative;
   min-height: 100px;
@@ -69,17 +70,18 @@
   max-width: 100%;
   background-color: rgba(255, 255, 255, 0.7);
   z-index: 1;
-  color: #1f2937;
+  color: var(--text);
   pointer-events: none;
+  transition: color var(--transition-speed) ease, background-color var(--transition-speed) ease;
 }
 
 .active {
-  border: 2px solid #3b82f6;
-  background-color: #eff6ff;
+  border: 2px solid var(--accent);
+  background-color: var(--secondary);
 }
 
 .isOver {
-  background-color: rgba(59, 130, 246, 0.1);
+  background-color: var(--secondary);
 }
 
 /* フィードバックカラー */
@@ -92,44 +94,45 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #f3f4f6;
-  color: #9ca3af;
+  background-color: var(--background);
+  color: var(--text);
   font-size: 1rem;
   text-align: center;
+  transition: background-color var(--transition-speed) ease, color var(--transition-speed) ease;
 }
 
 /* ダークモード */
 :global(.dark) .sortableItem {
-  background-color: #374151;
-  color: #f3f4f6;
+  background-color: var(--background);
+  color: var(--text);
   box-shadow: 0 1px 3px 0 rgba(255, 255, 255, 0.1), 0 1px 2px 0 rgba(255, 255, 255, 0.06);
 }
 
 :global(.dark) .classified {
-  background-color: #4b5563;
+  background-color: var(--secondary);
 }
 
 :global(.dark) .droppableCategory {
-  background-color: #1f2937;
-  border-color: #4b5563;
+  background-color: var(--background);
+  border-color: var(--border);
 }
 
 :global(.dark) .categoryName {
   background-color: rgba(0, 0, 0, 0.7);
-  color: #f3f4f6;
+  color: var(--text);
 }
 
 :global(.dark) .active {
-  border-color: #3b82f6;
-  background-color: #1e3a8a;
+  border-color: var(--accent);
+  background-color: var(--secondary);
 }
 
 :global(.dark) .green { background-color: #065f46; }
 :global(.dark) .red { background-color: #991b1b; }
 
 :global(.dark) .dragOverlay {
-  background-color: #374151;
-  color: #f3f4f6;
+  background-color: var(--background);
+  color: var(--text);
   box-shadow: 0 2px 4px rgba(255, 255, 255, 0.1);
 }
 
@@ -143,7 +146,7 @@
   .dragOverlay {
     writing-mode: horizontal-tb;
     text-orientation: mixed;
-    background-color: #ffffff;
+    background-color: var(--background);
     padding: 0.5rem;
     border-radius: 0.25rem;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);

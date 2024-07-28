@@ -1,22 +1,58 @@
 :root {
-    --background: #ffffff;
-    --text: #000000;
-    --primary: #1f2937;
-    --secondary: #4b5563;
-    --accent: #3b82f6;
-  }
+  --background: #ffffff;
+  --text: #333333;
+  --primary: #4a4a4a;
+  --secondary: #757575;
+  --accent: #2c2c2c;
+  --border: #e0e0e0;
   
-  .dark {
-    --background: #1f2937;
-    --text: #ffffff;
-    --primary: #e5e7eb;
-    --secondary: #9ca3af;
-    --accent: #60a5fa;
-  }
-  
-  body {
-    background-color: var(--background);
-    color: var(--text);
-  }
-  
-  /* その他のグローバルスタイル */
+  --transition-speed: 0.3s;
+}
+
+:root.dark {
+  --background: #111827;
+  --text: #f0f0f0;
+  --primary: #c0c0c0;
+  --secondary: #a0a0a0;
+  --accent: #ffffff;
+  --border: #404040;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--text);
+  transition: background-color var(--transition-speed) ease, color var(--transition-speed) ease;
+}
+
+/* グローバルなアニメーション */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.pulse {
+  animation: pulse 2s infinite;
+}
+
+/* スムーズなスクロール */
+html {
+  scroll-behavior: smooth;
+}
+
+/* フォーカス時のアウトライン */
+:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ボタンのベーススタイル */
+button {
+  transition: background-color var(--transition-speed) ease, transform 0.2s ease;
+}
+
+button:hover {
+  transform: translateY(-2px);
+}
+
+/* その他のグローバルスタイル */

@@ -1,10 +1,11 @@
 .container {
   padding: 0.75rem;
   width: 100%;
-  max-width: 100%;
+  max-width: 390px;
   margin-left: auto;
   margin-right: auto;
-  background-color: #f3f4f6;
+  background-color: var(--background);
+  transition: background-color var(--transition-speed) ease;
 }
 
 .header {
@@ -17,12 +18,13 @@
 .title {
   font-size: 1.125rem;
   font-weight: bold;
-  color: #1f2937;
+  color: var(--text);
+  transition: color var(--transition-speed) ease;
 }
 
 .description {
   font-size: 0.875rem;
-  color: #6b7280;
+  color: var(--secondary);
   margin-bottom: 0.75rem;
 }
 
@@ -33,10 +35,11 @@
 }
 
 .quizTypeCard {
-  background-color: white;
+  background-color: var(--background);
   border-radius: 0.5rem;
   overflow: hidden;
-  transition: box-shadow 0.3s ease;
+  transition: box-shadow var(--transition-speed) ease, background-color var(--transition-speed) ease;
+  border: 1px solid var(--border);
 }
 
 .quizTypeCard:hover {
@@ -48,14 +51,14 @@
   flex-direction: row;
   align-items: center;
   padding: 0.75rem 1rem;
-  background-color: #1f2937;
-  color: white;
+  background-color: var(--primary);
+  color: var(--background);
 }
 
 .cardIcon {
   height: 1.5rem;
   width: 1.5rem;
-  color: #3b82f6;
+  color: var(--accent);
   margin-right: 0.75rem;
   flex-shrink: 0;
 }
@@ -75,7 +78,7 @@
 
 .cardDescription {
   font-size: 0.75rem;
-  color: #6b7280;
+  color: var(--secondary);
   margin-bottom: 0.75rem;
   flex-grow: 1;
 }
@@ -90,30 +93,36 @@
 .button {
   font-size: 0.75rem;
   white-space: nowrap;
-  background-color: #3b82f6;
-  color: white;
+  background-color: var(--accent);
+  color: var(--background);
   padding: 0.5rem 1rem;
   border-radius: 0.25rem;
-  transition: background-color 0.2s;
+  transition: background-color var(--transition-speed) ease, transform 0.2s ease;
+}
+
+.button:hover {
+  background-color: var(--primary);
+  transform: translateY(-2px);
 }
 
 .button:first-child {
-  background-color: #3b82f6;
-  color: white;
+  background-color: var(--accent);
+  color: var(--background);
 }
 
 .button:first-child:hover {
-  background-color: #2563eb;
+  background-color: var(--primary);
 }
 
 .button:last-child {
-  background-color: white;
-  color: #3b82f6;
-  border: 1px solid #3b82f6;
+  background-color: var(--background);
+  color: var(--accent);
+  border: 1px solid var(--accent);
 }
 
 .button:last-child:hover {
-  background-color: #f0f9ff;
+  background-color: var(--secondary);
+  color: var(--background);
 }
 
 .buttonIcon {
@@ -123,7 +132,7 @@
 }
 
 /* レスポンシブデザイン */
-@media (max-width: 480px) {
+@media (max-width: 600px) {
   .container {
     padding: 0.5rem;
     max-width: 100%;
@@ -147,9 +156,10 @@
   }
 }
 
-@media (min-width: 481px) and (max-width: 768px) {
+@media (min-width: 601px) {
   .container {
-    max-width: 600px;
+    max-width: 800px;
+    padding: 1rem;
   }
 
   .cardList {
@@ -159,73 +169,104 @@
   }
 
   .quizTypeCard {
+    height: 100%;
     display: flex;
     flex-direction: column;
   }
+
+  .cardContent {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .cardTitle,
+  .cardDescription,
+  .button {
+    font-size: 0.875rem;
+  }
 }
 
-@media (min-width: 769px) {
+@media (min-width: 1024px) {
   .container {
-    max-width: 800px;
-    padding: 1rem;
+    max-width: 1000px;
+    padding: 1.5rem;
   }
 
   .cardList {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
     gap: 1.5rem;
   }
 
   .title {
-    font-size: 1.25rem;
+    font-size: 1.5rem;
   }
 
   .description {
+    font-size: 1.125rem;
+  }
+
+  .cardTitle,
+  .cardDescription,
+  .button {
     font-size: 1rem;
   }
 
-  .button {
-    font-size: 0.875rem;
-    padding: 0.6rem 1.2rem;
+  .cardIcon {
+    height: 2rem;
+    width: 2rem;
   }
 
-  .quizTypeCard {
-    display: flex;
-    flex-direction: column;
+  .cardHeader {
+    padding: 1rem 1.25rem;
+  }
+
+  .cardContent {
+    padding: 1rem 1.25rem;
   }
 }
 
-/* Dark mode styles */
+/* ダークモード対応 */
 :global(.dark) .container {
-  background-color: #111827;
+  background-color: var(--background);
 }
 
 :global(.dark) .title {
-  color: #f3f4f6;
+  color: var(--text);
 }
 
 :global(.dark) .description {
-  color: #9ca3af;
+  color: var(--secondary);
 }
 
 :global(.dark) .quizTypeCard {
-  background-color: #1f2937;
+  background-color: var(--background);
 }
 
 :global(.dark) .cardHeader {
-  background-color: #374151;
+  background-color: var(--primary);
 }
 
 :global(.dark) .cardDescription {
-  color: #9ca3af;
+  color: var(--secondary);
 }
 
 :global(.dark) .button:last-child {
-  background-color: #4b5563;
-  color: #f3f4f6;
-  border-color: #3b82f6;
+  background-color: var(--secondary);
+  color: var(--background);
+  border-color: var(--accent);
 }
 
 :global(.dark) .button:last-child:hover {
-  background-color: #2563eb;
+  background-color: var(--primary);
+}
+
+/* アニメーション */
+.quizTypeCard {
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
