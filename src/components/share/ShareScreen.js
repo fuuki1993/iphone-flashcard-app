@@ -128,7 +128,8 @@ const ShareScreen = ({ onBack, user }) => {
   const handleViewDetails = async (setId) => {
     try {
       const setDetails = await getPublicSetDetails(setId);
-      setSelectedSet(setDetails);
+      const authorDisplayName = await getUserDisplayName(setDetails.originalAuthorId);
+      setSelectedSet({ ...setDetails, authorDisplayName });
       setIsDetailsModalOpen(true);
     } catch (err) {
       console.error("セット詳細の取得中にエラーが発生しました:", err);
