@@ -18,20 +18,10 @@ import styles from '@/styles/modules/AuthScreen.module.css';
  * @param {Function} onSwitchToSignUp - サインアップ画面への切り替え関数
  */
 const SignIn = ({ onSignIn, onSwitchToSignUp }) => {
-  // ----------------------------------------
-  // ステート管理
-  // ----------------------------------------
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
 
-  // ----------------------------------------
-  // イベントハンドラ
-  // ----------------------------------------
-  /**
-   * フォーム送信時の処理
-   * @param {Event} e - フォーム送信イベント
-   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -50,38 +40,33 @@ const SignIn = ({ onSignIn, onSwitchToSignUp }) => {
     }
   };
 
-  // ----------------------------------------
-  // レンダリング
-  // ----------------------------------------
   return (
-    <div className={styles.container}>
-      <div className={styles.card}>
-        <h2 className={styles.cardTitle}>サインイン</h2>
-        <p className={styles.cardDescription}>アカウントにサインインしてください</p>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="メールアドレス"
-            required
-          />
-          <Input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="パスワード"
-            required
-          />
-          <Button type="submit" className={styles.signInButton}>サインイン</Button>
-          {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
-        </form>
-        <p className="text-center">
-          アカウントをお持ちでない方は
-          <Button variant="link" onClick={onSwitchToSignUp}>サインアップ</Button>
-        </p>
-      </div>
-    </div>
+    <>
+      <h2 className={styles.cardTitle}>サインイン</h2>
+      <p className={styles.cardDescription}>アカウントにサインインしてください</p>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="メールアドレス"
+          required
+        />
+        <Input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="パスワード"
+          required
+        />
+        <Button type="submit" className={styles.button}>サインイン</Button>
+        {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+      </form>
+      <p className="text-center mt-4">
+        アカウントをお持ちでない方は
+        <Button variant="link" onClick={onSwitchToSignUp}>サインアップ</Button>
+      </p>
+    </>
   );
 };
 

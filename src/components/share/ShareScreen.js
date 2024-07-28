@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Globe, Lock, Search, Filter } from 'lucide-react';
-import { getSets, publishSet, unpublishSet, getPublishedSets, copyPublishedSet, debugPublicSets, getUserDisplayName } from '@/utils/firebase/firestore';
+import { ArrowLeft, Globe, Lock, Search, Filter, Eye } from 'lucide-react';
+import { getSets, publishSet, unpublishSet, getPublishedSets, copyPublishedSet, debugPublicSets, getUserDisplayName, getPublicSetDetails } from '@/utils/firebase/firestore';
+import PublicSetDetailsModal from './PublicSetDetailsModal';
 import {
   Dialog,
   DialogContent,
@@ -27,6 +28,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/form/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/layout/tabs";
+import styles from '@/styles/modules/ShareScreen.module.css';  // この行を追加
 
 const ShareScreen = ({ onBack, user }) => {
   const [userSets, setUserSets] = useState([]);
@@ -39,6 +41,8 @@ const ShareScreen = ({ onBack, user }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogContent, setDialogContent] = useState({ title: '', description: '' });
+  const [selectedSet, setSelectedSet] = useState(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   const isSetAlreadyCopied = (publishedSetTitle) => {
     return userSets.some(set => set.title === publishedSetTitle);
@@ -119,18 +123,36 @@ const ShareScreen = ({ onBack, user }) => {
     }
   };
 
+
+
+  const handleViewDetails = async (setId) => {
+    try {
+      const setDetails = await getPublicSetDetails(setId);
+      setSelectedSet(setDetails);
+      setIsDetailsModalOpen(true);
+    } catch (err) {
+      console.error("セット詳細の取得中にエラーが発生しました:", err);
+      setDialogContent({
+        title: '詳細取得エラー',
+        description: 'セット詳細の取得中にエラーが発生しました。'
+      });
+      setDialogOpen(true);
+    }
+  };
+
   const handleCopy = async (publishedSetId) => {
     setIsCopying(true);
     try {
-      const setToCopy = publishedSets.find(set => set.id === publishedSetId);
       await copyPublishedSet(user.uid, publishedSetId);
       const updatedSets = await getSets(user.uid);
       setUserSets(updatedSets);
       setDialogContent({
         title: 'コピー成功',
-        description: `セット "${setToCopy.title}" が正常にコピーされました。`
+        description: `セットが正常にコピーされました。`
       });
       setDialogOpen(true);
+      setIsDetailsModalOpen(false);  // モーダルを閉じる
+      setSelectedSet(null);  // 選択されたセットをリセット
     } catch (err) {
       console.error("公開セットのコピー中にエラーが発生しました:", err);
       setDialogContent({
@@ -167,6 +189,16 @@ const ShareScreen = ({ onBack, user }) => {
               <p className="text-sm text-gray-500">タイプ: {quizTypes.find(type => type.id === set.type)?.label || set.type}</p>
             </CardContent>
             <CardFooter className="mt-auto">
+              {activeTab === 'published-sets' && (
+                <Button 
+                  onClick={() => handleViewDetails(set.id)} 
+                  variant="outline" 
+                  className="w-full mb-2"
+                >
+                  <Eye className="mr-2 h-4 w-4" />
+                  詳細を見る
+                </Button>
+              )}
               <Button 
                 onClick={() => handleAction(set.id)} 
                 variant="outline" 
@@ -261,12 +293,28 @@ const ShareScreen = ({ onBack, user }) => {
         </TabsContent>
       </Tabs>
 
+      <PublicSetDetailsModal
+        isOpen={isDetailsModalOpen}
+        onClose={() => setIsDetailsModalOpen(false)}
+        set={selectedSet}
+        onCopy={handleCopy}
+        isAlreadyCopied={selectedSet ? isSetAlreadyCopied(selectedSet.title) : false}
+      />
+
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className={styles.dialogContent}>
           <DialogHeader>
-            <DialogTitle>{dialogContent.title}</DialogTitle>
-            <DialogDescription>{dialogContent.description}</DialogDescription>
+            <DialogTitle className={styles.dialogTitle}>{dialogContent.title}</DialogTitle>
+            <DialogDescription className={styles.dialogDescription}>{dialogContent.description}</DialogDescription>
           </DialogHeader>
+          <div className={styles.dialogFooter}>
+            <Button 
+              onClick={() => setDialogOpen(false)} 
+              className={`${styles.dialogButton} ${styles.dialogSecondaryButton}`}
+            >
+              閉じる
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

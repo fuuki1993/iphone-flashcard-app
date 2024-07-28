@@ -198,28 +198,16 @@
   
   .dailyGoalProgressWrapper {
     width: 100%;
-    height: 0.5rem;
-    background-color: #e5e7eb;
-    border-radius: 9999px;
+    height: 8px;
+    background-color: #e0e0e0;
+    border-radius: 4px;
     overflow: hidden;
-    margin-bottom: 0.5rem;
   }
 
-  .dailyGoalProgress {
+  .dailyGoalProgressBar {
     height: 100%;
-    border-radius: 9999px;
-  }
-
-  .dailyGoalProgress::-webkit-progress-bar {
-    background-color: #e5e7eb;
-  }
-
-  .dailyGoalProgress::-webkit-progress-value {
-    background-color: #3b82f6;
-  }
-
-  .dailyGoalProgress::-moz-progress-bar {
-    background-color: #3b82f6;
+    background-color: #60a5fa;
+    transition: width 0.3s ease-in-out;
   }
 
   .goalAchieved {
@@ -587,15 +575,7 @@
   background-color: #4b5563;
 }
 
-:global(.dark) .dailyGoalProgress::-webkit-progress-bar {
-  background-color: #4b5563;
-}
-
-:global(.dark) .dailyGoalProgress::-webkit-progress-value {
-  background-color: #60a5fa;
-}
-
-:global(.dark) .dailyGoalProgress::-moz-progress-bar {
+:global(.dark) .dailyGoalProgressBar {
   background-color: #60a5fa;
 }
 
@@ -685,4 +665,110 @@
 
 :global(.dark) .adminUpdateFormCancelButton:hover {
   background-color: #6b7280;
+}
+
+.updateDialog {
+  background-color: white;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  max-width: 90%;
+  width: 400px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.updateDialogTitle {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #1f2937;
+  margin-bottom: 0.5rem;
+}
+
+.updateDialogDescription {
+  font-size: 0.875rem;
+  color: #4b5563;
+  margin-bottom: 1rem;
+}
+
+.updateContentItem {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.updateDialogCloseButton {
+  margin-top: 1rem;
+  width: 100%;
+  background-color: #3b82f6;
+  color: white;
+  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  transition: background-color 0.2s;
+}
+
+.updateDialogCloseButton:hover {
+  background-color: #2563eb;
+}
+
+/* レスポンシブデザイン */
+@media (max-width: 600px) {
+  .updateDialog {
+    padding: 1rem;
+    width: 95%;
+  }
+
+  .updateDialogTitle {
+    font-size: 1rem;
+  }
+
+  .updateDialogDescription,
+  .updateDialogCloseButton {
+    font-size: 0.75rem;
+  }
+}
+
+@media (min-width: 601px) and (max-width: 1023px) {
+  .updateDialog {
+    width: 80%;
+  }
+}
+
+@media (min-width: 1024px) {
+  .updateDialog {
+    width: 500px;
+  }
+
+  .updateDialogTitle {
+    font-size: 1.5rem;
+  }
+
+  .updateDialogDescription,
+  .updateDialogCloseButton {
+    font-size: 1rem;
+  }
+}
+
+/* ダークモード対応 */
+:global(.dark) .updateDialog {
+  background-color: #1f2937;
+}
+
+:global(.dark) .updateDialogTitle {
+  color: #f3f4f6;
+}
+
+:global(.dark) .updateDialogDescription {
+  color: #d1d5db;
+}
+
+:global(.dark) .updateContentItem {
+  border-top-color: #4b5563;
+}
+
+:global(.dark) .updateDialogCloseButton {
+  background-color: #3b82f6;
+}
+
+:global(.dark) .updateDialogCloseButton:hover {
+  background-color: #2563eb;
 }

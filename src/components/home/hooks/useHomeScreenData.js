@@ -4,14 +4,15 @@
  * =============================================
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { 
   getAllSets, 
   getSessionState, 
   getStudyHistory, 
   getCurrentProgress, 
   updateCurrentProgress,
-  calculateCurrentProgress
+  calculateCurrentProgress,
+  calculateTodayStudyTime,
 } from '../../../utils/firebase/firestore';
 
 /**
@@ -21,8 +22,10 @@ import {
  * @param {number} externalDailyGoal - 外部から設定される日次目標
  * @param {Array} recentActivities - useRecentActivitiesから取得した最近の活動データ
  * @param {function} calculateTotalStudiedItems - useRecentActivitiesから取得した勉強済みの問題数の合計を計算する関数
+ * @param {object} cachedData - キャッシュされたデータ
+ * @param {function} setCachedData - キャッシュデータを更新する関数
  */
-const useHomeScreenData = (userId, externalDailyGoal, recentActivities, calculateTotalStudiedItems) => {
+const useHomeScreenData = (userId, externalDailyGoal, recentActivities, calculateTotalStudiedItems, cachedData, setCachedData) => {
   // ----------------------------------------
   // ステート管理
   // ----------------------------------------
@@ -33,23 +36,17 @@ const useHomeScreenData = (userId, externalDailyGoal, recentActivities, calculat
   const [todayStudyTime, setTodayStudyTime] = useState(0);
   const [isGoalAchieved, setIsGoalAchieved] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const prevTodayStudyTimeRef = useRef(0);
+  const [lastUpdateTimestamp, setLastUpdateTimestamp] = useState(0);
 
   // ----------------------------------------
-  // ユーティリティ関数
+  // メモ化されたユーティリティ関数
   // ----------------------------------------
-  /**
-   * @function convertSecondsToMinutes
-   * @description 秒を分に変換する
-   */
-  const convertSecondsToMinutes = useCallback((seconds) => {
+  const convertSecondsToMinutes = useMemo(() => (seconds) => {
     return Math.floor(seconds / 60);
   }, []);
 
-  /**
-   * @function calculateTotalItems
-   * @description 全アイテム数を計算する
-   */
-  const calculateTotalItems = useCallback((sets) => {
+  const calculateTotalItems = useMemo(() => (sets) => {
     let flashcardItems = 0;
     let qaItems = 0;
     let multipleChoiceItems = 0;
@@ -126,11 +123,7 @@ const useHomeScreenData = (userId, externalDailyGoal, recentActivities, calculat
     return totalItems;
   }, []);
 
-  /**
-   * @function calculateCompletedItems
-   * @description recentActivitiesから完了したアイテム数を計算する
-   */
-  const calculateCompletedItems = useCallback(() => {
+  const calculateCompletedItems = useMemo(() => () => {
     if (typeof calculateTotalStudiedItems !== 'function') {
       console.error('calculateTotalStudiedItems is not a function');
       return 0;
@@ -140,44 +133,80 @@ const useHomeScreenData = (userId, externalDailyGoal, recentActivities, calculat
     return completedItems;
   }, [calculateTotalStudiedItems]);
 
-  /**
-   * @function calculateStreak
-   * @description 学習の連続日数を計算する
-   */
-  const calculateStreak = useCallback(async (userId) => {
+  const calculateStreak = useCallback(async () => {
+    if (!userId) {
+      console.log('No userId, returning 0 streak');
+      return 0;
+    }
+  
     const studyHistory = await getStudyHistory(userId);
-    let streak = 0;
+    console.log('Study history for streak calculation:', studyHistory);
+  
+    let currentStreak = 0;
     let currentDate = new Date();
     currentDate.setHours(0, 0, 0, 0);
-
+  
+    const todayAchieved = convertSecondsToMinutes(todayStudyTime) >= dailyGoal;
+    console.log('Today achieved:', todayAchieved, 'Today study time:', todayStudyTime, 'Daily goal:', dailyGoal);
+  
+    if (todayAchieved) {
+      currentStreak = 1;
+      console.log('Today goal achieved, starting streak at 1');
+    } else {
+      console.log('Today goal not achieved, starting streak at 0');
+    }
+  
     for (let i = 0; i < studyHistory.length; i++) {
       const entry = studyHistory[i];
       const entryDate = new Date(entry.date);
       entryDate.setHours(0, 0, 0, 0);
-      
-      if (currentDate.getTime() - entryDate.getTime() > 24 * 60 * 60 * 1000) {
+  
+      console.log(`Checking entry: ${entryDate.toISOString()}, study duration: ${entry.studyDuration}`);
+  
+      if (entryDate.getTime() === currentDate.getTime()) {
+        console.log('Skipping today\'s entry');
+        continue;
+      }
+  
+      const dayDifference = (currentDate.getTime() - entryDate.getTime()) / (1000 * 3600 * 24);
+      console.log(`Day difference: ${dayDifference}`);
+  
+      if (dayDifference === 1 && (entry.studyDuration >= dailyGoal * 60)) {
+        currentStreak++;
+        currentDate = entryDate;
+        console.log(`Streak increased to ${currentStreak}`);
+      } else {
+        console.log('Streak chain broken');
         break;
       }
-      
-      if (entryDate.getTime() === currentDate.getTime() && entry.studyDuration >= dailyGoal * 60) {
-        streak++;
-        currentDate.setDate(currentDate.getDate() - 1);
-      }
     }
-
-    return streak;
-  }, [dailyGoal]);
+  
+    console.log('Final calculated streak:', currentStreak);
+    return currentStreak;
+  }, [userId, dailyGoal, todayStudyTime, convertSecondsToMinutes]);
 
   // ----------------------------------------
   // データ読み込み
   // ----------------------------------------
-  /**
-   * @function loadData
-   * @description ホーム画面に必要なデータを読み込む
-   */
   const loadData = useCallback(async () => {
+    const currentTime = Date.now();
+    if (currentTime - lastUpdateTimestamp < 60000) { // 1分以内の更新は行わない
+      return;
+    }
+  
     setIsLoading(true);
     try {
+      console.log('Starting loadData function');
+      // キャッシュされたデータがある場合はそれを使用
+      if (cachedData) {
+        setCurrentProgress(cachedData.currentProgress);
+        setStreak(cachedData.streak);
+        setTodayStudyTime(cachedData.todayStudyTime);
+        setIsGoalAchieved(cachedData.isGoalAchieved);
+        setIsLoading(false);
+        return;
+      }
+
       if (!userId) {
         throw new Error('ユーザーが認証されていません');
       }
@@ -237,14 +266,30 @@ const useHomeScreenData = (userId, externalDailyGoal, recentActivities, calculat
       console.log('Final Total Study Time:', finalTotalStudyTime);
       setTodayStudyTime(finalTotalStudyTime);
 
-      const newStreak = await calculateStreak(userId);
-      setStreak(newStreak);
+      // 今日の学習時間を取得
+      const newTodayStudyTime = await calculateTodayStudyTime(userId);
+      console.log('New today study time:', newTodayStudyTime);  // デバッグ用ログ
+      setTodayStudyTime(newTodayStudyTime);
+
+      // 新しいstreakを計算
+      const newStreak = await calculateStreak();
+      console.log('New streak calculated:', newStreak);
+
+      // キャッシュを更新
+      setCachedData({
+        currentProgress: newCurrentProgress,
+        streak: newStreak,
+        todayStudyTime: newTodayStudyTime,
+        isGoalAchieved: convertSecondsToMinutes(newTodayStudyTime) >= dailyGoal,
+      });
+
+      setLastUpdateTimestamp(currentTime);
     } catch (error) {
       console.error("データの読み込み中にエラーが発生しました:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [userId, calculateTotalItems, calculateCompletedItems, recentActivities]);
+  }, [userId, calculateStreak, dailyGoal, convertSecondsToMinutes]);
 
   // ----------------------------------------
   // 副作用
@@ -264,6 +309,17 @@ const useHomeScreenData = (userId, externalDailyGoal, recentActivities, calculat
     setDailyGoal(externalDailyGoal);
   }, [externalDailyGoal]);
 
+  // todayStudyTimeが変更されたときにstreakを更新
+  useEffect(() => {
+    console.log('Today study time updated:', todayStudyTime);
+    if (convertSecondsToMinutes(todayStudyTime) >= dailyGoal && 
+        convertSecondsToMinutes(prevTodayStudyTimeRef.current) < dailyGoal) {
+      console.log('Daily goal newly achieved. Triggering data reload...');
+      loadData();
+    }
+    prevTodayStudyTimeRef.current = todayStudyTime;
+  }, [todayStudyTime, dailyGoal, loadData, convertSecondsToMinutes]);
+
   // ----------------------------------------
   // 返却値
   // ----------------------------------------
@@ -275,7 +331,7 @@ const useHomeScreenData = (userId, externalDailyGoal, recentActivities, calculat
     todayStudyTime,
     isGoalAchieved,
     convertSecondsToMinutes,
-    isLoading
+    isLoading,
   };
 };
 

@@ -25,7 +25,7 @@ const AuthScreen = ({ onSignIn, onSignUp }) => {
     <div className={styles.container}>
       <Card className={styles.card}>
         {/* カードヘッダー */}
-        <CardHeader className="space-y-1">
+        <CardHeader>
           <CardTitle className={styles.cardTitle}>
             ようこそ
           </CardTitle>
@@ -37,17 +37,17 @@ const AuthScreen = ({ onSignIn, onSignUp }) => {
         <CardContent>
           {/* タブコンポーネント */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className={`grid w-full grid-cols-2 ${styles.tabsList}`}>
+            <TabsList className={styles.tabsList}>
               <TabsTrigger value="signin" className={styles.tabsTrigger}>サインイン</TabsTrigger>
               <TabsTrigger value="signup" className={styles.tabsTrigger}>サインアップ</TabsTrigger>
             </TabsList>
             {/* サインインタブ */}
-            <TabsContent value="signin">
-              <SignIn onSignIn={onSignIn} />
+            <TabsContent value="signin" className={styles.tabContent}>
+              <SignIn onSignIn={onSignIn} buttonClassName={styles.button} />
             </TabsContent>
             {/* サインアップタブ */}
-            <TabsContent value="signup">
-              <SignUp onSignUp={onSignUp} />
+            <TabsContent value="signup" className={styles.tabContent}>
+              <SignUp onSignUp={onSignUp} buttonClassName={styles.button} />
             </TabsContent>
           </Tabs>
         </CardContent>

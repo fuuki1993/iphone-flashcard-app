@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, Suspense, lazy, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, Suspense, lazy, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/layout/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/layout/card';
@@ -17,6 +17,7 @@ import useScheduledEvents from './hooks/useScheduledEvents';
 import { useUpdateNotification } from './hooks/useUpdateNotification';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { checkUserRole } from '@/utils/firebase/auth';
+import { calculateTodayStudyTime } from '@/utils/firebase/firestore';
 
 import styles from '@/styles/modules/HomeScreen.module.css';
 
@@ -58,30 +59,35 @@ const Header = ({ onOpenSettings, onOpenShare }) => (
  * @param {number} currentProgress - 現在の進捗率
  * @param {Function} handleShowStatistics - 統計画面を表示する関数
  */
-const ProgressCard = ({ streak, currentProgress, handleShowStatistics }) => (
-  <Card className={styles.progressCard}>
-    <CardContent className={styles.progressCardContent}>
-      <div className={styles.streakInfo}>
-        <div className={styles.streakText}>
-          <Trophy className="mr-1 text-gray-300" size={16} />
-          <span className={styles.streakCount}>継続: {streak || 0}日</span>
+const ProgressCard = ({ streak, currentProgress, handleShowStatistics }) => {
+  console.log('ProgressCard props:', { streak, currentProgress });
+  return (
+    <Card className={styles.progressCard}>
+      <CardContent className={styles.progressCardContent}>
+        <div className={styles.streakInfo}>
+          <div className={styles.streakText}>
+            <Trophy className="mr-1 text-gray-300" size={16} />
+            <span className={styles.streakCount}>
+              継続: {streak || 0}日
+            </span>
+          </div>
+          <Button 
+            variant="outline" 
+            size="xs" 
+            onClick={handleShowStatistics}
+            className={styles.detailsButton}
+          >
+            <BarChart2 className="mr-1 h-3 w-3" />
+            詳細
+          </Button>
         </div>
-        <Button 
-          variant="outline" 
-          size="xs" 
-          onClick={handleShowStatistics}
-          className={styles.detailsButton}
-        >
-          <BarChart2 className="mr-1 h-3 w-3" />
-          詳細
-        </Button>
-      </div>
-      <p className={styles.progressLabel}>全体の進捗</p>
-      <Progress value={currentProgress || 0} className="w-full h-2 bg-gray-600" indicatorClassName="bg-white" />
-      <p className={styles.progressPercentage}>{(currentProgress || 0).toFixed(1)}%</p>
-    </CardContent>
-  </Card>
-);
+        <p className={styles.progressLabel}>全体の進捗</p>
+        <Progress value={currentProgress || 0} className="w-full h-2 bg-gray-600" indicatorClassName="bg-white" />
+        <p className={styles.progressPercentage}>{(currentProgress || 0).toFixed(1)}%</p>
+      </CardContent>
+    </Card>
+  );
+};
 
 // ----------------------------------------
 // アクションボタンコンポーネント
@@ -169,37 +175,41 @@ const ScheduledEventsTab = ({ scheduledEvents, handleEditEvent, formatEventDate,
 // ----------------------------------------
 /**
  * 日々の学習目標と進捗を表示するカード
- * @param {number} todayStudyTime - 今日の学習時間（秒）
+ * @param {number} todayStudyTimeMinutes - 今日の学習時間（分）
  * @param {number} dailyGoal - 1日の目標学習時間（分）
- * @param {Function} convertSecondsToMinutes - 秒を分に変換する関数
  * @param {boolean} isGoalAchieved - 目標達成フラグ
  */
-const DailyGoalCard = ({ todayStudyTime, dailyGoal, convertSecondsToMinutes, isGoalAchieved }) => (
-  <Card className={styles.dailyGoalCard}>
-    <CardHeader className={styles.dailyGoalHeader}>
-      <CardTitle className={styles.dailyGoalTitle}>
-        <Clock className="mr-2 text-gray-600" size={16} />
-        今日の目標
-      </CardTitle>
-    </CardHeader>
-    <CardContent className={styles.dailyGoalContent}>
-      <div className={styles.dailyGoalInfo}>
-        <span className={styles.dailyGoalText}>
-          {convertSecondsToMinutes(todayStudyTime)}分 / {dailyGoal}分
-        </span>
-      </div>
-      <div className={styles.dailyGoalProgressWrapper}>
-        <Progress 
-          value={(convertSecondsToMinutes(todayStudyTime) / dailyGoal) * 100} 
-          className={styles.dailyGoalProgress}
-        />
-      </div>
-      {isGoalAchieved && (
-        <p className={styles.goalAchieved}>目標達成！</p>
-      )}
-    </CardContent>
-  </Card>
-);
+const DailyGoalCard = ({ todayStudyTimeMinutes, dailyGoal, isGoalAchieved }) => {
+  const progressValue = Math.min((todayStudyTimeMinutes / dailyGoal) * 100, 100);
+  console.log('DailyGoalCard:', { todayStudyTimeMinutes, dailyGoal, progressValue });
+
+  return (
+    <Card className={styles.dailyGoalCard}>
+      <CardHeader className={styles.dailyGoalHeader}>
+        <CardTitle className={styles.dailyGoalTitle}>
+          <Clock className="mr-2 text-gray-600" size={16} />
+          今日の目標
+        </CardTitle>
+      </CardHeader>
+      <CardContent className={styles.dailyGoalContent}>
+        <div className={styles.dailyGoalInfo}>
+          <span className={styles.dailyGoalText}>
+            {todayStudyTimeMinutes}分 / {dailyGoal}分
+          </span>
+        </div>
+        <div className={styles.dailyGoalProgressWrapper}>
+          <div
+            className={styles.dailyGoalProgressBar}
+            style={{ width: `${progressValue}%` }}
+          />
+        </div>
+        {isGoalAchieved && (
+          <p className={styles.goalAchieved}>目標達成！</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
 
 // ======================================
 // メインのHomeScreenコンポーネント
@@ -225,6 +235,7 @@ const HomeScreen = ({
   const [cachedHomeScreenData, setCachedHomeScreenData] = useLocalStorage('homeScreenData', null);
   const [cachedRecentActivities, setCachedRecentActivities] = useLocalStorage('recentActivities', null);
   const [cachedScheduledEvents, setCachedScheduledEvents] = useLocalStorage('scheduledEvents', null);
+  const [todayStudyTime, setTodayStudyTime] = useState(0);
 
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -240,7 +251,7 @@ const HomeScreen = ({
 
   // 並列データ取得
   const recentActivitiesData = useRecentActivities(userId, onStartLearning, cachedRecentActivities, setCachedRecentActivities);
-  const homeScreenData = useHomeScreenData(userId, dailyGoal, refreshTrigger, recentActivitiesData.calculateTotalStudiedItems);
+  const homeScreenData = useHomeScreenData(userId, dailyGoal, refreshTrigger, recentActivitiesData.calculateTotalStudiedItems, cachedHomeScreenData, setCachedHomeScreenData);
   const scheduledEventsData = useScheduledEvents(cachedScheduledEvents, setCachedScheduledEvents);
 
   // 統計画面の表示を切り替える関数
@@ -256,33 +267,66 @@ const HomeScreen = ({
     navigateTo('share');
   }, [navigateTo]);
 
-  // 統計画面の表示
-  if (showStatistics) {
+  const convertSecondsToMinutes = (seconds) => {
+    return Math.floor(seconds / 60);
+  };
+
+  useEffect(() => {
+    const fetchTodayStudyTime = async () => {
+      if (userId) {
+        const time = await calculateTodayStudyTime(userId);
+        setTodayStudyTime(time);
+        console.log('Fetched today study time (seconds):', time);
+      }
+    };
+    fetchTodayStudyTime();
+  }, [userId]);
+
+  // メモ化されたコンポーネント
+  const MemoizedProgressCard = useMemo(() => {
+    console.log('MemoizedProgressCard rendering with:', {
+      streak: homeScreenData.streak,
+      currentProgress: homeScreenData.currentProgress
+    });
     return (
-      <Suspense fallback={<div>Loading statistics...</div>}>
-        <StatisticsScreen
-          onBack={handleBackFromStatistics}
-          totalStudyTime={homeScreenData.studyHistory.reduce((total, entry) => total + entry.studyDuration, 0)}
-          todayStudiedCards={homeScreenData.todayStudyTime}
-        />
-      </Suspense>
-    );
-  }
-
-  // スケルトンローディングの実装
-  if (homeScreenData.isLoading || recentActivitiesData.isLoading || scheduledEventsData.isLoading) {
-    return <SkeletonLoading />;
-  }
-
-  return (
-    <div className={styles.container}>
-      <Header onOpenSettings={onOpenSettings} onOpenShare={handleOpenShare} />
       <ProgressCard 
         streak={homeScreenData.streak} 
         currentProgress={homeScreenData.currentProgress}
         handleShowStatistics={handleShowStatistics} 
       />
-      <ActionButtons onCreateSet={onCreateSet} onStartLearning={onStartLearning} />
+    );
+  }, [homeScreenData.streak, homeScreenData.currentProgress, handleShowStatistics]);
+
+  const MemoizedActionButtons = useMemo(() => (
+    <ActionButtons onCreateSet={onCreateSet} onStartLearning={onStartLearning} />
+  ), [onCreateSet, onStartLearning]);
+
+  const MemoizedDailyGoalCard = useMemo(() => (
+    <DailyGoalCard 
+      todayStudyTimeMinutes={convertSecondsToMinutes(todayStudyTime)} 
+      dailyGoal={dailyGoal} 
+      isGoalAchieved={todayStudyTime >= dailyGoal * 60} 
+    />
+  ), [todayStudyTime, dailyGoal]);
+
+  // スケルトンローディングの改善
+  if (homeScreenData.isLoading || recentActivitiesData.isLoading || scheduledEventsData.isLoading) {
+    return <SkeletonLoading />;
+  }
+
+  if (showStatistics) {
+    return (
+      <Suspense fallback={<div>Loading...</div>}>
+        <StatisticsScreen onBack={handleBackFromStatistics} userId={userId} />
+      </Suspense>
+    );
+  }
+
+  return (
+    <div className={styles.container}>
+      <Header onOpenSettings={onOpenSettings} onOpenShare={handleOpenShare} />
+      {MemoizedProgressCard}
+      {MemoizedActionButtons}
 
       <Tabs defaultValue="recent" className={styles.tabs}>
         <TabsList className={styles.tabsList}>
@@ -301,12 +345,7 @@ const HomeScreen = ({
         />
       </Tabs>
 
-      <DailyGoalCard 
-        todayStudyTime={homeScreenData.todayStudyTime} 
-        dailyGoal={homeScreenData.dailyGoal} 
-        convertSecondsToMinutes={homeScreenData.convertSecondsToMinutes} 
-        isGoalAchieved={homeScreenData.isGoalAchieved} 
-      />
+      {MemoizedDailyGoalCard}
 
       <SignOut onSignOut={onSignOut} />
 
@@ -319,17 +358,20 @@ const HomeScreen = ({
       />
 
       <Dialog open={isUpdateDialogOpen} onOpenChange={closeUpdateDialog}>
-        <DialogContent>
+        <DialogContent className={styles.updateDialog}>
           <DialogHeader>
-            <DialogTitle>更新情報</DialogTitle>
+            <DialogTitle className={styles.updateDialogTitle}>更新情報</DialogTitle>
           </DialogHeader>
-          <DialogDescription>
+          <DialogDescription className={styles.updateDialogDescription}>
             {updateContents.map((content, index) => (
-              <div key={index} className={index > 0 ? "mt-4" : ""}>
+              <div key={index} className={index > 0 ? styles.updateContentItem : ""}>
                 {content}
               </div>
             ))}
           </DialogDescription>
+          <Button onClick={closeUpdateDialog} className={styles.updateDialogCloseButton}>
+            閉じる
+          </Button>
         </DialogContent>
       </Dialog>
 

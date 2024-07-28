@@ -28,56 +28,67 @@ const StatisticsScreen = ({ onBack, userId, refreshTrigger }) => {
     const fetchStatistics = async () => {
       if (userId) {
         if (cachedStatistics && Date.now() - cachedStatistics.timestamp < 5 * 60 * 1000) {
-          // Use cached data if it's less than 5 minutes old
           setStatistics(cachedStatistics.data);
         } else {
           try {
-            // Fetch new data
             const userStats = await getUserStatistics(userId);
-            const studyHistory = await getStudyHistory(userId);
-            
-            // 総学習時間の計算
-            const totalStudyTime = studyHistory.reduce((total, entry) => {
-              console.log('Entry study duration:', entry.studyDuration);
-              return total + (entry.studyDuration || 0);
-            }, 0);
-            console.log('Total study time:', totalStudyTime);
-            
-            // 週間学習時間の計算
-            const weeklyStudyTime = calculateWeeklyStudyTime(studyHistory);
-            console.log('Weekly study time:', weeklyStudyTime);
-            
-            // 今日の学習カード数の計算
-            const today = new Date().toDateString();
-            const todayStudiedCards = studyHistory
-              .filter(entry => new Date(entry.date).toDateString() === today)
-              .reduce((total, entry) => {
-                console.log('Today\'s entry cards studied:', entry.cardsStudied);
-                return total + (entry.cardsStudied || 0);
+            if (userStats) {
+              // ユーザー統計情報が取得できた場合の処理
+              const studyHistory = await getStudyHistory(userId);
+              
+              // 総学習時間の計算
+              const totalStudyTime = studyHistory.reduce((total, entry) => {
+                console.log('Entry study duration:', entry.studyDuration);
+                return total + (entry.studyDuration || 0);
               }, 0);
-            console.log('Today\'s studied cards:', todayStudiedCards);
+              console.log('Total study time:', totalStudyTime);
+              
+              // 週間学習時間の計算
+              const weeklyStudyTime = calculateWeeklyStudyTime(studyHistory);
+              console.log('Weekly study time:', weeklyStudyTime);
+              
+              // 今日の学習カード数の計算
+              const today = new Date().toDateString();
+              const todayStudiedCards = studyHistory
+                .filter(entry => new Date(entry.date).toDateString() === today)
+                .reduce((total, entry) => {
+                  console.log('Today\'s entry cards studied:', entry.cardsStudied);
+                  return total + (entry.cardsStudied || 0);
+                }, 0);
+              console.log('Today\'s studied cards:', todayStudiedCards);
 
-            // 前週比の計算
-            const totalStudyTimeComparison = calculateComparison(studyHistory, 'studyDuration');
-            console.log('Total study time comparison:', totalStudyTimeComparison);
-            
-            const todayStudiedCardsComparison = calculateComparison(studyHistory, 'cardsStudied');
-            console.log('Today\'s studied cards comparison:', todayStudiedCardsComparison);
+              // 前週比の計算
+              const totalStudyTimeComparison = calculateComparison(studyHistory, 'studyDuration');
+              console.log('Total study time comparison:', totalStudyTimeComparison);
+              
+              const todayStudiedCardsComparison = calculateComparison(studyHistory, 'cardsStudied');
+              console.log('Today\'s studied cards comparison:', todayStudiedCardsComparison);
 
-            const newStatistics = {
-              ...userStats,
-              totalStudyTime,
-              weeklyStudyTime,
-              todayStudiedCards,
-              totalStudyTimeComparison,
-              todayStudiedCardsComparison
-            };
+              const newStatistics = {
+                ...userStats,
+                totalStudyTime,
+                weeklyStudyTime,
+                todayStudiedCards,
+                totalStudyTimeComparison,
+                todayStudiedCardsComparison
+              };
 
-            setStatistics(newStatistics);
-            setCachedStatistics({ data: newStatistics, timestamp: Date.now() });
+              setStatistics(newStatistics);
+              setCachedStatistics({ data: newStatistics, timestamp: Date.now() });
+            } else {
+              // ユーザー統計情報が取得できなかった場合の処理
+              console.log('ユーザー統計情報が利用できません');
+              setStatistics({
+                ...statistics,
+                error: '統計情報を取得できませんでした。'
+              });
+            }
           } catch (error) {
             console.error('Failed to fetch user statistics:', error);
-            // エラー処理を追加（例：エラーメッセージを表示）
+            setStatistics({
+              ...statistics,
+              error: '統計情報の取得に失敗しました。しばらくしてからもう一度お試しください。'
+            });
           }
         }
       }

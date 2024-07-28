@@ -54,34 +54,32 @@ const SignUp = ({ onSignUp, onSwitchToSignIn }) => {
   // レンダリング
   // ----------------------------------------
   return (
-    <div className={styles.container}>
-      <div className={styles.card}>
-        <h2 className={styles.cardTitle}>サインアップ</h2>
-        <p className={styles.cardDescription}>新しいアカウントを作成してください</p>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="メールアドレス"
-            required
-          />
-          <Input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="パスワード"
-            required
-          />
-          <Button type="submit" className={styles.signUpButton}>サインアップ</Button>
-          {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
-        </form>
-        <p className="text-center">
-          既にアカウントをお持ちの方は
-          <Button variant="link" onClick={onSwitchToSignIn}>サインイン</Button>
-        </p>
-      </div>
-    </div>
+    <>
+      <h2 className={styles.cardTitle}>サインアップ</h2>
+      <p className={styles.cardDescription}>新しいアカウントを作成してください</p>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="メールアドレス"
+          required
+        />
+        <Input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="パスワード"
+          required
+        />
+        <Button type="submit" className={styles.button}>サインアップ</Button>
+        {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+      </form>
+      <p className="text-center mt-4">
+        既にアカウントをお持ちの方は
+        <Button variant="link" onClick={onSwitchToSignIn}>サインイン</Button>
+      </p>
+    </>
   );
 };
 

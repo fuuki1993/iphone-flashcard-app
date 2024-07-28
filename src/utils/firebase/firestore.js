@@ -605,6 +605,33 @@ export const debugPublicSets = async () => {
   }
 };
 
+/**
+ * 公開セットの詳細を取得する
+ * @param {string} publicSetId - 公開セットのID
+ * @returns {Promise<Object>} 公開セットの詳細
+ */
+export const getPublicSetDetails = async (publicSetId) => {
+  try {
+    console.log("Fetching public set details for ID:", publicSetId);
+    
+    const publicSetsRef = collection(db, 'publicSets');
+    const q = query(publicSetsRef, where("id", "==", publicSetId));
+    const querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      const setData = querySnapshot.docs[0].data();
+      console.log("Public set found:", setData);
+      return { id: querySnapshot.docs[0].id, ...setData };
+    } else {
+      console.log("Public set not found");
+      throw new Error('公開セットが見つかりません');
+    }
+  } catch (error) {
+    console.error("公開セットの詳細取得中にエラーが発生しました:", error);
+    throw error;
+  }
+};
+
 //=============================================================================
 // 日付関連の関数
 //=============================================================================
@@ -665,6 +692,37 @@ export const getTodayStudyTime = async (userId) => {
  */
 export const saveTodayStudyTime = async (userId, time) => {
   await saveSettings(userId, 'todayStudyTime', time);
+};
+
+/**
+ * 今日の学習時間を計算する
+ * @param {string} userId - ユーザーID
+ * @returns {Promise<number>} 今日の学習時間（秒）
+ */
+export const calculateTodayStudyTime = async (userId) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const studyHistoryRef = collection(db, `users/${userId}/${HISTORY_COLLECTION}`);
+    const q = query(studyHistoryRef, 
+      where('date', '>=', today.toISOString()),
+      orderBy('date', 'desc')
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const todayStudyTime = querySnapshot.docs.reduce((total, doc) => {
+      const data = doc.data();
+      return total + (data.studyDuration || 0);
+    }, 0);
+
+    console.log('Today study time (seconds):', todayStudyTime);
+    console.log('Study history entries:', querySnapshot.docs.map(doc => doc.data()));
+    return todayStudyTime;
+  } catch (error) {
+    console.error("Error calculating today's study time:", error);
+    throw error;
+  }
 };
 
 //=============================================================================
@@ -850,7 +908,8 @@ export const getUserStatistics = async (userId) => {
       }
     }
 
-    const userStatsRef = doc(db, `users/${userId}/statistics/userStatistics`);
+    // ここを修正
+    const userStatsRef = doc(db, `userStatistics/${userId}`);
     const userStatsSnap = await getDoc(userStatsRef);
     
     if (userStatsSnap.exists()) {
