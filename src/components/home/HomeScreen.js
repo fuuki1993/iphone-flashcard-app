@@ -314,14 +314,6 @@ const HomeScreen = ({
     return <SkeletonLoading />;
   }
 
-  if (showStatistics) {
-    return (
-      <Suspense fallback={<div>Loading...</div>}>
-        <StatisticsScreen onBack={handleBackFromStatistics} userId={userId} />
-      </Suspense>
-    );
-  }
-
   return (
     <div className={styles.container}>
       <Header onOpenSettings={onOpenSettings} onOpenShare={handleOpenShare} />

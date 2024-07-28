@@ -290,17 +290,26 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
             await deleteObject(imageRef);
           }
         }
-
-        const newProgress = await deleteSet(user.uid, selectedSetId);
+  
+        await deleteSet(user.uid, selectedSetId);
         
         const updatedSets = await getSets(user.uid, 'classification');
         setSets(updatedSets);
-
+  
+        // ローカルストレージからセットデータを削除
+        localStorage.removeItem(`classificationSet_${selectedSetId}`);
+        localStorage.removeItem('lastEditedClassificationSetId');
+  
+        // sessionStatesを削除
+        const sessionStates = JSON.parse(localStorage.getItem('sessionStates')) || {};
+        delete sessionStates[selectedSetId];
+        localStorage.setItem('sessionStates', JSON.stringify(sessionStates));
+  
         setSelectedSetId('');
         setSetTitle('');
         setCategories([{ name: '', items: [''] }]);
         setOriginalCategories([]);
-
+  
         setErrors({});
         alert('セットが正常に削除されました。');
       } catch (error) {

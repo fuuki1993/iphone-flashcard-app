@@ -253,12 +253,21 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
             await deleteObject(imageRef);
           }
         }
-
-        const newProgress = await deleteSet(user.uid, selectedSetId);
+  
+        await deleteSet(user.uid, selectedSetId);
         
         const updatedSets = await getSets(user.uid, 'flashcard');
         setSets(updatedSets);
-
+  
+        // ローカルストレージからセットデータを削除
+        localStorage.removeItem(`flashcardSet_${selectedSetId}`);
+        localStorage.removeItem('lastEditedFlashcardSetId');
+  
+        // sessionStatesを削除
+        const sessionStates = JSON.parse(localStorage.getItem('sessionStates')) || {};
+        delete sessionStates[selectedSetId];
+        localStorage.setItem('sessionStates', JSON.stringify(sessionStates));
+  
         setSelectedSetId('');
         setSetTitle('');
         setCards([]);
@@ -270,7 +279,7 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
         setErrors(prevErrors => ({ ...prevErrors, delete: "セットの削除中にエラーが発生しました。" }));
       }
     }
-  }, [selectedSetId, cards, user, onBack]);
+  }, [selectedSetId, cards, user]);
 
   const removeImage = useCallback((index) => {
     updateCard(index, 'image', null);

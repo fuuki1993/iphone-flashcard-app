@@ -8,18 +8,15 @@ import { Timestamp } from 'firebase/firestore';
 import { Book, Globe, Code, Calendar } from 'lucide-react';
 import { Progress } from '../../ui/feedback/progress';
 import styles from '../../../styles/modules/recentActivities.module.css';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
 
 /**
  * 最近の学習活動を管理するカスタムフック
  * @param {string} userId - ユーザーID
  * @param {Function} onStartLearning - 学習開始時のコールバック関数
- * @param {Array} cachedActivities - キャッシュされた学習活動データ
- * @param {Function} setCachedActivities - キャッシュされた学習活動データを更新する関数
  */
-const useRecentActivities = (userId, onStartLearning, cachedActivities, setCachedActivities) => {
-  const [recentActivities, setRecentActivities] = useState(cachedActivities || []);
-  const [isLoading, setIsLoading] = useState(!cachedActivities);
+const useRecentActivities = (userId, onStartLearning) => {
+  const [recentActivities, setRecentActivities] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
 
   // ----------------------------------------
@@ -68,12 +65,6 @@ const useRecentActivities = (userId, onStartLearning, cachedActivities, setCache
    * 最近の学習活動を読み込む
    */
   const loadRecentActivities = useCallback(async () => {
-    if (cachedActivities) {
-      setRecentActivities(cachedActivities);
-      setIsLoading(false);
-      return;
-    }
-
     setIsLoading(true);
     try {
       const allSets = await getAllSets(userId);
@@ -104,13 +95,12 @@ const useRecentActivities = (userId, onStartLearning, cachedActivities, setCache
       });
 
       setRecentActivities(sortedActivities);
-      setCachedActivities(sortedActivities);
     } catch (error) {
       console.error("最近の学習活動の読み込み中にエラーが発生しました:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [userId, cachedActivities, setCachedActivities]);
+  }, [userId]);
 
   /**
    * 学習活動アイテムを作成
@@ -286,7 +276,8 @@ const useRecentActivities = (userId, onStartLearning, cachedActivities, setCache
     renderActivityItem,
     onFinishQuiz,
     calculateTotalStudiedItems,
-    isLoading
+    isLoading,
+    loadRecentActivities // 新しく追加：データを再読み込みするための関数
   };
 };
 

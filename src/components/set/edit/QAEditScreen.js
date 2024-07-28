@@ -253,12 +253,21 @@ const QAEditScreen = ({ onBack, onSave }) => {
             await deleteObject(imageRef);
           }
         }
-
-        const newProgress = await deleteSet(user.uid, selectedSetId);
+  
+        await deleteSet(user.uid, selectedSetId);
         
         const updatedSets = await getSets(user.uid, 'qa');
         setSets(updatedSets);
-
+  
+        // ローカルストレージからセットデータを削除
+        localStorage.removeItem(`qaSet_${selectedSetId}`);
+        localStorage.removeItem('lastEditedQASetId');
+  
+        // sessionStatesを削除
+        const sessionStates = JSON.parse(localStorage.getItem('sessionStates')) || {};
+        delete sessionStates[selectedSetId];
+        localStorage.setItem('sessionStates', JSON.stringify(sessionStates));
+  
         setSelectedSetId('');
         setSetTitle('');
         setQAItems([]);
