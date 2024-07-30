@@ -3,6 +3,7 @@
   width: 33.33vw; /* 画面幅の3分の1 */
   max-width: 160px;
   height: 100px; /* 固定の高さを設定 */
+  margin-bottom: 20px; /* ボタンの下に20pxの余白を追加 */
   background-color: #f3f4f6;
   border-radius: 0.5rem;
   overflow: visible;
@@ -101,5 +102,6 @@
 @media (min-width: 768px) {
   .flickButton {
     width: 180px; /* タブレット以上の画面サイズでは固定幅に */
+    margin-bottom: 30px; /* タブレット以上の画面サイズでは余白を30pxに増やす */
   }
 }
