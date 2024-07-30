@@ -114,7 +114,7 @@ const RecentActivitiesTab = ({ recentActivities, renderActivityItem }) => (
     <Card>
       <CardContent className="py-2 px-3">
         {recentActivities.length > 0 ? (
-          <div className="max-h-60 overflow-y-auto">
+          <div className={styles.recentActivitiesScroll}>
             <ul className="space-y-2">
               {recentActivities.map(renderActivityItem)}
             </ul>

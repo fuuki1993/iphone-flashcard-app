@@ -370,6 +370,13 @@
     background-color: #d1d5db;
   }
 
+  .recentActivitiesScroll {
+    max-height: 60vh;
+    overflow-y: scroll;
+    -webkit-overflow-scrolling: touch;
+    padding-right: 10px; /* スクロールバーのスペースを確保 */
+  }
+
 /* レスポンシブデザイン */
 @media (max-width: 600px) {
   .container {
