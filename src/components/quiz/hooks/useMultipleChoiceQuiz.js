@@ -17,7 +17,7 @@ import { getFirestore, writeBatch, doc } from "firebase/firestore";
  * @param {string} title - クイズセットのタイトル
  * @param {string} quizType - クイズのタイプ
  * @param {Object} sessionState - 保存されたセッション状態
- * @param {Function} setTodayStudyTime - 今日の学習時間を設定する関数
+ * @param {Function} setTodayStudyTime - 今日の学習時間を設定する��数
  * @param {Function} onFinish - クイズ終了時のコールバック関数
  * @param {Function} updateProgress - 進捗を更新する関数
  */
@@ -43,7 +43,7 @@ export const useMultipleChoiceQuiz = (setId, title, quizType, sessionState, setT
   /**
    * QAまたはフラッシュカードの項目を統一された形式に変換する
    * @param {Object} set - クイズセット
-   * @returns {Array} 統一された形式の問題配列
+   * @returns {Array} 統一された形式の問��配列
    */
   const convertToUnifiedFormat = useCallback((set) => {
     if (set.type === 'qa' && Array.isArray(set.qaItems)) {

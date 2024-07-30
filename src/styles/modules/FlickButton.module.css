@@ -1,0 +1,105 @@
+.flickButton {
+  position: relative;
+  width: 33.33vw; /* 画面幅の3分の1 */
+  max-width: 160px;
+  height: 100px; /* 固定の高さを設定 */
+  background-color: #f3f4f6;
+  border-radius: 0.5rem;
+  overflow: visible;
+}
+  
+.mainButton {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem; /* フォントサイズを少し大きくしました */
+  color: #4b5563;
+  background-color: #f3f4f6;
+  border-radius: 0.5rem;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* ボタンに軽い影を追加 */
+}
+  
+.mainButton svg {
+  width: 24px; /* アイコンサイズを少し大きくしました */
+  height: 24px;
+  margin-right: 8px;
+}
+  
+.optionLabel {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: #e5e7eb;
+  color: #4b5563;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem; /* パディングを増やしました */
+  font-size: 0.875rem; /* フォントサイズを大きくしました */
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0.9;
+  transition: opacity 0.2s;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* シャドウを追加 */
+  pointer-events: none; /* オプションラベルがマウスイベントを妨げないようにします */
+}
+  
+.leftOption {
+  right: 100%; /* ボタンの左端に配置 */
+  transform: translate(-10px, -50%); /* 左に10px移動 */
+}
+  
+.rightOption {
+  left: 100%; /* ボタンの右端に配置 */
+  transform: translate(10px, -50%); /* 右に10px移動 */
+}
+  
+.activeOption {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #4b5563;
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 700;
+  border-radius: 0.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+  
+/* ダークモード対応 */
+:global(.dark) .flickButton {
+  background-color: #1f2937;
+}
+
+:global(.dark) .mainButton {
+  background-color: #1f2937;
+  color: #e5e7eb;
+}
+
+:global(.dark) .optionLabel {
+  background-color: #374151;
+  color: #e5e7eb;
+}
+
+:global(.dark) .activeOption {
+  background-color: #4b5563;
+}
+  
+/* レスポンシブデザイン */
+@media (min-width: 768px) {
+  .flickButton {
+    width: 180px; /* タブレット以上の画面サイズでは固定幅に */
+  }
+}

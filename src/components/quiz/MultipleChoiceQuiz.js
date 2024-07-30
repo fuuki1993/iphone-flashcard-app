@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Check, X, Shuffle } from 'lucide-react';
 import { useMultipleChoiceQuiz } from './hooks/useMultipleChoiceQuiz';
+import QuizResult from './QuizResult';
 import styles from '@/styles/modules/quiz/MultipleChoiceQuiz.module.css';
 
 const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTodayStudyTime, updateProgress }) => {
@@ -39,20 +40,16 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
 
   if (isLastQuestion) {
     return (
-      <div className={styles.quizEndContainer}>
-        <Card className={styles.quizEndCard}>
-          <CardHeader>
-            <CardTitle className={styles.quizEndTitle}>クイズ終了</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className={styles.finalScore}>最終スコア: {calculateScore()}%</p>
-            <div className={styles.quizEndButtons}>
-              <Button onClick={handleShuffle}>もう一度挑戦</Button>
-              <Button onClick={handleFinish}>終了</Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <QuizResult
+        score={results.filter(Boolean).length}
+        totalQuestions={shuffledQuestions.length}
+        onRetry={handleShuffle}
+        onFinish={handleFinish}
+        questions={shuffledQuestions}
+        results={results}
+        quizType="multiple-choice"
+        userAnswers={selectedAnswers}
+      />
     );
   }
 

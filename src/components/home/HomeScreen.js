@@ -5,11 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/layout/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/layout/card';
 import { Progress } from '@/components/ui/feedback/progress';
-import { Settings, PlusCircle, BookOpen, Trophy, BarChart2, Clock, Calendar, Share2 } from 'lucide-react';
+import { Settings, PlusCircle, BookOpen, Trophy, BarChart2, Clock, Calendar, Share2, LogOut, FileText } from 'lucide-react';
 import AddEventModal from '../schedule/AddEventModal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import AdminUpdateForm from '../admin/AdminUpdateForm';
 import SignOut from '../auth/SignOut';
+import FlickButton from '../ui/FlickButton';
+import { Book } from 'lucide-react';
 
 import useHomeScreenData from './hooks/useHomeScreenData';
 import useRecentActivities from './hooks/useRecentActivities';
@@ -35,8 +37,11 @@ const StatisticsScreen = lazy(() => import('../statistics/StatisticsScreen'));
  * アプリのヘッダーを表示する
  * @param {Function} onOpenSettings - 設定を開く関数
  * @param {Function} onOpenShare - 共有画面を開く関数
+ * @param {Function} onSignOut - サインアウト関数
+ * @param {boolean} isAdmin - 管理者権限フラグ
+ * @param {Function} onOpenAdminUpdate - 管理者用更新フォームを開く関数
  */
-const Header = ({ onOpenSettings, onOpenShare }) => (
+const Header = ({ onOpenSettings, onOpenShare, onSignOut, isAdmin, onOpenAdminUpdate }) => (
   <div className={styles.header}>
     <h1 className={styles.title}>暗記アプリ</h1>
     <div className={styles.headerButtons}>
@@ -45,6 +50,14 @@ const Header = ({ onOpenSettings, onOpenShare }) => (
       </Button>
       <Button variant="ghost" size="sm" onClick={onOpenSettings}>
         <Settings className="text-gray-600 h-5 w-5" />
+      </Button>
+      {isAdmin && (
+        <Button variant="ghost" size="sm" onClick={onOpenAdminUpdate}>
+          <FileText className="text-gray-600 h-5 w-5" />
+        </Button>
+      )}
+      <Button variant="ghost" size="sm" onClick={onSignOut}>
+        <LogOut className="text-gray-600 h-5 w-5" />
       </Button>
     </div>
   </div>
@@ -89,27 +102,6 @@ const ProgressCard = ({ streak, currentProgress, handleShowStatistics }) => {
 };
 
 // ----------------------------------------
-// アクションボタンコンポーネント
-// ----------------------------------------
-/**
- * セット作成と学習開始のボタンを表示する
- * @param {Function} onCreateSet - セット作成画面を開く関数
- * @param {Function} onStartLearning - 学習を開始する関数
- */
-const ActionButtons = ({ onCreateSet, onStartLearning }) => (
-  <div className={styles.actionButtons}>
-    <Button className={styles.actionButton} onClick={onCreateSet}>
-      <PlusCircle className="mr-1 h-3 w-3" />
-      作成/編集
-    </Button>
-    <Button className={styles.actionButton} onClick={onStartLearning}>
-      <BookOpen className="mr-1 h-3 w-3" />
-      学習開始
-    </Button>
-  </div>
-);
-
-// ----------------------------------------
 // 最近の学習タブコンテンツ
 // ----------------------------------------
 /**
@@ -142,7 +134,7 @@ const RecentActivitiesTab = ({ recentActivities, renderActivityItem }) => (
  * スケジュールされたイベントを表示するタブ
  * @param {Array} scheduledEvents - スケジュールされたイベントリスト
  * @param {Function} handleEditEvent - イベント編集関数
- * @param {Function} formatEventDate - イベント日付のフォーマット関数
+ * @param {Function} formatEventDate - イント日付のフォーマット関数
  * @param {Function} handleAddEvent - イベント追加関数
  */
 const ScheduledEventsTab = ({ scheduledEvents, handleEditEvent, formatEventDate, handleAddEvent }) => (
@@ -173,7 +165,7 @@ const ScheduledEventsTab = ({ scheduledEvents, handleEditEvent, formatEventDate,
 // 日次目標カードコンポーネント
 // ----------------------------------------
 /**
- * 日々の学習目標と進捗を表示するカード
+ * 日々の学習目標と進捗を表るカード
  * @param {number} todayStudyTimeMinutes - 今日の学習時間（分）
  * @param {number} dailyGoal - 1日の目標学習時間（分）
  * @param {boolean} isGoalAchieved - 目標達成フラグ
@@ -279,6 +271,18 @@ const HomeScreen = ({
     fetchTodayStudyTime();
   }, [userId]);
 
+  const handleOpenAdminUpdate = useCallback(() => {
+    setIsAdminUpdateDialogOpen(true);
+  }, []);
+
+  const handleFlickInput = useCallback((option) => {
+    if (option === '問題管理') {
+      onCreateSet();
+    } else if (option === '学習開始') {
+      onStartLearning();
+    }
+  }, [onCreateSet, onStartLearning]);
+
   // メモ化されたコンポーネント
   const MemoizedProgressCard = useMemo(() => {
     return (
@@ -289,10 +293,6 @@ const HomeScreen = ({
       />
     );
   }, [homeScreenData.streak, homeScreenData.currentProgress, handleShowStatistics]);
-
-  const MemoizedActionButtons = useMemo(() => (
-    <ActionButtons onCreateSet={onCreateSet} onStartLearning={onStartLearning} />
-  ), [onCreateSet, onStartLearning]);
 
   const MemoizedDailyGoalCard = useMemo(() => (
     <DailyGoalCard 
@@ -317,9 +317,14 @@ const HomeScreen = ({
 
   return (
     <div className={styles.container}>
-      <Header onOpenSettings={onOpenSettings} onOpenShare={handleOpenShare} />
+      <Header 
+        onOpenSettings={onOpenSettings} 
+        onOpenShare={handleOpenShare}
+        onSignOut={onSignOut}
+        isAdmin={isAdmin}
+        onOpenAdminUpdate={handleOpenAdminUpdate}
+      />
       {MemoizedProgressCard}
-      {MemoizedActionButtons}
 
       <Tabs defaultValue="recent" className={styles.tabs}>
         <TabsList className={styles.tabsList}>
@@ -339,8 +344,6 @@ const HomeScreen = ({
       </Tabs>
 
       {MemoizedDailyGoalCard}
-
-      <SignOut onSignOut={onSignOut} />
 
       <AddEventModal
         isOpen={scheduledEventsData.isAddEventModalOpen}
@@ -369,31 +372,31 @@ const HomeScreen = ({
       </Dialog>
 
       {isAdmin && (
-        <>
-          <Button 
-            onClick={() => setIsAdminUpdateDialogOpen(true)} 
-            className={styles.adminUpdateButton}
-          >
-            管理者用更新フォーム
-          </Button>
-          <Dialog 
-            open={isAdminUpdateDialogOpen} 
-            onOpenChange={setIsAdminUpdateDialogOpen}
-          >
-            <DialogContent className={styles.adminUpdateDialog}>
-              <DialogHeader>
-                <DialogTitle className={styles.adminUpdateDialogTitle}>
-                  管理者用更新フォーム
-                </DialogTitle>
-                <DialogDescription className={styles.adminUpdateDialogDescription}>
-                  更新内容を入力してください。
-                </DialogDescription>
-              </DialogHeader>
-              <AdminUpdateForm onClose={() => setIsAdminUpdateDialogOpen(false)} />
-            </DialogContent>
-          </Dialog>
-        </>
+        <Dialog 
+          open={isAdminUpdateDialogOpen} 
+          onOpenChange={setIsAdminUpdateDialogOpen}
+        >
+          <DialogContent className={styles.adminUpdateDialog}>
+            <DialogHeader>
+              <DialogTitle className={styles.adminUpdateDialogTitle}>
+                管理者用更新フォーム
+              </DialogTitle>
+              <DialogDescription className={styles.adminUpdateDialogDescription}>
+                更新内容を入力してください。
+              </DialogDescription>
+            </DialogHeader>
+            <AdminUpdateForm onClose={() => setIsAdminUpdateDialogOpen(false)} />
+          </DialogContent>
+        </Dialog>
       )}
+
+      <div className={styles.flickButtonContainer}>
+        <FlickButton 
+          main={<><Book size={20} /><span>選択</span></>}
+          options={['問題管理', '学習開始']}
+          onInput={handleFlickInput}
+        />
+      </div>
     </div>
   );
 };
@@ -408,7 +411,6 @@ const SkeletonLoading = () => (
   <div className={styles.container}>
     <div className={styles.skeletonHeader}></div>
     <div className={styles.skeletonCard}></div>
-    <div className={styles.skeletonButtons}></div>
     <div className={styles.skeletonTabs}></div>
     <div className={styles.skeletonCard}></div>
   </div>

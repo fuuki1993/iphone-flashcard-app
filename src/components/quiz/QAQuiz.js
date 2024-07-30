@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/form/input';
 import { ArrowLeft, Check, X, Shuffle } from 'lucide-react';
 import { useQAQuiz } from './hooks/useQAQuiz';
+import QuizResult from './QuizResult';
 import styles from '@/styles/modules/quiz/QAQuiz.module.css';
 
 const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTodayStudyTime }) => {
@@ -41,20 +42,16 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTod
   if (isLastQuestion) {
     const finalScore = calculateScore();
     return (
-      <div className={styles.finalScoreContainer}>
-        <Card className={styles.finalScoreCard}>
-          <CardHeader>
-            <CardTitle className={styles.finalScoreTitle}>クイズ終了</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className={styles.finalScoreText}>最終スコア: {finalScore}%</p>
-            <div className={styles.finalScoreButtons}>
-              <Button onClick={handleShuffle} className={styles.finalScoreButton}>もう一度挑戦</Button>
-              <Button onClick={handleFinish} className={styles.finalScoreButton}>終了</Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <QuizResult
+        score={results.filter(Boolean).length}
+        totalQuestions={shuffledQuestions.length}
+        onRetry={handleShuffle}
+        onFinish={handleFinish}
+        questions={shuffledQuestions}
+        results={results}
+        quizType="qa"
+        userAnswers={userAnswers}
+      />
     );
   }
 

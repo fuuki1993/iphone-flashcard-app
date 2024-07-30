@@ -1,0 +1,273 @@
+.container {
+    padding: 1rem;
+    max-width: 28rem;
+    margin: 0 auto;
+    width: 100%;
+  }
+  
+  .resultCard {
+    background-color: var(--background);
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 1.5rem;
+    text-align: center;
+    transition: background-color var(--transition-speed) ease;
+  }
+  
+  .resultTitle {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--text);
+    margin-bottom: 0.75rem;
+    transition: color var(--transition-speed) ease;
+  }
+  
+  .scoreText {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+    color: var(--secondary);
+    transition: color var(--transition-speed) ease;
+  }
+  
+  .percentageText {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 1.5rem;
+    color: var(--accent);
+    transition: color var(--transition-speed) ease;
+  }
+  
+  .buttonContainer {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+  }
+  
+  .retryButton,
+  .finishButton {
+    padding: 0.75rem 1.5rem;
+    background-color: var(--secondary);
+    color: var(--background);
+    border: none;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: all var(--transition-speed) ease;
+  }
+  
+  .retryButton:hover,
+  .finishButton:hover {
+    background-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  
+  .questionResults {
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+    text-align: left;
+  }
+  
+  .questionResult {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    padding: 0.5rem;
+    background-color: var(--background-secondary);
+    border-radius: 0.25rem;
+    transition: background-color var(--transition-speed) ease;
+  }
+  
+  .questionResultHeader {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+  
+  .questionNumber {
+    font-weight: bold;
+    margin-right: 0.5rem;
+    color: var(--secondary);
+  }
+  
+  .questionResultIcon {
+    flex-shrink: 0;
+    margin-right: 0.5rem;
+  }
+  
+  .correctIcon {
+    color: #10b981;
+  }
+  
+  .incorrectIcon {
+    color: #ef4444;
+  }
+  
+  .questionResultContent {
+    flex: 1;
+  }
+  
+  .questionText {
+    font-size: 0.875rem;
+    color: var(--text);
+    margin-bottom: 0.25rem;
+    transition: color var(--transition-speed) ease;
+  }
+  
+  .answerText {
+    font-size: 0.75rem;
+    color: var(--secondary);
+    transition: color var(--transition-speed) ease;
+  }
+  
+  .explanationText {
+    font-size: 0.75rem;
+    color: var(--text);
+    margin-top: 0.5rem;
+    transition: color var(--transition-speed) ease;
+  }
+  
+  .questionImage {
+    max-width: 100%;
+    height: auto;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+    border-radius: 0.25rem;
+  }
+  
+  .toggleQuestionsButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    margin-bottom: 1rem;
+    background-color: var(--secondary);
+    color: var(--background);
+    transition: all var(--transition-speed) ease;
+  }
+  
+  .toggleQuestionsButton:hover {
+    background-color: var(--accent);
+  }
+  
+  .toggleIcon {
+    margin-left: 0.5rem;
+  }
+
+  .userAnswerText {
+    font-size: 0.75rem;
+    color: var(--text);
+    margin-top: 0.25rem;
+    transition: color var(--transition-speed) ease;
+  }
+  
+  @media (max-width: 600px) {
+    .container {
+      padding: 0.5rem;
+    }
+  
+    .resultTitle {
+      font-size: 1.25rem;
+    }
+  
+    .scoreText {
+      font-size: 1rem;
+    }
+  
+    .percentageText {
+      font-size: 1.25rem;
+    }
+  
+    .retryButton,
+    .finishButton {
+      font-size: 0.75rem;
+      padding: 0.5rem 1rem;
+    }
+  
+    .questionText {
+      font-size: 0.75rem;
+    }
+  
+    .answerText {
+      font-size: 0.6875rem;
+    }
+  
+    .explanationText {
+      font-size: 0.6875rem;
+    }
+
+    .userAnswerText {
+        font-size: 0.6875rem;
+      }
+  }
+  
+  @media (min-width: 601px) and (max-width: 1023px) {
+    .container {
+      max-width: 36rem;
+    }
+  
+    .resultTitle {
+      font-size: 1.75rem;
+    }
+  
+    .scoreText {
+      font-size: 1.375rem;
+    }
+  
+    .percentageText {
+      font-size: 1.625rem;
+    }
+  
+    .questionText {
+      font-size: 1rem;
+    }
+  
+    .answerText {
+      font-size: 0.875rem;
+    }
+  
+    .explanationText {
+      font-size: 0.875rem;
+    }
+
+    .userAnswerText {
+        font-size: 0.875rem;
+      }
+  }
+  
+  @media (min-width: 1024px) {
+    .container {
+      max-width: 48rem;
+    }
+  
+    .resultTitle {
+      font-size: 2rem;
+    }
+  
+    .scoreText {
+      font-size: 1.5rem;
+    }
+  
+    .percentageText {
+      font-size: 1.75rem;
+    }
+  
+    .questionText {
+      font-size: 1.125rem;
+    }
+  
+    .answerText {
+      font-size: 1rem;
+    }
+  
+    .explanationText {
+      font-size: 1rem;
+    }
+  
+    .questionImage {
+      max-height: 300px;
+    }
+
+    .userAnswerText {
+        font-size: 1rem;
+      }
+  }

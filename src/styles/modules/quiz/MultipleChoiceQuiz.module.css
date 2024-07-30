@@ -30,19 +30,8 @@
   display: flex;
 }
 
-.backButton,
-.shuffleButton,
-.finishButton {
-  margin-left: 0.5rem;
-  background-color: var(--secondary);
-  color: var(--background);
-  transition: background-color var(--transition-speed) ease, color var(--transition-speed) ease;
-}
-
-.backButton:hover,
-.shuffleButton:hover,
-.finishButton:hover {
-  background-color: var(--accent);
+.shuffleButton {
+  margin-right: 0.5rem;
 }
 
 .choiceGrid {
@@ -279,13 +268,6 @@
 
   .questionImage {
     max-height: 200px;
-  }
-
-  .backButton,
-  .shuffleButton,
-  .finishButton {
-    margin-left: 0;
-    margin-top: 0.5rem;
   }
 }
 

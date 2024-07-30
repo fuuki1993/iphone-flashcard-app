@@ -76,26 +76,6 @@
     font-size: 0.75rem;
   }
   
-  .actionButtons {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.5rem;
-    margin-bottom: 0.75rem;
-  }
-  
-  .actionButton {
-    height: 2.5rem;
-    background-color: var(--secondary);
-    color: var(--background);
-    font-size: 0.75rem;
-    transition: background-color 0.3s ease, transform 0.2s ease;
-  }
-  
-  .actionButton:hover {
-    background-color: var(--accent);
-    transform: translateY(-2px);
-  }
-  
   .tabs {
     margin-bottom: 1rem;
     border-bottom: 2px solid #e5e7eb;
@@ -401,10 +381,6 @@
     font-size: 1rem;
   }
 
-  .actionButtons {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
   .progressCardContent,
   .dailyGoalHeader,
   .dailyGoalContent {
@@ -415,7 +391,6 @@
   .detailsButton,
   .progressLabel,
   .progressPercentage,
-  .actionButton,
   .eventTitle,
   .eventDate,
   .dailyGoalTitle,
@@ -440,10 +415,6 @@
     max-width: 600px;
   }
 
-  .actionButtons {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
   .progressCardContent,
   .dailyGoalHeader,
   .dailyGoalContent {
@@ -454,7 +425,6 @@
   .detailsButton,
   .progressLabel,
   .progressPercentage,
-  .actionButton,
   .eventTitle,
   .eventDate,
   .dailyGoalTitle,
@@ -479,20 +449,6 @@
     font-size: 1.25rem;
   }
 
-  .actionButton {
-    height: 3rem;
-    font-size: 1rem;
-    padding: 0.75rem 1.5rem;
-  }
-
-  .addEventButton,
-  .signOutButton,
-  .adminUpdateButton {
-    height: 3rem;
-    font-size: 1rem;
-    padding: 0.75rem 1.5rem;
-  }
-
   .progressCardContent,
   .dailyGoalHeader,
   .dailyGoalContent {
@@ -503,7 +459,6 @@
   .detailsButton,
   .progressLabel,
   .progressPercentage,
-  .actionButton,
   .eventTitle,
   .dailyGoalTitle,
   .dailyGoalText,
@@ -540,14 +495,6 @@
 }
 
 :global(.dark) .detailsButton:hover {
-  background-color: #6b7280;
-}
-
-:global(.dark) .actionButton {
-  background-color: #4b5563;
-}
-
-:global(.dark) .actionButton:hover {
   background-color: #6b7280;
 }
 
@@ -832,4 +779,23 @@
   .container {
     max-width: 960px;
   }
+}
+
+.flickButtonContainer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  padding: 10px;
+  background-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  transition: background-color 0.3s ease;
+}
+
+:global(.dark) .flickButtonContainer {
+  background-color: rgba(17, 24, 39, 0.9);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
 }

@@ -1,0 +1,93 @@
+.flickButtonContainer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  padding: 10px;
+  background-color: rgba(255, 255, 255, 0.9); /* 半透明の白背景を追加 */
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1); /* 上部に影を追加 */
+  z-index: 1000;
+}
+
+.flickButton {
+  position: relative;
+  width: 33.33vw; /* 画面幅の3分の1 */
+  max-width: 160px;
+  height: 0;
+  padding-bottom: 20%;
+  background-color: #f3f4f6;
+  border-radius: 0.5rem;
+  overflow: visible;
+}
+
+.mainButton {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  color: #4b5563;
+  background-color: #f3f4f6;
+  border-radius: 0.5rem;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* ボタンに軽い影を追加 */
+}
+
+.mainButton svg {
+  width: 20px;
+  height: 20px;
+  margin-right: 5px;
+}
+
+.optionLabel {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: #e5e7eb;
+  color: #4b5563;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.7rem; /* パディングを増やしました */
+  font-size: 0.7rem; /* フォントサイズを大きくしました */
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0.9;
+  transition: opacity 0.2s;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* シャドウを追加 */
+  pointer-events: none; /* オプションラベルがマウスイベントを妨げないようにします */
+}
+
+.leftOption {
+  right: 100%; /* ボタンの左端に配置 */
+  transform: translate(-10px, -50%); /* 左に10px移動 */
+}
+
+.rightOption {
+  left: 100%; /* ボタンの右端に配置 */
+  transform: translate(10px, -50%); /* 右に10px移動 */
+}
+
+.activeOption {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #4b5563;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: 0.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
