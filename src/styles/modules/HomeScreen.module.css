@@ -32,14 +32,17 @@
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding: 0.75rem;
-  padding-bottom: 140px; /* フリックボタンの高さ分の余白 */
+  padding-bottom: 160px; /* フリックボタンの高さ分の余白を増やす */
 }
 
 .flickButtonContainer {
-  position: absolute;
+  position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
+  display: flex;
+  justify-content: center;
+  padding: 20px 10px; /* 上下のパディングを増やす */
   background-color: rgba(255, 255, 255, 0.9);
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
   z-index: 1000;
@@ -715,6 +718,11 @@
   color: #b0b0b0;
 }
 
+:global(.dark) .flickButtonContainer {
+  background-color: rgba(17, 24, 39, 0.9);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
+}
+
 .updateDialog {
   background-color: white;
   border-radius: 0.5rem;
@@ -883,7 +891,7 @@
   right: 0;
   display: flex;
   justify-content: center;
-  padding: 10px;
+  padding: 20px 10px; /* 上下のパディングを増やす */
   background-color: rgba(255, 255, 255, 0.9);
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
   z-index: 1000;
