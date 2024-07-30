@@ -158,13 +158,14 @@
   }
 
   .cardFooter {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
   }
 
   .startButton {
-    margin-top: 0.5rem;
-    align-self: flex-start;
+    margin-top: 0;
+    margin-left: 0.5rem;
   }
 }
 
