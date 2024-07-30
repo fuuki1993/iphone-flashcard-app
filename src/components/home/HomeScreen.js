@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useMemo, Suspense, lazy, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, Suspense, lazy, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/layout/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/layout/card';
@@ -120,7 +120,7 @@ const RecentActivitiesTab = ({ recentActivities, renderActivityItem }) => (
             </ul>
           </div>
         ) : (
-          <p className={styles.emptyMessage}>未完���のセッションはありません</p>
+          <p className={styles.emptyMessage}>未完了のセッションはありません</p>
         )}
       </CardContent>
     </Card>
@@ -226,6 +226,7 @@ const HomeScreen = ({
   const [cachedRecentActivities, setCachedRecentActivities] = useLocalStorage('recentActivities', null);
   const [cachedScheduledEvents, setCachedScheduledEvents] = useLocalStorage('scheduledEvents', null);
   const [todayStudyTime, setTodayStudyTime] = useState(0);
+  const scrollableContentRef = useRef(null);
 
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -302,6 +303,42 @@ const HomeScreen = ({
     />
   ), [todayStudyTime, dailyGoal]);
 
+  useEffect(() => {
+    const scrollableContent = scrollableContentRef.current;
+    if (scrollableContent) {
+      let startY;
+      
+      const handleTouchStart = (e) => {
+        startY = e.touches[0].pageY;
+      };
+      
+      const handleTouchMove = (e) => {
+        const currentY = e.touches[0].pageY;
+        const scrollTop = scrollableContent.scrollTop;
+        const scrollHeight = scrollableContent.scrollHeight;
+        const clientHeight = scrollableContent.clientHeight;
+        
+        // 上端でのオーバースクロールを防止
+        if (scrollTop <= 0 && currentY > startY) {
+          e.preventDefault();
+        }
+        
+        // 下端でのオーバースクロールを防止
+        if (scrollTop + clientHeight >= scrollHeight && currentY < startY) {
+          e.preventDefault();
+        }
+      };
+      
+      scrollableContent.addEventListener('touchstart', handleTouchStart);
+      scrollableContent.addEventListener('touchmove', handleTouchMove, { passive: false });
+      
+      return () => {
+        scrollableContent.removeEventListener('touchstart', handleTouchStart);
+        scrollableContent.removeEventListener('touchmove', handleTouchMove);
+      };
+    }
+  }, []);
+
   // スケルトンローディングの改善
   if (homeScreenData.isLoading || recentActivitiesData.isLoading || scheduledEventsData.isLoading) {
     return <SkeletonLoading />;
@@ -324,7 +361,7 @@ const HomeScreen = ({
         isAdmin={isAdmin}
         onOpenAdminUpdate={handleOpenAdminUpdate}
       />
-      <div className={styles.scrollableContent}>
+      <div className={styles.scrollableContent} ref={scrollableContentRef}>
         {MemoizedProgressCard}
 
         <Tabs defaultValue="recent" className={styles.tabs}>
