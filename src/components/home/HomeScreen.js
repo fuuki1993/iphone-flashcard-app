@@ -306,25 +306,8 @@ const HomeScreen = ({
   useEffect(() => {
     const scrollableContent = scrollableContentRef.current;
     if (scrollableContent) {
-      const handleTouchMove = (e) => {
-        // スクロール可能な要素が一番上にあり、上にスクロールしようとする場合
-        if (scrollableContent.scrollTop === 0 && e.touches[0].clientY > e.touches[0].clientY) {
-          e.preventDefault();
-        }
-        // スクロール可能な要素が一番下にあり、下にスクロールしようとする場合
-        else if (
-          scrollableContent.scrollHeight - scrollableContent.scrollTop <= scrollableContent.clientHeight &&
-          e.touches[0].clientY < e.touches[0].clientY
-        ) {
-          e.preventDefault();
-        }
-      };
-
-      scrollableContent.addEventListener('touchmove', handleTouchMove, { passive: false });
-      
-      return () => {
-        scrollableContent.removeEventListener('touchmove', handleTouchMove);
-      };
+      // スクロール位置をリセットする
+      scrollableContent.scrollTop = 0;
     }
   }, []);
 
