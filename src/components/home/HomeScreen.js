@@ -114,13 +114,13 @@ const RecentActivitiesTab = ({ recentActivities, renderActivityItem }) => (
     <Card>
       <CardContent className="py-2 px-3">
         {recentActivities.length > 0 ? (
-          <div className={styles.recentActivitiesScroll}>
+          <div className="max-h-60 overflow-y-auto">
             <ul className="space-y-2">
               {recentActivities.map(renderActivityItem)}
             </ul>
           </div>
         ) : (
-          <p className={styles.emptyMessage}>未完了のセッションはありません</p>
+          <p className={styles.emptyMessage}>未完���のセッションはありません</p>
         )}
       </CardContent>
     </Card>
@@ -324,26 +324,36 @@ const HomeScreen = ({
         isAdmin={isAdmin}
         onOpenAdminUpdate={handleOpenAdminUpdate}
       />
-      {MemoizedProgressCard}
+      <div className={styles.scrollableContent}>
+        {MemoizedProgressCard}
 
-      <Tabs defaultValue="recent" className={styles.tabs}>
-        <TabsList className={styles.tabsList}>
-          <TabsTrigger value="recent" className={styles.tabTrigger}>最近の学習</TabsTrigger>
-          <TabsTrigger value="scheduled" className={styles.tabTrigger}>予定</TabsTrigger>
-        </TabsList>
-        <RecentActivitiesTab 
-          recentActivities={recentActivitiesData.recentActivities} 
-          renderActivityItem={recentActivitiesData.renderActivityItem} 
-        />
-        <ScheduledEventsTab 
-          scheduledEvents={scheduledEventsData.scheduledEvents} 
-          handleEditEvent={scheduledEventsData.handleEditEvent} 
-          formatEventDate={scheduledEventsData.formatEventDate} 
-          handleAddEvent={scheduledEventsData.handleAddEvent} 
-        />
-      </Tabs>
+        <Tabs defaultValue="recent" className={styles.tabs}>
+          <TabsList className={styles.tabsList}>
+            <TabsTrigger value="recent" className={styles.tabTrigger}>最近の学習</TabsTrigger>
+            <TabsTrigger value="scheduled" className={styles.tabTrigger}>予定</TabsTrigger>
+          </TabsList>
+          <RecentActivitiesTab 
+            recentActivities={recentActivitiesData.recentActivities} 
+            renderActivityItem={recentActivitiesData.renderActivityItem} 
+          />
+          <ScheduledEventsTab 
+            scheduledEvents={scheduledEventsData.scheduledEvents} 
+            handleEditEvent={scheduledEventsData.handleEditEvent} 
+            formatEventDate={scheduledEventsData.formatEventDate} 
+            handleAddEvent={scheduledEventsData.handleAddEvent} 
+          />
+        </Tabs>
 
-      {MemoizedDailyGoalCard}
+        {MemoizedDailyGoalCard}
+      </div>
+
+      <div className={styles.flickButtonContainer}>
+        <FlickButton 
+          main={<><Book size={20} /><span>選択</span></>}
+          options={['問題管理', '学習開始']}
+          onInput={handleFlickInput}
+        />
+      </div>
 
       <AddEventModal
         isOpen={scheduledEventsData.isAddEventModalOpen}
@@ -389,14 +399,6 @@ const HomeScreen = ({
           </DialogContent>
         </Dialog>
       )}
-
-      <div className={styles.flickButtonContainer}>
-        <FlickButton 
-          main={<><Book size={20} /><span>選択</span></>}
-          options={['問題管理', '学習開始']}
-          onInput={handleFlickInput}
-        />
-      </div>
     </div>
   );
 };
