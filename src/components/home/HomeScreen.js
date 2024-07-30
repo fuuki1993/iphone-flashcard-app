@@ -311,6 +311,23 @@ const HomeScreen = ({
     }
   }, []);
 
+  // タッチイベントの処理を追加
+  const handleTouchMove = useCallback((e) => {
+    // スクロール可能な要素内でのみスクロールを許可
+    if (e.target.closest(`.${styles.scrollableContent}`)) {
+      e.stopPropagation();
+    } else {
+      e.preventDefault();
+    }
+  }, []);
+
+  useEffect(() => {
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    return () => {
+      document.removeEventListener('touchmove', handleTouchMove);
+    };
+  }, [handleTouchMove]);
+
   // スケルトンローディングの改善
   if (homeScreenData.isLoading || recentActivitiesData.isLoading || scheduledEventsData.isLoading) {
     return <SkeletonLoading />;
