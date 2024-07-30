@@ -14,9 +14,7 @@ import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { getFirestore, writeBatch, doc, getDoc, serverTimestamp } from "firebase/firestore";
 import styles from '@/styles/modules/CommonEditScreen.module.css';
 
-const ClassificationEditScreen = ({ onBack, onSave }) => {
-  const [sets, setSets] = useState([]);
-  const [selectedSetId, setSelectedSetId] = useState('');
+const ClassificationEditScreen = ({ onBack, onSave, selectedSetId }) => {
   const [setTitle, setSetTitle] = useState('');
   const [categories, setCategories] = useState([{ name: '', items: [''] }]);
   const [errors, setErrors] = useState({});
@@ -34,62 +32,21 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
   }, []);
 
   useEffect(() => {
-    const loadSetsAndData = async () => {
-      if (user) {
+    const loadSetData = async () => {
+      if (user && selectedSetId) {
         try {
-          const loadedSets = await getSets(user.uid, 'classification');
-          setSets(loadedSets);
-
-          const lastEditedSetId = localStorage.getItem('lastEditedClassificationSetId');
-          if (lastEditedSetId) {
-            const cachedSet = localStorage.getItem(`classificationSet_${lastEditedSetId}`);
-            if (cachedSet) {
-              const parsedSet = JSON.parse(cachedSet);
-              setSelectedSetId(lastEditedSetId);
-              setSetTitle(parsedSet.title);
-              setCategories(parsedSet.categories || [{ name: '', items: [''] }]);
-              setOriginalCategories(parsedSet.categories || [{ name: '', items: [''] }]);
-            } else {
-              await loadSetData(lastEditedSetId);
-            }
-          }
+          const set = await getSetById(user.uid, selectedSetId);
+          setSetTitle(set.title);
+          setCategories(set.categories || [{ name: '', items: [''] }]);
+          setOriginalCategories(set.categories || [{ name: '', items: [''] }]);
         } catch (error) {
-          console.error("Error loading sets:", error);
+          console.error("Error loading set:", error);
           setErrors(prevErrors => ({ ...prevErrors, load: "セットの読み込み中にエラーが発生しました。" }));
         }
       }
     };
-    loadSetsAndData();
-  }, [user]);
-
-  const loadSetData = async (setId) => {
-    try {
-      const set = await getSetById(user.uid, setId);
-      setSetTitle(set.title);
-      setCategories(set.categories || [{ name: '', items: [''] }]);
-      setOriginalCategories(set.categories || [{ name: '', items: [''] }]);
-      localStorage.setItem(`classificationSet_${setId}`, JSON.stringify(set));
-    } catch (error) {
-      console.error("Error loading set:", error);
-      setErrors(prevErrors => ({ ...prevErrors, load: "セットの読み込み中にエラーが発生しました。" }));
-    }
-  };
-  
-  const handleSetChange = async (value) => {
-    setSelectedSetId(value);
-    localStorage.setItem('lastEditedClassificationSetId', value);
-    if (user) {
-      const cachedSet = localStorage.getItem(`classificationSet_${value}`);
-      if (cachedSet) {
-        const parsedSet = JSON.parse(cachedSet);
-        setSetTitle(parsedSet.title);
-        setCategories(parsedSet.categories || [{ name: '', items: [''] }]);
-        setOriginalCategories(parsedSet.categories || [{ name: '', items: [''] }]);
-      } else {
-        await loadSetData(value);
-      }
-    }
-  };
+    loadSetData();
+  }, [user, selectedSetId]);
 
   const addCategory = () => {
     if (categories.length < 10) {
@@ -264,6 +221,7 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
         onSave(updatedSet);
         setOriginalCategories(updatedSet.categories);
         setErrors({});
+        onBack(); // 保存後に前の画面に戻る
       } catch (error) {
         console.error("Error updating set:", error);
         setErrors(prevErrors => ({ 
@@ -274,50 +232,11 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
         }));
       }
     }
-  }, [selectedSetId, setTitle, categories, validateForm, onSave, originalCategories, deleteUnusedImages, user]);
+  }, [selectedSetId, setTitle, categories, validateForm, onSave, originalCategories, deleteUnusedImages, user, onBack]);
 
   const togglePreviewMode = () => {
     setPreviewMode(!previewMode);
   };
-
-  const handleDelete = useCallback(async () => {
-    if (window.confirm('このセットを削除してもよろしいですか？この操作は取り消せません。') && user) {
-      try {
-        const storage = getStorage();
-        for (const category of categories) {
-          if (category.image) {
-            const imageRef = ref(storage, category.image);
-            await deleteObject(imageRef);
-          }
-        }
-  
-        await deleteSet(user.uid, selectedSetId);
-        
-        const updatedSets = await getSets(user.uid, 'classification');
-        setSets(updatedSets);
-  
-        // ローカルストレージからセットデータを削除
-        localStorage.removeItem(`classificationSet_${selectedSetId}`);
-        localStorage.removeItem('lastEditedClassificationSetId');
-  
-        // sessionStatesを削除
-        const sessionStates = JSON.parse(localStorage.getItem('sessionStates')) || {};
-        delete sessionStates[selectedSetId];
-        localStorage.setItem('sessionStates', JSON.stringify(sessionStates));
-  
-        setSelectedSetId('');
-        setSetTitle('');
-        setCategories([{ name: '', items: [''] }]);
-        setOriginalCategories([]);
-  
-        setErrors({});
-        alert('セットが正常に削除されました。');
-      } catch (error) {
-        console.error("Error deleting set:", error);
-        setErrors(prevErrors => ({ ...prevErrors, delete: "セットの削除中にエラーが発生しました。" }));
-      }
-    }
-  }, [selectedSetId, categories, user]);
 
   const removeImage = useCallback((categoryIndex) => {
     updateCategory(categoryIndex, 'image', null);
@@ -334,16 +253,6 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
         </div>
 
         <div className={styles.selectContainer}>
-          <Select onValueChange={handleSetChange} value={selectedSetId}>
-            <SelectTrigger className={styles.selectTrigger}>
-              <SelectValue placeholder="編集するセットを選択" />
-            </SelectTrigger>
-            <SelectContent>
-              {sets.map((set, index) => (
-                <SelectItem key={`${set.id}-${index}`} value={set.id.toString()}>{set.title}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           <Input
             placeholder="セットのタイトル"
             value={setTitle}
@@ -351,11 +260,6 @@ const ClassificationEditScreen = ({ onBack, onSave }) => {
             className={`${styles.mobileFriendlyInput} ${styles.setTitle} mb-2`}
           />
           {errors.title && <Alert variant="destructive"><AlertDescription>{errors.title}</AlertDescription></Alert>}
-          {selectedSetId && (
-            <Button onClick={handleDelete} variant="destructive" className="mt-2">
-              <Trash2 className="mr-2 h-4 w-4" /> セットを削除
-            </Button>
-          )}
         </div>
 
         <Button onClick={togglePreviewMode} className={styles.previewButton}>

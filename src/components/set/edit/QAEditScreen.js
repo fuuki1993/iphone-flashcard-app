@@ -8,21 +8,19 @@ import { Textarea } from '@/components/ui/form/textarea';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/form/select';
 import { ArrowLeft, Plus, Save, Trash2, Image, Eye, EyeOff, X } from 'lucide-react';
-import { getSets, getSetById, updateSet, deleteSet } from '@/utils/firebase/firestore';
+import { getSets, getSetById, updateSet } from '@/utils/firebase/firestore';
 import { compressImage } from '@/utils/helpers/imageCompression';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { getFirestore, writeBatch, doc, getDoc, serverTimestamp } from "firebase/firestore";
 import styles from '@/styles/modules/CommonEditScreen.module.css';
 
-const QAEditScreen = ({ onBack, onSave }) => {
-  const [sets, setSets] = useState([]);
-  const [selectedSetId, setSelectedSetId] = useState('');
+const QAEditScreen = ({ onBack, onSave, selectedSetId }) => {
+  const [user, setUser] = useState(null);
   const [setTitle, setSetTitle] = useState('');
   const [qaItems, setQAItems] = useState([]);
   const [errors, setErrors] = useState({});
   const [originalQAItems, setOriginalQAItems] = useState([]);
-  const [user, setUser] = useState(null);
   const [previewMode, setPreviewMode] = useState(false);
   const fileInputRefs = useRef([]);
 
@@ -35,63 +33,21 @@ const QAEditScreen = ({ onBack, onSave }) => {
   }, []);
 
   useEffect(() => {
-    const loadSetsAndData = async () => {
-      if (user) {
+    const loadSetData = async () => {
+      if (user && selectedSetId) {
         try {
-          const loadedSets = await getSets(user.uid);
-          const qaSets = loadedSets.filter(set => set.type === 'qa');
-          setSets(qaSets);
-  
-          const lastEditedSetId = localStorage.getItem('lastEditedQASetId');
-          if (lastEditedSetId) {
-            const cachedSet = localStorage.getItem(`qaSet_${lastEditedSetId}`);
-            if (cachedSet) {
-              const parsedSet = JSON.parse(cachedSet);
-              setSelectedSetId(lastEditedSetId);
-              setSetTitle(parsedSet.title);
-              setQAItems(parsedSet.qaItems);
-              setOriginalQAItems(parsedSet.qaItems);
-            } else {
-              await loadSetData(lastEditedSetId);
-            }
-          }
+          const set = await getSetById(user.uid, selectedSetId);
+          setSetTitle(set.title);
+          setQAItems(set.qaItems || []);
+          setOriginalQAItems(set.qaItems || []);
         } catch (error) {
-          console.error("Error loading sets:", error);
+          console.error("Error loading set:", error);
           setErrors(prevErrors => ({ ...prevErrors, load: "セットの読み込み中にエラーが発生しました。" }));
         }
       }
     };
-    loadSetsAndData();
-  }, [user]);
-
-  const loadSetData = async (setId) => {
-    try {
-      const set = await getSetById(user.uid, setId);
-      setSetTitle(set.title);
-      setQAItems(set.qaItems || []);
-      setOriginalQAItems(set.qaItems || []);
-      localStorage.setItem(`qaSet_${setId}`, JSON.stringify(set));
-    } catch (error) {
-      console.error("Error loading set:", error);
-      setErrors(prevErrors => ({ ...prevErrors, load: "セットの読み込み中にエラーが発生しました。" }));
-    }
-  };
-
-  const handleSetChange = async (value) => {
-    setSelectedSetId(value);
-    localStorage.setItem('lastEditedQASetId', value);
-    if (user) {
-      const cachedSet = localStorage.getItem(`qaSet_${value}`);
-      if (cachedSet) {
-        const parsedSet = JSON.parse(cachedSet);
-        setSetTitle(parsedSet.title);
-        setQAItems(parsedSet.qaItems);
-        setOriginalQAItems(parsedSet.qaItems);
-      } else {
-        await loadSetData(value);
-      }
-    }
-  };
+    loadSetData();
+  }, [user, selectedSetId]);
 
   const addQAItem = () => {
     setQAItems([...qaItems, { question: '', answer: '', image: null }]);
@@ -222,11 +178,10 @@ const QAEditScreen = ({ onBack, onSave }) => {
   
         await batch.commit();
   
-        localStorage.setItem(`qaSet_${selectedSetId}`, JSON.stringify(updatedSet));
-  
-        onSave(updatedSet);
         setOriginalQAItems(updatedSet.qaItems);
         setErrors({});
+        onSave(updatedSet);
+        onBack(); // 保存後に前の画面に戻る
       } catch (error) {
         console.error("Error updating set:", error);
         setErrors(prevErrors => ({ 
@@ -237,49 +192,11 @@ const QAEditScreen = ({ onBack, onSave }) => {
         }));
       }
     }
-  }, [selectedSetId, setTitle, qaItems, validateForm, onSave, originalQAItems, deleteUnusedImages, user]);
+  }, [selectedSetId, setTitle, qaItems, validateForm, onSave, originalQAItems, deleteUnusedImages, user, onBack]);
 
   const togglePreviewMode = () => {
     setPreviewMode(!previewMode);
   };
-
-  const handleDelete = useCallback(async () => {
-    if (window.confirm('このセットを削除してもよろしいですか？この操作は取り消せません。') && user) {
-      try {
-        const storage = getStorage();
-        for (const item of qaItems) {
-          if (item.image) {
-            const imageRef = ref(storage, item.image);
-            await deleteObject(imageRef);
-          }
-        }
-  
-        await deleteSet(user.uid, selectedSetId);
-        
-        const updatedSets = await getSets(user.uid, 'qa');
-        setSets(updatedSets);
-  
-        // ローカルストレージからセットデータを削除
-        localStorage.removeItem(`qaSet_${selectedSetId}`);
-        localStorage.removeItem('lastEditedQASetId');
-  
-        // sessionStatesを削除
-        const sessionStates = JSON.parse(localStorage.getItem('sessionStates')) || {};
-        delete sessionStates[selectedSetId];
-        localStorage.setItem('sessionStates', JSON.stringify(sessionStates));
-  
-        setSelectedSetId('');
-        setSetTitle('');
-        setQAItems([]);
-        
-        setErrors({});
-        alert('セットが正常に削除されました。');
-      } catch (error) {
-        console.error("Error deleting set:", error);
-        setErrors(prevErrors => ({ ...prevErrors, delete: "セットの削除中にエラーが発生しました。" }));
-      }
-    }
-  }, [selectedSetId, qaItems, user]);
 
   const removeImage = useCallback((index) => {
     updateQAItem(index, 'image', null);
@@ -295,30 +212,13 @@ const QAEditScreen = ({ onBack, onSave }) => {
           <h1 className="text-2xl font-bold ml-2">一問一答編集</h1>
         </div>
 
-        <div className={styles.selectContainer}>
-          <Select onValueChange={handleSetChange} value={selectedSetId}>
-            <SelectTrigger className={styles.selectTrigger}>
-              <SelectValue placeholder="編集するセットを選択" />
-            </SelectTrigger>
-            <SelectContent>
-              {sets.map((set, index) => (
-                <SelectItem key={`${set.id}-${index}`} value={set.id.toString()}>{set.title}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Input
-            placeholder="セットのタイトル"
-            value={setTitle}
-            onChange={(e) => setSetTitle(e.target.value)}
-            className={`${styles.mobileFriendlyInput} ${styles.setTitle} mb-2`}
-          />
-          {errors.title && <Alert variant="destructive"><AlertDescription>{errors.title}</AlertDescription></Alert>}
-          {selectedSetId && (
-            <Button onClick={handleDelete} variant="destructive" className="mt-2">
-              <Trash2 className="mr-2 h-4 w-4" /> セットを削除
-            </Button>
-          )}
-        </div>
+        <Input
+          placeholder="セットのタイトル"
+          value={setTitle}
+          onChange={(e) => setSetTitle(e.target.value)}
+          className={`${styles.mobileFriendlyInput} ${styles.setTitle} mb-2`}
+        />
+        {errors.title && <Alert variant="destructive"><AlertDescription>{errors.title}</AlertDescription></Alert>}
 
         <Button onClick={togglePreviewMode} className={styles.previewButton}>
           {previewMode ? <EyeOff className={styles.previewButtonIcon} /> : <Eye className={styles.previewButtonIcon} />}

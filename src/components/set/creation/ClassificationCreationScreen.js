@@ -172,13 +172,14 @@ const ClassificationCreationScreen = ({ onBack, onSave }) => {
       const savedSet = await saveSet(newSet, user.uid);
       localStorage.removeItem('classificationCreationData');
       onSave(savedSet);
+      onBack(); // 保存後に前の画面に戻る
     } catch (error) {
       console.error("Error saving set:", error);
       setErrors(prevErrors => ({ ...prevErrors, save: `セットの保存中にエラーが発生しました: ${error.message}` }));
     } finally {
       setIsSaving(false);
     }
-  }, [setTitle, categories, validateForm, onSave, user, isSaving]);
+  }, [setTitle, categories, validateForm, onSave, user, isSaving, onBack]);
 
   const togglePreviewMode = () => {
     setPreviewMode(!previewMode);

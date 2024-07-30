@@ -13,6 +13,25 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 0.75rem;
+  position: sticky;
+  top: 0;
+  background-color: var(--background);
+  z-index: 10;
+  padding: 0.75rem 0;
+}
+
+.contentContainer {
+  overflow-y: auto;
+  height: calc(100vh - 60px); /* ヘッダーの高さを引いた値 */
+}
+
+.selectionModeButtons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.setCheckbox {
+  margin-right: 0.5rem;
 }
 
 .title {
@@ -23,14 +42,15 @@
 }
 
 .description {
-  font-size: 0.875rem;
-  color: var(--secondary);
-  margin-bottom: 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text);
 }
 
 .cardList {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
   gap: 0.75rem;
 }
 
@@ -40,6 +60,9 @@
   overflow: hidden;
   transition: box-shadow var(--transition-speed) ease, background-color var(--transition-speed) ease;
   border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .quizTypeCard:hover {
@@ -66,6 +89,7 @@
 .cardTitle {
   font-size: 1rem;
   font-weight: 500;
+  flex-grow: 1;
 }
 
 .cardContent {
@@ -73,21 +97,27 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  height: 100%;
+  flex-grow: 1;
+}
+
+.cardFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
 }
 
 .cardDescription {
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   color: var(--secondary);
-  margin-bottom: 0.75rem;
-  flex-grow: 1;
+  margin: 0;
 }
 
 .buttonGroup {
   display: flex;
-  justify-content: flex-end;
   gap: 0.5rem;
-  align-self: flex-end;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
 }
 
 .button {
@@ -95,7 +125,7 @@
   white-space: nowrap;
   background-color: var(--accent);
   color: var(--background);
-  padding: 0.5rem 1rem;
+  padding: 0.25rem 0.5rem;
   border-radius: 0.25rem;
   transition: background-color var(--transition-speed) ease, transform 0.2s ease;
 }
@@ -131,6 +161,41 @@
   width: 0.75rem;
 }
 
+.searchFilterContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.searchContainer {
+  position: relative;
+  flex-grow: 1;
+  margin-right: 1rem;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 0.5rem 2rem 0.5rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  background-color: var(--background);
+  color: var(--text);
+}
+
+.searchIcon {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--secondary);
+}
+
+.filterButton {
+  white-space: nowrap;
+}
+
 /* レスポンシブデザイン */
 @media (max-width: 600px) {
   .container {
@@ -163,7 +228,6 @@
   }
 
   .cardList {
-    display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 1rem;
   }
@@ -190,12 +254,13 @@
 
 @media (min-width: 1024px) {
   .container {
-    max-width: 1000px;
+    max-width: 1200px;
     padding: 1.5rem;
   }
 
   .cardList {
-    gap: 1.5rem;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
   }
 
   .title {
@@ -223,6 +288,15 @@
 
   .cardContent {
     padding: 1rem 1.25rem;
+  }
+
+  .cardFooter {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .button {
+    margin-left: 0.5rem;
   }
 }
 
@@ -269,4 +343,95 @@
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+.createButtonsContainer {
+  margin-bottom: 1rem;
+}
+
+.sectionTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text);
+}
+
+.createButtons {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+.createButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  background-color: var(--accent);
+  color: var(--background);
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  transition: background-color var(--transition-speed) ease, transform 0.2s ease;
+  text-align: center;
+}
+
+.createButton:hover {
+  background-color: var(--primary);
+  transform: translateY(-2px);
+}
+
+.buttonIcon {
+  margin-right: 0.25rem;
+  height: 0.75rem;
+  width: 0.75rem;
+}
+
+/* 既存のボタンスタイルと合わせる */
+.button {
+  font-size: 0.75rem;
+  white-space: nowrap;
+  background-color: var(--accent);
+  color: var(--background);
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  transition: background-color var(--transition-speed) ease, transform 0.2s ease;
+}
+
+.button:hover {
+  background-color: var(--primary);
+  transform: translateY(-2px);
+}
+
+/* レスポンシブデザイン */
+@media (min-width: 640px) {
+  .createButtons {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (min-width: 768px) {
+  .createButton {
+    font-size: 0.875rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .createButtons {
+    gap: 1rem;
+  }
+
+  .createButton {
+    padding: 0.75rem;
+  }
+}
+
+/* 新しく追加するスタイル */
+.manageSetContainer {
+  margin-bottom: 1rem;
+}
+
+/* ダークモード対応 */
+:global(.dark) .header {
+  background-color: var(--background);
 }

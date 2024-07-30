@@ -125,12 +125,8 @@ const QACreationScreen = ({ onBack, onSave }) => {
 
   const handleSave = useCallback(async () => {
     if (isSaving) return;
-    if (!validateForm()) {
-      console.error("Form validation failed");
-      return;
-    }
+    if (!validateForm()) return;
     if (!user) {
-      console.error("User not authenticated");
       setErrors(prevErrors => ({ ...prevErrors, save: "ユーザー認証が必要です。再度ログインしてください。" }));
       return;
     }
@@ -138,37 +134,20 @@ const QACreationScreen = ({ onBack, onSave }) => {
     try {
       const newSet = {
         title: setTitle,
-        qaItems: await Promise.all(qaItems.map(async (item, i) => {
-          if (item.image) {
-            const storage = getStorage();
-            const oldRef = ref(storage, item.image);
-            const newRef = ref(storage, `qa_images/${user.uid}/qa_${Date.now()}_${i}`);
-            
-            const oldBlob = await getBlob(oldRef);
-            await uploadBytes(newRef, oldBlob);
-            const newUrl = await getDownloadURL(newRef);
-            await deleteObject(oldRef);
-
-            return { ...item, image: newUrl };
-          }
-          return item;
-        })),
-        type: 'qa',
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
+        qaItems: qaItems,
+        type: 'qa'
       };
-
       const savedSet = await saveSet(newSet, user.uid);
-
       localStorage.removeItem('qaCreationData');
       onSave(savedSet);
+      onBack(); // 保存後に前の画面に戻る
     } catch (error) {
       console.error("Error saving set:", error);
       setErrors(prevErrors => ({ ...prevErrors, save: `セットの保存中にエラーが発生しました: ${error.message}` }));
     } finally {
       setIsSaving(false);
     }
-  }, [setTitle, qaItems, validateForm, onSave, user, isSaving]);
+  }, [setTitle, qaItems, validateForm, onSave, user, isSaving, onBack]);
 
   const togglePreviewMode = () => {
     setPreviewMode(!previewMode);

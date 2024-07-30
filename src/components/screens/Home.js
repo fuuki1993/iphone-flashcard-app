@@ -106,7 +106,7 @@ export default function Home() {
 
   useEffect(() => {
     // Handle routing based on hashPath
-    const [mainPath, subPath] = hashPath.split('/');
+    const [mainPath, subPath, setId] = hashPath.split('/');
     switch (mainPath) {
       case '':
       case 'home':
@@ -122,8 +122,14 @@ export default function Home() {
       case 'qa':
       case 'multiple-choice':
       case 'classification':
-        setCurrentSetType(mainPath);
-        setCurrentScreen(subPath === 'edit' ? `${mainPath}Edit` : `${mainPath}Creation`);
+        if (subPath === 'edit' && setId) {
+          setCurrentSetType(mainPath);
+          setEditingSetId(setId);
+          setCurrentScreen(`${mainPath}Edit`);
+        } else {
+          setCurrentSetType(mainPath);
+          setCurrentScreen(`${mainPath}Creation`);
+        }
         break;
       case 'quiz':
         setCurrentScreen('quiz');
@@ -288,14 +294,16 @@ export default function Home() {
     setCurrentScreen(`${type}Creation`);
   };
   
-  const handleEditType = (type) => {
+  const handleEditType = (type, setId) => {
     setCurrentSetType(type);
+    setEditingSetId(setId);
     setCurrentScreen(`${type}Edit`);
+    push(`${type}/edit/${setId}`);
   };
 
   const handleSave = (data) => {
     // ここでデータを保存する処理を実装
-    navigateTo('home');
+    navigateTo('createEditSet');
   };
 
   const handleFinishQuiz = useCallback(async (results, studyDuration, cardsStudied) => {
@@ -370,7 +378,7 @@ export default function Home() {
           <CreateEditSetSelectionScreen 
             onBack={() => navigateTo('home')}
             onSelectType={handleSelectType}
-            onEditType={handleEditType}
+            onEditType={(type, setId) => handleEditType(type, setId)}
             userId={user.uid}
           />
         );
@@ -396,6 +404,7 @@ export default function Home() {
             onBack={() => navigateTo('createEditSet')}
             onSave={handleSave}
             userId={user.uid}
+            selectedSetId={editingSetId}
           />
         );
       case 'qaCreation':
@@ -412,6 +421,7 @@ export default function Home() {
             onBack={() => navigateTo('createEditSet')}
             onSave={handleSave}
             userId={user.uid}
+            selectedSetId={editingSetId}
           />
         );
       case 'multiple-choiceCreation':
@@ -428,6 +438,7 @@ export default function Home() {
             onBack={() => navigateTo('createEditSet')}
             onSave={handleSave}
             userId={user.uid}
+            selectedSetId={editingSetId}
           />
         );
       case 'classificationCreation':
@@ -444,6 +455,7 @@ export default function Home() {
             onBack={() => navigateTo('createEditSet')}
             onSave={handleSave}
             userId={user.uid}
+            selectedSetId={editingSetId}
           />
         );
       case 'quiz':
@@ -516,7 +528,7 @@ export default function Home() {
       default:
         return <div>Unknown screen: {currentScreen}</div>;
     }
-  }, [currentScreen, user, loading, todayStudyTime, overallProgress, streak, studyHistory, userDailyGoal, navigateTo, handleFinishQuiz, setTodayStudyTime, quizType, quizSetId, quizSetTitle, sessionState, handleUpdateDailyGoal, darkMode, handleUpdateDarkMode]);
+  }, [currentScreen, user, loading, todayStudyTime, overallProgress, streak, studyHistory, userDailyGoal, navigateTo, handleFinishQuiz, setTodayStudyTime, quizType, quizSetId, quizSetTitle, sessionState, handleUpdateDailyGoal, darkMode, handleUpdateDarkMode, editingSetId]);
 
   if (!isReady) {
     return null; // または適切なローディング表示

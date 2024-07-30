@@ -2,7 +2,7 @@
   position: relative;
   width: 33.33vw; /* 画面幅の3分の1 */
   max-width: 160px;
-  height: 80px; /* 高さを少し小さくする */
+  height: 100px; /* 固定の高さを設定 */
   margin-bottom: 20px; /* ボタンの下に20pxの余白を追加 */
   background-color: #f3f4f6;
   border-radius: 0.5rem;

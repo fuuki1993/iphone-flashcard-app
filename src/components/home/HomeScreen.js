@@ -43,22 +43,24 @@ const StatisticsScreen = lazy(() => import('../statistics/StatisticsScreen'));
  */
 const Header = ({ onOpenSettings, onOpenShare, onSignOut, isAdmin, onOpenAdminUpdate }) => (
   <div className={styles.header}>
-    <h1 className={styles.title}>暗記アプリ</h1>
-    <div className={styles.headerButtons}>
-      <Button variant="ghost" size="sm" onClick={onOpenShare}>
-        <Share2 className="text-gray-600 h-5 w-5" />
-      </Button>
-      <Button variant="ghost" size="sm" onClick={onOpenSettings}>
-        <Settings className="text-gray-600 h-5 w-5" />
-      </Button>
-      {isAdmin && (
-        <Button variant="ghost" size="sm" onClick={onOpenAdminUpdate}>
-          <FileText className="text-gray-600 h-5 w-5" />
+    <div className={styles.headerContent}>
+      <h1 className={styles.title}>暗記アプリ</h1>
+      <div className={styles.headerButtons}>
+        <Button variant="ghost" size="sm" onClick={onOpenShare}>
+          <Share2 className="text-gray-600 h-5 w-5" />
         </Button>
-      )}
-      <Button variant="ghost" size="sm" onClick={onSignOut}>
-        <LogOut className="text-gray-600 h-5 w-5" />
-      </Button>
+        <Button variant="ghost" size="sm" onClick={onOpenSettings}>
+          <Settings className="text-gray-600 h-5 w-5" />
+        </Button>
+        {isAdmin && (
+          <Button variant="ghost" size="sm" onClick={onOpenAdminUpdate}>
+            <FileText className="text-gray-600 h-5 w-5" />
+          </Button>
+        )}
+        <Button variant="ghost" size="sm" onClick={onSignOut}>
+          <LogOut className="text-gray-600 h-5 w-5" />
+        </Button>
+      </div>
     </div>
   </div>
 );

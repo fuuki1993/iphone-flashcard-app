@@ -160,13 +160,14 @@ const FlashcardCreationScreen = ({ onBack, onSave }) => {
 
       localStorage.removeItem('flashcardCreationData');
       onSave(savedSet);
+      onBack(); // 保存後に前の画面に戻る
     } catch (error) {
       console.error("Error saving set:", error);
       setErrors(prevErrors => ({ ...prevErrors, save: `セットの保存中にエラーが発生しました: ${error.message}` }));
     } finally {
       setIsSaving(false);
     }
-  }, [setTitle, cards, validateForm, onSave, user, isSaving]);
+  }, [setTitle, cards, validateForm, onSave, user, isSaving, onBack]);
 
   const togglePreviewMode = () => {
     setPreviewMode(!previewMode);

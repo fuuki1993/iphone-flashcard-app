@@ -13,6 +13,16 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 0.75rem;
+  position: sticky;
+  top: 0;
+  background-color: var(--background);
+  z-index: 10;
+  padding: 0.75rem 0;
+}
+
+.contentContainer {
+  overflow-y: auto;
+  height: calc(100vh - 60px);
 }
 
 .title {
@@ -22,15 +32,44 @@
   transition: color var(--transition-speed) ease;
 }
 
-.description {
-  font-size: 0.875rem;
-  color: var(--secondary);
-  margin-bottom: 0.75rem;
+.searchFilterContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
 }
 
-.quizTypeList {
-  display: flex;
-  flex-direction: column;
+.searchContainer {
+  position: relative;
+  flex-grow: 1;
+  margin-right: 1rem;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 0.5rem 2rem 0.5rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  background-color: var(--background);
+  color: var(--text);
+}
+
+.searchIcon {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--secondary);
+}
+
+.filterButton {
+  white-space: nowrap;
+}
+
+.cardList {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
   gap: 0.75rem;
 }
 
@@ -39,30 +78,16 @@
   border-radius: 0.5rem;
   overflow: hidden;
   transition: box-shadow var(--transition-speed) ease, background-color var(--transition-speed) ease;
+  border: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--border);
-}
-
-.quizTypeCard:hover {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  height: 100%;
 }
 
 .cardHeader {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
   padding: 0.75rem 1rem;
   background-color: var(--primary);
   color: var(--background);
-}
-
-.cardIcon {
-  height: 1.5rem;
-  width: 1.5rem;
-  color: var(--accent);
-  margin-right: 0.75rem;
-  flex-shrink: 0;
 }
 
 .cardTitle {
@@ -78,26 +103,16 @@
   flex-grow: 1;
 }
 
-.cardDescription {
-  font-size: 0.75rem;
-  color: var(--secondary);
-  margin-bottom: 0.75rem;
-}
-
-.selectContainer {
+.cardFooter {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 0.5rem;
-  margin-top: auto;
 }
 
-.selectTrigger {
-  font-size: 0.75rem;
-  flex-grow: 1;
-  background-color: var(--secondary);
-  color: var(--background);
-  padding: 0.5rem;
-  border-radius: 0.25rem;
+.cardDescription {
+  font-size: 0.875rem;
+  color: var(--secondary);
+  margin: 0;
 }
 
 .startButton {
@@ -105,7 +120,7 @@
   white-space: nowrap;
   background-color: var(--accent);
   color: var(--background);
-  padding: 0.5rem 1rem;
+  padding: 0.25rem 0.5rem;
   border-radius: 0.25rem;
   transition: background-color var(--transition-speed) ease, transform 0.2s ease;
 }
@@ -132,19 +147,24 @@
     font-size: 1rem;
   }
 
-  .description {
-    font-size: 0.75rem;
-  }
-
-  .quizTypeList {
+  .cardList {
     gap: 0.5rem;
   }
 
   .cardTitle,
   .cardDescription,
-  .selectTrigger,
   .startButton {
     font-size: 0.7rem;
+  }
+
+  .cardFooter {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .startButton {
+    margin-top: 0.5rem;
+    align-self: flex-start;
   }
 }
 
@@ -154,30 +174,28 @@
     padding: 1rem;
   }
 
-  .quizTypeList {
-    display: grid;
+  .cardList {
     grid-template-columns: repeat(2, 1fr);
     gap: 1rem;
   }
 
   .quizTypeCard {
     height: 100%;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .cardContent {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
   }
 
   .cardTitle,
   .cardDescription,
-  .selectTrigger,
   .startButton {
     font-size: 0.875rem;
+  }
+
+  .cardFooter {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .startButton {
+    margin-left: 0.5rem;
   }
 }
 
@@ -187,7 +205,8 @@
     padding: 1.5rem;
   }
 
-  .quizTypeList {
+  .cardList {
+    grid-template-columns: repeat(3, 1fr);
     gap: 1.5rem;
   }
 
@@ -195,20 +214,10 @@
     font-size: 1.5rem;
   }
 
-  .description {
-    font-size: 1.125rem;
-  }
-
   .cardTitle,
   .cardDescription,
-  .selectTrigger,
   .startButton {
     font-size: 1rem;
-  }
-
-  .cardIcon {
-    height: 2rem;
-    width: 2rem;
   }
 
   .cardHeader {
@@ -229,10 +238,6 @@
   color: var(--text);
 }
 
-:global(.dark) .description {
-  color: var(--secondary);
-}
-
 :global(.dark) .quizTypeCard {
   background-color: var(--background);
 }
@@ -243,19 +248,6 @@
 
 :global(.dark) .cardDescription {
   color: var(--secondary);
-}
-
-:global(.dark) .selectTrigger {
-  background-color: var(--secondary);
-  color: var(--background);
-}
-
-:global(.dark) .startButton {
-  background-color: var(--accent);
-}
-
-:global(.dark) .startButton:hover {
-  background-color: var(--primary);
 }
 
 /* アニメーション */

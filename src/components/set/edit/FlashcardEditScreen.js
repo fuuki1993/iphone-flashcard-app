@@ -15,14 +15,12 @@ import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { getFirestore, writeBatch, doc, getDoc, serverTimestamp } from "firebase/firestore";
 import styles from '@/styles/modules/CommonEditScreen.module.css';
 
-const FlashcardEditScreen = ({ onBack, onSave }) => {
-  const [sets, setSets] = useState([]);
-  const [selectedSetId, setSelectedSetId] = useState('');
+const FlashcardEditScreen = ({ onBack, onSave, selectedSetId }) => {
+  const [user, setUser] = useState(null);
   const [setTitle, setSetTitle] = useState('');
   const [cards, setCards] = useState([]);
   const [errors, setErrors] = useState({});
   const [originalCards, setOriginalCards] = useState([]);
-  const [user, setUser] = useState(null);
   const [previewMode, setPreviewMode] = useState(false);
   const fileInputRefs = useRef([]);
 
@@ -35,67 +33,26 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
   }, []);
 
   useEffect(() => {
-    const loadSetsAndData = async () => {
-      if (user) {
+    const loadSetData = async () => {
+      if (user && selectedSetId) {
         try {
-          const loadedSets = await getSets(user.uid);
-          const flashcardSets = loadedSets.filter(set => set.type === 'flashcard');
-          setSets(flashcardSets);
-  
-          const lastEditedSetId = localStorage.getItem('lastEditedFlashcardSetId');
-          if (lastEditedSetId) {
-            const cachedSet = localStorage.getItem(`flashcardSet_${lastEditedSetId}`);
-            if (cachedSet) {
-              const parsedSet = JSON.parse(cachedSet);
-              setSelectedSetId(lastEditedSetId);
-              setSetTitle(parsedSet.title);
-              setCards(parsedSet.cards);
-              setOriginalCards(parsedSet.cards);
-            } else {
-              await loadSetData(lastEditedSetId);
-            }
-          }
+          const set = await getSetById(user.uid, selectedSetId);
+          setSetTitle(set.title);
+          setCards(set.cards || []);
+          setOriginalCards(set.cards || []);
+          localStorage.setItem(`flashcardSet_${selectedSetId}`, JSON.stringify(set));
         } catch (error) {
-          console.error("Error loading sets:", error);
+          console.error("Error loading set:", error);
           setErrors(prevErrors => ({ ...prevErrors, load: "セットの読み込み中にエラーが発生しました。" }));
         }
       }
     };
-    loadSetsAndData();
-  }, [user]);
+    loadSetData();
+  }, [user, selectedSetId]);
 
-  const loadSetData = async (setId) => {
-    try {
-      const set = await getSetById(user.uid, setId);
-      setSetTitle(set.title);
-      setCards(set.cards || []);
-      setOriginalCards(set.cards || []);
-      localStorage.setItem(`flashcardSet_${setId}`, JSON.stringify(set));
-    } catch (error) {
-      console.error("Error loading set:", error);
-      setErrors(prevErrors => ({ ...prevErrors, load: "セットの読み込み中にエラーが発生しました。" }));
-    }
-  };
-
-  const handleSetChange = async (value) => {
-    setSelectedSetId(value);
-    localStorage.setItem('lastEditedFlashcardSetId', value);
-    if (user) {
-      const cachedSet = localStorage.getItem(`flashcardSet_${value}`);
-      if (cachedSet) {
-        const parsedSet = JSON.parse(cachedSet);
-        setSetTitle(parsedSet.title);
-        setCards(parsedSet.cards);
-        setOriginalCards(parsedSet.cards);
-      } else {
-        await loadSetData(value);
-      }
-    }
-  };
-
-  const addCard = () => {
-    setCards([...cards, { front: '', back: '', image: null }]);
-  };
+  const addCard = useCallback(() => {
+    setCards(prevCards => [...prevCards, { front: '', back: '', image: null }]);
+  }, []);
 
   const updateCard = useCallback((index, field, value) => {
     setCards(prevCards => prevCards.map((card, i) => 
@@ -227,6 +184,7 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
         onSave(updatedSet);
         setOriginalCards(updatedSet.cards);
         setErrors({});
+        onBack(); // 保存後に前の画面に戻る
       } catch (error) {
         console.error("Error updating set:", error);
         setErrors(prevErrors => ({ 
@@ -237,7 +195,7 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
         }));
       }
     }
-  }, [selectedSetId, setTitle, cards, validateForm, onSave, originalCards, deleteUnusedImages, user]);
+  }, [selectedSetId, setTitle, cards, validateForm, onSave, originalCards, deleteUnusedImages, user, onBack]);
 
   const togglePreviewMode = () => {
     setPreviewMode(!previewMode);
@@ -295,30 +253,13 @@ const FlashcardEditScreen = ({ onBack, onSave }) => {
           <h1 className="text-2xl font-bold ml-2">フラッシュカード編集</h1>
         </div>
 
-        <div className={styles.selectContainer}>
-          <Select onValueChange={handleSetChange} value={selectedSetId}>
-            <SelectTrigger className={styles.selectTrigger}>
-              <SelectValue placeholder="編集するセットを選択" />
-            </SelectTrigger>
-            <SelectContent>
-              {sets.map((set, index) => (
-                <SelectItem key={`${set.id}-${index}`} value={set.id.toString()}>{set.title}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Input
-            placeholder="セットのタイトル"
-            value={setTitle}
-            onChange={(e) => setSetTitle(e.target.value)}
-            className={`${styles.mobileFriendlyInput} ${styles.setTitle} mb-2`}
-          />
-          {errors.title && <Alert variant="destructive"><AlertDescription>{errors.title}</AlertDescription></Alert>}
-          {selectedSetId && (
-            <Button onClick={handleDelete} variant="destructive" className="mt-2">
-              <Trash2 className="mr-2 h-4 w-4" /> セットを削除
-            </Button>
-          )}
-        </div>
+        <Input
+          placeholder="セットのタイトル"
+          value={setTitle}
+          onChange={(e) => setSetTitle(e.target.value)}
+          className={`${styles.mobileFriendlyInput} ${styles.setTitle} mb-2`}
+        />
+        {errors.title && <Alert variant="destructive"><AlertDescription>{errors.title}</AlertDescription></Alert>}
 
         <Button onClick={togglePreviewMode} className={styles.previewButton}>
           {previewMode ? <EyeOff className={styles.previewButtonIcon} /> : <Eye className={styles.previewButtonIcon} />}

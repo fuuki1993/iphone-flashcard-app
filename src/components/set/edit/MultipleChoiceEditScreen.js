@@ -9,16 +9,14 @@ import { Checkbox } from '@/components/ui/form/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/form/select';
 import { ArrowLeft, Plus, Save, Trash2, Image, Eye, EyeOff, X } from 'lucide-react';
-import { getSets, getSetById, updateSet, deleteSet } from '@/utils/firebase/firestore';
+import { getSets, getSetById, updateSet } from '@/utils/firebase/firestore';
 import { compressImage } from '@/utils/helpers/imageCompression';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { getFirestore, writeBatch, doc, getDoc, serverTimestamp } from "firebase/firestore";
 import styles from '@/styles/modules/CommonEditScreen.module.css';
 
-const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
-  const [sets, setSets] = useState([]);
-  const [selectedSetId, setSelectedSetId] = useState('');
+const MultipleChoiceEditScreen = ({ onBack, onSave, selectedSetId }) => {
   const [setTitle, setSetTitle] = useState('');
   const [questions, setQuestions] = useState([]);
   const [errors, setErrors] = useState({});
@@ -36,63 +34,22 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
   }, []);
 
   useEffect(() => {
-    const loadSetsAndData = async () => {
-      if (user) {
+    const loadSetData = async () => {
+      if (user && selectedSetId) {
         try {
-          const loadedSets = await getSets(user.uid);
-          const multipleChoiceSets = loadedSets.filter(set => set.type === 'multiple-choice');
-          setSets(multipleChoiceSets);
-  
-          const lastEditedSetId = localStorage.getItem('lastEditedMultipleChoiceSetId');
-          if (lastEditedSetId) {
-            const cachedSet = localStorage.getItem(`multiple-choiceSet_${lastEditedSetId}`);
-            if (cachedSet) {
-              const parsedSet = JSON.parse(cachedSet);
-              setSelectedSetId(lastEditedSetId);
-              setSetTitle(parsedSet.title);
-              setQuestions(parsedSet.questions);
-              setOriginalQuestions(parsedSet.questions);
-            } else {
-              await loadSetData(lastEditedSetId);
-            }
-          }
+          const set = await getSetById(user.uid, selectedSetId);
+          setSetTitle(set.title);
+          setQuestions(set.questions || []);
+          setOriginalQuestions(set.questions || []);
+          localStorage.setItem(`multiple-choiceSet_${selectedSetId}`, JSON.stringify(set));
         } catch (error) {
-          console.error("Error loading sets:", error);
+          console.error("Error loading set:", error);
           setErrors(prevErrors => ({ ...prevErrors, load: "セットの読み込み中にエラーが発生しました。" }));
         }
       }
     };
-    loadSetsAndData();
-  }, [user]);
-
-  const loadSetData = async (setId) => {
-    try {
-      const set = await getSetById(user.uid, setId);
-      setSetTitle(set.title);
-      setQuestions(set.questions || []);
-      setOriginalQuestions(set.questions || []);
-      localStorage.setItem(`multiple-choiceSet_${setId}`, JSON.stringify(set));
-    } catch (error) {
-      console.error("Error loading set:", error);
-      setErrors(prevErrors => ({ ...prevErrors, load: "セットの読み込み中にエラーが発生しました。" }));
-    }
-  };
-
-  const handleSetChange = async (value) => {
-    setSelectedSetId(value);
-    localStorage.setItem('lastEditedMultipleChoiceSetId', value);
-    if (user) {
-      const cachedSet = localStorage.getItem(`multiple-choiceSet_${value}`);
-      if (cachedSet) {
-        const parsedSet = JSON.parse(cachedSet);
-        setSetTitle(parsedSet.title);
-        setQuestions(parsedSet.questions);
-        setOriginalQuestions(parsedSet.questions);
-      } else {
-        await loadSetData(value);
-      }
-    }
-  };
+    loadSetData();
+  }, [user, selectedSetId]);
 
   const addQuestion = () => {
     setQuestions([...questions, { 
@@ -271,6 +228,7 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
         onSave(updatedSet);
         setOriginalQuestions(updatedSet.questions);
         setErrors({});
+        onBack(); // 保存後に前の画面に戻る
       } catch (error) {
         console.error("Error updating set:", error);
         setErrors(prevErrors => ({ 
@@ -281,49 +239,11 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
         }));
       }
     }
-  }, [selectedSetId, setTitle, questions, validateForm, onSave, originalQuestions, deleteUnusedImages, user]);
+  }, [selectedSetId, setTitle, questions, validateForm, onSave, originalQuestions, deleteUnusedImages, user, onBack]);
 
   const togglePreviewMode = () => {
     setPreviewMode(!previewMode);
   };
-
-  const handleDelete = useCallback(async () => {
-    if (window.confirm('このセットを削除してもよろしいですか？この操作は取り消せません。') && user) {
-      try {
-        const storage = getStorage();
-        for (const question of questions) {
-          if (question.image) {
-            const imageRef = ref(storage, question.image);
-            await deleteObject(imageRef);
-          }
-        }
-  
-        await deleteSet(user.uid, selectedSetId);
-        
-        const updatedSets = await getSets(user.uid, 'multiple-choice');
-        setSets(updatedSets);
-  
-        // ローカルストレージからセットデータを削除
-        localStorage.removeItem(`multiple-choiceSet_${selectedSetId}`);
-        localStorage.removeItem('lastEditedMultipleChoiceSetId');
-  
-        // sessionStatesを削除
-        const sessionStates = JSON.parse(localStorage.getItem('sessionStates')) || {};
-        delete sessionStates[selectedSetId];
-        localStorage.setItem('sessionStates', JSON.stringify(sessionStates));
-  
-        setSelectedSetId('');
-        setSetTitle('');
-        setQuestions([]);
-  
-        setErrors({});
-        alert('セットが正常に削除されました。');
-      } catch (error) {
-        console.error("Error deleting set:", error);
-        setErrors(prevErrors => ({ ...prevErrors, delete: "セットの削除中にエラーが発生しました。" }));
-      }
-    }
-  }, [selectedSetId, questions, user]);
 
   const removeImage = useCallback((index) => {
     updateQuestion(index, 'image', null);
@@ -339,30 +259,13 @@ const MultipleChoiceEditScreen = ({ onBack, onSave }) => {
           <h1 className="text-2xl font-bold ml-2">多肢選択問題編集</h1>
         </div>
 
-        <div className={styles.selectContainer}>
-          <Select onValueChange={handleSetChange} value={selectedSetId}>
-            <SelectTrigger className={styles.selectTrigger}>
-              <SelectValue placeholder="編集するセットを選択" />
-            </SelectTrigger>
-            <SelectContent>
-              {sets.map((set, index) => (
-                <SelectItem key={`${set.id}-${index}`} value={set.id.toString()}>{set.title}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Input
-            placeholder="セットのタイトル"
-            value={setTitle}
-            onChange={(e) => setSetTitle(e.target.value)}
-            className={`${styles.mobileFriendlyInput} ${styles.setTitle} mb-2`}
-          />
-          {errors.title && <Alert variant="destructive"><AlertDescription>{errors.title}</AlertDescription></Alert>}
-          {selectedSetId && (
-            <Button onClick={handleDelete} variant="destructive" className="mt-2">
-              <Trash2 className="mr-2 h-4 w-4" /> セットを削除
-            </Button>
-          )}
-        </div>
+        <Input
+          placeholder="セットのタイトル"
+          value={setTitle}
+          onChange={(e) => setSetTitle(e.target.value)}
+          className={`${styles.mobileFriendlyInput} ${styles.setTitle} mb-2`}
+        />
+        {errors.title && <Alert variant="destructive"><AlertDescription>{errors.title}</AlertDescription></Alert>}
 
         <Button onClick={togglePreviewMode} className={styles.previewButton}>
           {previewMode ? <EyeOff className={styles.previewButtonIcon} /> : <Eye className={styles.previewButtonIcon} />}
