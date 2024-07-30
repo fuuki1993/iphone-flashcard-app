@@ -10,6 +10,10 @@
   margin-right: auto;
   background-color: var(--background);
   transition: background-color 0.3s ease;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
 }
 
 .header {
@@ -30,14 +34,14 @@
 .scrollableContent {
   flex: 1;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 0.75rem;
   padding-bottom: 140px; /* フリックボタンの高さ分の余白 */
-  -webkit-overflow-scrolling: touch; /* iOSデバイスでのスムーズスクロール */
-  overscroll-behavior-y: contain; /* オーバースクロール時の挙動を制御 */
+  overscroll-behavior-y: contain;
 }
 
 .flickButtonContainer {
-  position: sticky;
+  position: fixed;
   bottom: 0;
   left: 0;
   right: 0;

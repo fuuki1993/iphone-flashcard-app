@@ -303,41 +303,20 @@ const HomeScreen = ({
     />
   ), [todayStudyTime, dailyGoal]);
 
+  const handleScroll = useCallback((e) => {
+    e.stopPropagation();
+  }, []);
+
   useEffect(() => {
     const scrollableContent = scrollableContentRef.current;
     if (scrollableContent) {
-      let startY;
-      
-      const handleTouchStart = (e) => {
-        startY = e.touches[0].pageY;
-      };
-      
-      const handleTouchMove = (e) => {
-        const currentY = e.touches[0].pageY;
-        const scrollTop = scrollableContent.scrollTop;
-        const scrollHeight = scrollableContent.scrollHeight;
-        const clientHeight = scrollableContent.clientHeight;
-        
-        // 上端でのオーバースクロールを防止
-        if (scrollTop <= 0 && currentY > startY) {
-          e.preventDefault();
-        }
-        
-        // 下端でのオーバースクロールを防止
-        if (scrollTop + clientHeight >= scrollHeight && currentY < startY) {
-          e.preventDefault();
-        }
-      };
-      
-      scrollableContent.addEventListener('touchstart', handleTouchStart);
-      scrollableContent.addEventListener('touchmove', handleTouchMove, { passive: false });
+      scrollableContent.addEventListener('touchmove', handleScroll, { passive: false });
       
       return () => {
-        scrollableContent.removeEventListener('touchstart', handleTouchStart);
-        scrollableContent.removeEventListener('touchmove', handleTouchMove);
+        scrollableContent.removeEventListener('touchmove', handleScroll);
       };
     }
-  }, []);
+  }, [handleScroll]);
 
   // スケルトンローディングの改善
   if (homeScreenData.isLoading || recentActivitiesData.isLoading || scheduledEventsData.isLoading) {
