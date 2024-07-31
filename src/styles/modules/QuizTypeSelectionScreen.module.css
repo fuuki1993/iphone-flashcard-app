@@ -107,12 +107,31 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .cardDescription {
   font-size: 0.875rem;
   color: var(--secondary);
   margin: 0;
+  flex-basis: 100%;
+}
+
+.quizTypeButton {
+  font-size: 0.75rem;
+  white-space: nowrap;
+  background-color: var(--background);
+  color: var(--text);
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  border: 1px solid var(--border);
+  transition: background-color var(--transition-speed) ease, transform 0.2s ease;
+}
+
+.quizTypeButton:hover {
+  background-color: var(--accent);
+  color: var(--background);
 }
 
 .startButton {
@@ -158,14 +177,14 @@
   }
 
   .cardFooter {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
+    align-items: flex-start;
   }
 
+  .quizTypeButton,
   .startButton {
-    margin-top: 0;
-    margin-left: 0.5rem;
+    width: 100%;
+    margin-top: 0.5rem;
   }
 }
 
@@ -195,6 +214,7 @@
     align-items: center;
   }
 
+  .quizTypeButton,
   .startButton {
     margin-left: 0.5rem;
   }

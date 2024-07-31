@@ -24,6 +24,7 @@ const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
   const [activeQuizType, setActiveQuizType] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedQuizTypes, setSelectedQuizTypes] = useState({});
 
   useEffect(() => {
     const auth = getAuth();
@@ -57,11 +58,56 @@ const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
     (activeQuizType === 'all' || set.type === activeQuizType)
   );
 
-  const handleStartQuiz = useCallback(async (setId, setType) => {
+  const getAvailableQuizTypes = (set) => {
+    const baseTypes = [set.type];
+    switch (set.type) {
+      case 'flashcard':
+        baseTypes.push('qa');
+        if (set.cards?.length >= 4) {
+          baseTypes.push('multiple-choice');
+        }
+        break;
+      case 'qa':
+        baseTypes.push('flashcard');
+        if (set.qaItems?.length >= 4) {
+          baseTypes.push('multiple-choice');
+        }
+        break;
+      case 'classification':
+        // 分類タイプの場合は他のタイプを追加しない
+        break;
+    }
+    return baseTypes;
+  };
+
+  const getQuizTypeLabel = (type) => {
+    switch (type) {
+      case 'flashcard':
+        return 'フラッシュカード';
+      case 'qa':
+        return '一問一答';
+      case 'multiple-choice':
+        return '多肢選択';
+      case 'classification':
+        return '分類';
+      default:
+        return type;
+    }
+  };
+
+  const handleQuizTypeSelect = (setId, quizType) => {
+    setSelectedQuizTypes(prev => ({
+      ...prev,
+      [setId]: quizType
+    }));
+  };
+
+  const handleStartQuiz = useCallback(async (setId, set) => {
     if (!user) return;
-    await clearSessionState(user.uid, setId, setType);
-    onStartQuiz(setType, setId);
-  }, [user, onStartQuiz]);
+    const quizType = selectedQuizTypes[setId] || set.type;
+    await clearSessionState(user.uid, setId, quizType);
+    onStartQuiz(quizType, setId, set.title);
+  }, [user, onStartQuiz, selectedQuizTypes]);
 
   if (!user) {
     return (
@@ -127,25 +173,46 @@ const QuizTypeSelectionScreen = ({ onBack, onStartQuiz }) => {
         {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
         <div className={styles.cardList}>
-          {filteredSets.map((set) => (
-            <Card key={set.id} className={styles.quizTypeCard}>
-              <CardHeader className={styles.cardHeader}>
-                <CardTitle className={styles.cardTitle}>{set.title}</CardTitle>
-              </CardHeader>
-              <CardContent className={styles.cardContent}>
-                <div className={styles.cardFooter}>
-                  <p className={styles.cardDescription}>タイプ: {set.type}</p>
-                  <Button 
-                    size="sm"
-                    className={styles.startButton}
-                    onClick={() => handleStartQuiz(set.id, set.type)}
-                  >
-                    <Play className={styles.startButtonIcon} /> 学習開始
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+          {filteredSets.map((set) => {
+            const availableTypes = getAvailableQuizTypes(set);
+            return (
+              <Card key={set.id} className={styles.quizTypeCard}>
+                <CardHeader className={styles.cardHeader}>
+                  <CardTitle className={styles.cardTitle}>{set.title}</CardTitle>
+                </CardHeader>
+                <CardContent className={styles.cardContent}>
+                  <div className={styles.cardFooter}>
+                    <p className={styles.cardDescription}>
+                      タイプ: {availableTypes.map(getQuizTypeLabel).join(', ')}
+                    </p>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" className={styles.quizTypeButton}>
+                          {getQuizTypeLabel(selectedQuizTypes[set.id] || set.type)}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuLabel>クイズタイプを選択</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {availableTypes.map((type) => (
+                          <DropdownMenuItem key={type} onSelect={() => handleQuizTypeSelect(set.id, type)}>
+                            {getQuizTypeLabel(type)}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Button 
+                      size="sm"
+                      className={styles.startButton}
+                      onClick={() => handleStartQuiz(set.id, set)}
+                    >
+                      <Play className={styles.startButtonIcon} /> 学習開始
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       </div>
     </div>

@@ -33,6 +33,12 @@ export const useFlashcardQuiz = (setId, sessionState, onFinish, setTodayStudyTim
   const [studiedCards, setStudiedCards] = useState(new Set());
   const [results, setResults] = useState([]);
 
+  useEffect(() => {
+    if (cards && cards.length > 0) {
+      setShuffledCards(shuffleArray([...cards]));
+    }
+  }, [cards]);
+
   /**
    * =============================================
    * データ読み込みと初期化

@@ -50,7 +50,7 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTod
         questions={shuffledQuestions}
         results={results}
         quizType="qa"
-        userAnswers={userAnswers}
+        userAnswers={userAnswer}
       />
     );
   }

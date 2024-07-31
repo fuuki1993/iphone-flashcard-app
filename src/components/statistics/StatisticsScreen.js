@@ -1,250 +1,225 @@
-import React, { useState, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/layout/card";
-import { ArrowLeft, Clock, BookOpen, TrendingUp, ArrowUpRight, ArrowDownRight, ArrowRight } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts';
-import { getUserStatistics, getStudyHistory } from '@/utils/firebase/firestore';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/layout/card';
+import { Progress } from '@/components/ui/feedback/progress';
+import { ArrowLeft, BarChart2, Clock, Target, Activity, Award } from 'lucide-react';
+import { getStudyHistory, getCurrentProgress, calculateTodayStudyTime, getAllSets } from '@/utils/firebase/firestore';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import styles from '@/styles/modules/StatisticsScreen.module.css';
 
-const formatTotalStudyTime = (totalSeconds) => {
-  if (isNaN(totalSeconds) || totalSeconds === 0) return '0時間0分';
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  return `${hours}時間${minutes}分`;
-};
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
-const StatisticsScreen = ({ onBack, userId, refreshTrigger }) => {
-  const [cachedStatistics, setCachedStatistics] = useLocalStorage('userStatistics', null);
-  const [statistics, setStatistics] = useState(cachedStatistics?.data || {
+const StatisticsScreen = ({ onBack, userId }) => {
+  const [stats, setStats] = useState({
+    overallProgress: 0,
+    todayStudyTime: 0,
+    streak: 0,
     totalStudyTime: 0,
-    todayStudiedCards: 0,
-    weeklyStudyTime: [0, 0, 0, 0, 0, 0, 0],
-    totalStudyTimeComparison: 0,
-    todayStudiedCardsComparison: 0
+    averageScore: 0,
+    weeklyStudyTime: [],
+    quizTypeDistribution: []
   });
+  const [isLoading, setIsLoading] = useState(true);
+
+  const loadData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [progress, today, history, sets] = await Promise.all([
+        getCurrentProgress(userId),
+        calculateTodayStudyTime(userId),
+        getStudyHistory(userId),
+        getAllSets(userId)
+      ]);
+
+      const weeklyData = calculateWeeklyStudyTime(history);
+      const distribution = calculateQuizTypeDistribution(sets);
+      const streak = calculateStreak(history);
+      const totalStudyTime = history.reduce((total, entry) => total + (entry.studyDuration || 0), 0);
+      const averageScore = calculateAverageScore(history);
+
+      setStats({
+        overallProgress: progress,
+        todayStudyTime: today,
+        streak,
+        totalStudyTime,
+        averageScore,
+        weeklyStudyTime: weeklyData,
+        quizTypeDistribution: distribution
+      });
+    } catch (error) {
+      console.error("Error loading statistics:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [userId]);
 
   useEffect(() => {
-    const fetchStatistics = async () => {
-      if (userId) {
-        if (cachedStatistics && Date.now() - cachedStatistics.timestamp < 5 * 60 * 1000) {
-          setStatistics(cachedStatistics.data);
-        } else {
-          try {
-            const userStats = await getUserStatistics(userId);
-            if (userStats) {
-              // ユーザー統計情報が取得できた場合の処理
-              const studyHistory = await getStudyHistory(userId);
-              
-              // 総学習時間の計算
-              const totalStudyTime = studyHistory.reduce((total, entry) => {
-                return total + (entry.studyDuration || 0);
-              }, 0);
-              
-              // 週間学習時間の計算
-              const weeklyStudyTime = calculateWeeklyStudyTime(studyHistory);
-              
-              // 今日の学習カード数の計算
-              const today = new Date().toDateString();
-              const todayStudiedCards = studyHistory
-                .filter(entry => new Date(entry.date).toDateString() === today)
-                .reduce((total, entry) => {
-                  return total + (entry.cardsStudied || 0);
-                }, 0);
+    loadData();
+  }, [loadData]);
 
-              // 前週比の計算
-              const totalStudyTimeComparison = calculateComparison(studyHistory, 'studyDuration');
-              
-              const todayStudiedCardsComparison = calculateComparison(studyHistory, 'cardsStudied');
+  const calculateWeeklyStudyTime = (history) => {
+    const now = new Date();
+    const weeklyData = Array(7).fill().map((_, i) => {
+      const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+      return {
+        date: date.toLocaleDateString('ja-JP', { weekday: 'short' }),
+        minutes: 0
+      };
+    }).reverse();
 
-              const newStatistics = {
-                ...userStats,
-                totalStudyTime,
-                weeklyStudyTime,
-                todayStudiedCards,
-                totalStudyTimeComparison,
-                todayStudiedCardsComparison
-              };
-
-              setStatistics(newStatistics);
-              setCachedStatistics({ data: newStatistics, timestamp: Date.now() });
-            } else {
-              // ユーザー統計情報が取得できなかった場合の処理
-              setStatistics({
-                ...statistics,
-                error: '統計情報を取得できませんでした。'
-              });
-            }
-          } catch (error) {
-            setStatistics({
-              ...statistics,
-              error: '統計情報の取得に失敗しました。しばらくしてからもう一度お試しください。'
-            });
-          }
-        }
+    history.forEach(entry => {
+      const entryDate = new Date(entry.date);
+      const dayIndex = weeklyData.findIndex(day => 
+        new Date(day.date).toDateString() === entryDate.toDateString()
+      );
+      if (dayIndex !== -1) {
+        weeklyData[dayIndex].minutes += Math.round(entry.studyDuration / 60);
       }
-    };
-
-    fetchStatistics();
-  }, [userId, refreshTrigger]);
-
-  const calculateWeeklyStudyTime = (studyHistory) => {
-    const today = new Date();
-    const oneWeekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-    
-    const weeklyData = studyHistory
-      .filter(entry => {
-        const entryDate = new Date(entry.date);
-        return entryDate >= oneWeekAgo;
-      })
-      .reduce((acc, entry) => {
-        const dayOfWeek = new Date(entry.date).getDay();
-        acc[dayOfWeek] += entry.studyDuration;
-        return acc;
-      }, Array(7).fill(0));
+    });
 
     return weeklyData;
   };
 
-  const calculateComparison = (studyHistory, field) => {
-    const today = new Date();
-    const oneWeekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const twoWeeksAgo = new Date(today.getTime() - 14 * 24 * 60 * 60 * 1000);
+  const calculateQuizTypeDistribution = (sets) => {
+    const distribution = {
+      flashcard: 0,
+      qa: 0,
+      'multiple-choice': 0,
+      classification: 0
+    };
 
-    const thisWeekTotal = studyHistory
-      .filter(entry => new Date(entry.date) >= oneWeekAgo)
-      .reduce((total, entry) => total + (entry[field] || 0), 0);
+    sets.forEach(set => {
+      distribution[set.type] += 1;
+    });
 
-    const lastWeekTotal = studyHistory
-      .filter(entry => new Date(entry.date) >= twoWeeksAgo && new Date(entry.date) < oneWeekAgo)
-      .reduce((total, entry) => total + (entry[field] || 0), 0);
-
-    if (lastWeekTotal === 0) return 0;
-    const comparison = ((thisWeekTotal - lastWeekTotal) / lastWeekTotal) * 100;
-    return comparison;
+    return Object.entries(distribution).map(([name, value]) => ({ name, value }));
   };
 
-  const formattedTotalStudyTime = formatTotalStudyTime(statistics.totalStudyTime);
+  const calculateStreak = (history) => {
+    let currentStreak = 0;
+    let lastDate = new Date();
 
-  const transformedWeeklyData = ['日', '月', '火', '水', '木', '金', '土'].map((day, index) => ({
-    day,
-    time: Math.floor(statistics.weeklyStudyTime[index] / 60) // 秒から分に変換
-  }));
+    for (let i = 0; i < history.length; i++) {
+      const entryDate = new Date(history[i].date);
+      const diffDays = Math.floor((lastDate - entryDate) / (1000 * 60 * 60 * 24));
 
-  const renderComparison = (value) => {
-    if (value === undefined || value === null || isNaN(value)) {
-      // 比較データが存在しない場合
-      return (
-        <div className={`${styles.comparison} ${styles.comparisonNeutral}`}>
-          <ArrowRight size={16} className="mr-1" />
-          <span>0.0%</span>
-          <span className="text-xs ml-1">前週比</span>
-        </div>
-      );
+      if (diffDays <= 1) {
+        currentStreak++;
+        lastDate = entryDate;
+      } else {
+        break;
+      }
     }
-    const absValue = Math.abs(value);
-    let Icon, color;
-    if (value > 0) {
-      Icon = ArrowUpRight;
-      color = styles.comparisonPositive;
-    } else if (value < 0) {
-      Icon = ArrowDownRight;
-      color = styles.comparisonNegative;
-    } else {
-      Icon = ArrowRight;
-      color = styles.comparisonNeutral;
-    }
-    return (
-      <div className={`${styles.comparison} ${color}`}>
-        <Icon size={16} className="mr-1" />
-        <span>{absValue.toFixed(1)}%</span>
-        <span className="text-xs ml-1">前週比</span>
-      </div>
-    );
+
+    return currentStreak;
   };
+
+  const calculateAverageScore = (history) => {
+    const scores = history.filter(entry => entry.score !== undefined);
+    if (scores.length === 0) return 0;
+    return scores.reduce((sum, entry) => sum + entry.score, 0) / scores.length;
+  };
+
+  if (isLoading) {
+    return <div className={styles.loading}>Loading...</div>;
+  }
 
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <Button variant="ghost" size="icon" onClick={onBack} className="text-gray-800">
-          <ArrowLeft size={24} />
+        <Button variant="ghost" size="icon" onClick={onBack}>
+          <ArrowLeft />
         </Button>
-        <h1 className={styles.title}>統計</h1>
+        <h1 className={styles.title}>統計情報</h1>
       </div>
 
-      <div className={styles.gridContainer}>
-        <Card className={styles.card}>
-          <CardHeader className={styles.cardHeader}>
-            <CardTitle className={styles.cardTitle}>
-              <Clock className="mr-1" size={16} />
-              総学習時間
-            </CardTitle>
-          </CardHeader>
-          <CardContent className={styles.cardContent}>
-            <p className={styles.statValue}>{formattedTotalStudyTime}</p>
-            {renderComparison(statistics.totalStudyTimeComparison)}
+      <div className={styles.statsGrid}>
+        <Card className={styles.statsCard}>
+          <CardContent>
+            <BarChart2 className={styles.statsIcon} />
+            <h2>全体の進捗</h2>
+            <Progress value={stats.overallProgress} className="w-full" />
+            <p>{stats.overallProgress.toFixed(1)}%</p>
           </CardContent>
         </Card>
 
-        <Card className={styles.card}>
-          <CardHeader className={styles.cardHeader}>
-            <CardTitle className={styles.cardTitle}>
-              <BookOpen className="mr-1" size={16} />
-              今日の学習
-            </CardTitle>
-          </CardHeader>
-          <CardContent className={styles.cardContent}>
-            <p className={styles.statValue}>{statistics.todayStudiedCards}枚</p>
-            {renderComparison(statistics.todayStudiedCardsComparison)}
+        <Card className={styles.statsCard}>
+          <CardContent>
+            <Clock className={styles.statsIcon} />
+            <h2>今日の学習時間</h2>
+            <p>{Math.round(stats.todayStudyTime / 60)} 分</p>
+          </CardContent>
+        </Card>
+
+        <Card className={styles.statsCard}>
+          <CardContent>
+            <Target className={styles.statsIcon} />
+            <h2>連続学習日数</h2>
+            <p>{stats.streak} 日</p>
+          </CardContent>
+        </Card>
+
+        <Card className={styles.statsCard}>
+          <CardContent>
+            <Activity className={styles.statsIcon} />
+            <h2>総学習時間</h2>
+            <p>{Math.round(stats.totalStudyTime / 3600)} 時間</p>
+          </CardContent>
+        </Card>
+
+        <Card className={styles.statsCard}>
+          <CardContent>
+            <Award className={styles.statsIcon} />
+            <h2>平均スコア</h2>
+            <p>{stats.averageScore.toFixed(1)}%</p>
           </CardContent>
         </Card>
       </div>
 
-      <Card className={styles.card}>
-        <CardHeader className={styles.cardHeader}>
-          <CardTitle className={styles.cardTitle}>
-            <TrendingUp className="mr-2" size={20} />
-            週間学習時間
-          </CardTitle>
-        </CardHeader>
-        <CardContent className={styles.cardContent}>
-          <div className={styles.chartContainer}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={transformedWeeklyData}
-                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                <XAxis 
-                  dataKey="day" 
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: '#4b5563', fontSize: 12 }}
-                />
-                <YAxis
-                  tickCount={5}
-                  domain={[0, 'dataMax + 10']}
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: '#4b5563', fontSize: 12 }}
-                />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e5e7eb' }}
-                  labelStyle={{ color: '#111827', fontWeight: 'bold' }}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="time" 
-                  stroke="#4b5563" 
-                  strokeWidth={2}
-                  dot={{ fill: '#4b5563', r: 4 }}
-                  activeDot={{ r: 6, fill: '#111827' }}
-                />
+      <div className={styles.chartsContainer}>
+        <Card className={styles.chartCard}>
+          <CardHeader>
+            <CardTitle>週間学習時間</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={150}>
+              <LineChart data={stats.weeklyStudyTime}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Line type="monotone" dataKey="minutes" stroke="#8884d8" />
               </LineChart>
             </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        <Card className={styles.chartCard}>
+          <CardHeader>
+            <CardTitle>クイズタイプ分布</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={150}>
+              <PieChart>
+                <Pie
+                  data={stats.quizTypeDistribution}
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={60}
+                  fill="#8884d8"
+                  dataKey="value"
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                >
+                  {stats.quizTypeDistribution.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
