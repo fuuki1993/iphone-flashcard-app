@@ -48,7 +48,7 @@ export const saveSet = async (set, userId) => {
     await setDoc(newSetRef, newSet);
     return newSet;
   } catch (error) {
-    console.error("Error saving set:", error);
+
     throw error;
   }
 };
@@ -72,7 +72,7 @@ export const getSets = async (userId, type = null) => {
     }
     return sets;
   } catch (error) {
-    console.error("Error getting sets:", error);
+
     throw error;
   }
 };
@@ -88,7 +88,7 @@ export const getAllSets = async (userId) => {
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
-    console.error("Error getting all sets:", error);
+
     throw error;
   }
 };
@@ -117,7 +117,7 @@ export const getSetById = async (userId, setId) => {
       throw new Error(`セットが見つかりません: ${setId}`);
     }
   } catch (error) {
-    console.error(`Error getting set by ID (${setId}):`, error);
+
     throw error;
   }
 };
@@ -125,7 +125,7 @@ export const getSetById = async (userId, setId) => {
 /**
  * セットを更新する
  * @param {Object} set - 更新するセットのデータ
- * @param {string} userId - ユーザーID
+ * @param {string} userId - ユーザID
  * @returns {Promise<string>} 更新されたセットのID
  */
 export const updateSet = async (set, userId) => {
@@ -158,7 +158,7 @@ export const updateSet = async (set, userId) => {
 
     return set.id;
   } catch (error) {
-    console.error("Error updating set:", error);
+
     throw error;
   }
 };
@@ -199,7 +199,7 @@ export const deleteSet = async (userId, setId) => {
     const newProgress = await recalculateProgressAfterDeletion(userId);
     return newProgress;
   } catch (error) {
-    console.error("Error deleting set and related data:", error);
+
     throw error;
   }
 };
@@ -215,7 +215,7 @@ export const getSetTitle = async (userId, setId) => {
     const set = await getSetById(userId, setId);
     return set.title;
   } catch (error) {
-    console.error("Error getting set title:", error);
+
     throw error;
   }
 };
@@ -250,23 +250,25 @@ export const saveStudyHistory = async (userId, studyHistoryEntry) => {
  * @returns {Promise<Array>} 学習履歴の配列
  */
 export const getStudyHistory = async (userId) => {
+
   try {
     const studyHistoryRef = collection(db, 'users', userId, 'studyHistory');
-    const q = query(studyHistoryRef, orderBy('createdAt', 'desc'));
+    const q = query(studyHistoryRef, orderBy('date', 'desc'));
     const querySnapshot = await getDocs(q);
     const studyHistory = querySnapshot.docs.map(doc => {
       const data = doc.data();
       return {
         ...data,
         id: doc.id,
-        createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt.seconds * 1000)
+        date: data.date instanceof Timestamp ? data.date.toDate() : new Date(data.date)
       };
     });
 
+
     return studyHistory;
   } catch (error) {
-    console.error("Error fetching study history:", error);
-    return [];
+
+    throw error;
   }
 };
 
@@ -279,7 +281,7 @@ export const deleteStudyHistoryEntry = async (userId, entryId) => {
   try {
     await deleteDoc(doc(db, `users/${userId}/${HISTORY_COLLECTION}`, entryId));
   } catch (error) {
-    console.error("Error deleting study history entry:", error);
+
     throw error;
   }
 };
@@ -292,20 +294,19 @@ export const deleteStudyHistoryEntry = async (userId, entryId) => {
  * セッション状態を保存する
  * @param {string} userId - ユーザーID
  * @param {string} setId - セットID
- * @param {string} setType - セットタイプ
- * @param {Object} state - セッション状態
+ * @param {string} quizType - クイズタイプ
+ * @param {Object} sessionState - セッション状態
  */
-export const saveSessionState = async (userId, setId, setType, state) => {
+export const saveSessionState = async (userId, setId, quizType, sessionState) => {
   try {
-    const docRef = doc(db, `users/${userId}/${SESSION_STATES_COLLECTION}`, `${setId}_${setType}`);
+    const docRef = doc(db, `users/${userId}/${SESSION_STATES_COLLECTION}`, `${setId}_${quizType}`);
     const now = serverTimestamp();
     await setDoc(docRef, { 
-      setId, 
-      setType, 
-      state, 
+      ...sessionState,
+      quizType,
       lastStudyDate: now,
       updatedAt: now
-    });
+    }, { merge: true });
   } catch (error) {
     console.error("Error saving session state:", error);
     throw error;
@@ -316,20 +317,15 @@ export const saveSessionState = async (userId, setId, setType, state) => {
  * セッション状態を取得する
  * @param {string} userId - ユーザーID
  * @param {string} setId - セットID
- * @param {string} setType - セットタイプ
+ * @param {string} quizType - クイズタイプ
  * @returns {Promise<Object|null>} セッション状態
  */
-export const getSessionState = async (userId, setId, setType) => {
+export const getSessionState = async (userId, setId, quizType) => {
   try {
-    const docRef = doc(db, `users/${userId}/${SESSION_STATES_COLLECTION}`, `${setId}_${setType}`);
+    const docRef = doc(db, `users/${userId}/${SESSION_STATES_COLLECTION}`, `${setId}_${quizType}`);
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
-      const data = docSnap.data();
-      return {
-        ...data.state,
-        lastStudyDate: data.lastStudyDate || null,
-        updatedAt: data.updatedAt || null
-      };
+      return docSnap.data();
     } else {
       return null;
     }
@@ -343,27 +339,15 @@ export const getSessionState = async (userId, setId, setType) => {
  * セッション状態をクリアする
  * @param {string} userId - ユーザーID
  * @param {string} setId - セットID
- * @param {string} setType - セットタイプ
+ * @param {string} quizType - クイズタイプ
  */
-export const clearSessionState = async (userId, setId, setType) => {
+export const clearSessionState = async (userId, setId, quizType) => {
   try {
-    await deleteDoc(doc(db, `users/${userId}/${SESSION_STATES_COLLECTION}`, `${setId}_${setType}`));
+    await deleteDoc(doc(db, `users/${userId}/${SESSION_STATES_COLLECTION}`, `${setId}_${quizType}`));
   } catch (error) {
     console.error("Error clearing session state:", error);
     throw error;
   }
-};
-
-/**
- * セッション状態を更新する
- * @param {string} userId - ユーザーID
- * @param {string} setId - セットID
- * @param {string} quizType - クイズタイプ
- * @param {Object} data - 更新データ
- */
-export const updateSessionState = async (userId, setId, quizType, data) => {
-  const sessionStateRef = doc(db, `users/${userId}/${SESSION_STATES_COLLECTION}`, `${setId}_${quizType}`);
-  await setDoc(sessionStateRef, data, { merge: true });
 };
 
 //=============================================================================
@@ -510,7 +494,7 @@ export const unpublishSet = async (userId, setId) => {
     const setRef = doc(db, `users/${userId}/${SETS_COLLECTION}`, setId);
     await updateDoc(setRef, { isPublished: false });
     
-    // 公開セットコレクションから削除
+    // 公開セットコレクションから削
     const publicSetsRef = collection(db, 'publicSets');
     const q = query(publicSetsRef, where("originalAuthorId", "==", userId), where("id", "==", setId));
     const querySnapshot = await getDocs(q);
@@ -518,7 +502,7 @@ export const unpublishSet = async (userId, setId) => {
       await deleteDoc(doc.ref);
     });
   } catch (error) {
-    console.error("Error unpublishing set:", error);
+
     throw error;
   }
 };
@@ -530,18 +514,18 @@ export const getPublishedSets = async () => {
     const q = query(publicSetsRef, orderBy("publishedAt", "desc"));
     const querySnapshot = await getDocs(q);
     const publishedSets = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    console.log('Retrieved published sets:', publishedSets);
+
     publishedSets.forEach(set => {
-      console.log(`Set ID: ${set.id}, Title: ${set.title}, Data:`, set);
+
     });
     return publishedSets;
   } catch (error) {
-    console.error("Error getting published sets:", error);
+
     throw error;
   }
 };
 
-// 公開されたセットをコピーする
+// 公されたセットをコピーする
 export const copyPublishedSet = async (userId, publishedSetId) => {
   try {
     console.log(`Attempting to copy published set with ID: ${publishedSetId}`);
@@ -588,18 +572,6 @@ const getAllPublicSets = async () => {
   const publicSetsRef = collection(db, 'publicSets');
   const snapshot = await getDocs(publicSetsRef);
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-};
-
-export const debugPublicSets = async () => {
-  try {
-    const publicSetsRef = collection(db, 'publicSets');
-    const snapshot = await getDocs(publicSetsRef);
-    console.log('Debug: All public sets:', snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    return true;
-  } catch (error) {
-    console.error('Debug: Error fetching public sets:', error);
-    return false;
-  }
 };
 
 /**
@@ -775,7 +747,7 @@ export const updateUserMaxProgress = async (userId, newProgress) => {
       updatedAt: serverTimestamp() 
     });
   } catch (error) {
-    console.error("Error updating user max progress:", error);
+
     throw error;
   }
 };
@@ -795,7 +767,7 @@ export const getCurrentProgress = async (userId) => {
       return 0; // デフォルト値として0を返す
     }
   } catch (error) {
-    console.error("Error getting current progress:", error);
+
     throw error;
   }
 };
@@ -813,7 +785,7 @@ export const updateCurrentProgress = async (userId, newProgress) => {
       updatedAt: serverTimestamp() 
     });
   } catch (error) {
-    console.error("Error updating current progress:", error);
+
     throw error;
   }
 };
@@ -829,30 +801,19 @@ export const calculateCurrentProgress = async (userId) => {
     const totalItems = calculateTotalItems(allSets);
 
     const sessionStates = await Promise.all(
-      allSets.map(set => getSessionState(userId, set.id, set.type))
+      allSets.map(set => getSessionState(userId, set.id))
     );
 
-    const completedItems = sessionStates.reduce((total, state, index) => {
-      if (state) {
-        const set = allSets[index];
-        switch (set.type) {
-          case 'flashcard':
-            return total + (state.studiedCards ? state.studiedCards.length : 0);
-          case 'qa':
-          case 'multiple-choice':
-            return total + (state.studiedQuestions ? state.studiedQuestions.length : 0);
-          case 'classification':
-            return total + (state.studiedItems ? state.studiedItems.length : 0);
-          default:
-            return total;
-        }
+    const completedItems = sessionStates.reduce((total, state) => {
+      if (state && state.studiedItems) {
+        return total + state.studiedItems.length;
       }
       return total;
     }, 0);
 
     return totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
   } catch (error) {
-    console.error("Error calculating current progress:", error);
+
     throw error;
   }
 };
@@ -879,7 +840,7 @@ export const recalculateProgressAfterDeletion = async (userId) => {
     
     return newProgress;
   } catch (error) {
-    console.error("Error recalculating progress after deletion:", error);
+
     throw error;
   }
 };
@@ -923,7 +884,7 @@ export const getUserStatistics = async (userId) => {
       return defaultStats;
     }
   } catch (error) {
-    console.error('Error getting user statistics:', error);
+
     throw error;
   }
 };
@@ -945,7 +906,7 @@ export const uploadImage = async (file, path) => {
     const downloadURL = await getDownloadURL(snapshot.ref);
     return downloadURL;
   } catch (error) {
-    console.error("Error uploading image:", error);
+
     throw error;
   }
 };
@@ -985,20 +946,9 @@ const calculateTotalItems = (sets) => {
 const calculateCompletedItems = async (userId, sets) => {
   let completedItems = 0;
   for (const set of sets) {
-    const sessionState = await getSessionState(userId, set.id, set.type);
+    const sessionState = await getSessionState(userId, set.id);
     if (sessionState) {
-      switch (set.type) {
-        case 'flashcard':
-          completedItems += sessionState.studiedCards ? sessionState.studiedCards.length : 0;
-          break;
-        case 'qa':
-        case 'multiple-choice':
-          completedItems += sessionState.studiedQuestions ? sessionState.studiedQuestions.length : 0;
-          break;
-        case 'classification':
-          completedItems += sessionState.studiedItems ? sessionState.studiedItems.length : 0;
-          break;
-      }
+      completedItems += sessionState.studiedItems ? sessionState.studiedItems.length : 0;
     }
   }
   return completedItems;
@@ -1026,7 +976,7 @@ export const syncUnsyncedData = async (userId) => {
     // セッション状態の同期
     const unsyncedSessionStates = await getUnsyncedSessionStates(userId);
     for (const state of unsyncedSessionStates) {
-      await saveSessionState(userId, state.setId, state.setType, state.state);
+      await saveSessionState(userId, state.setId, state.state);
     }
 
     // ユーザー設定の同期
@@ -1035,16 +985,16 @@ export const syncUnsyncedData = async (userId) => {
       await updateUserSettings(userId, unsyncedSettings);
     }
 
-    // 進捗の再計算と同期（必要な場合のみ）
+    // 進捗の再計算と同期（必な場合のみ）
     const currentProgress = await getCurrentProgress(userId);
     const calculatedProgress = await calculateCurrentProgress(userId);
     if (currentProgress !== calculatedProgress) {
       await updateCurrentProgress(userId, calculatedProgress);
     }
 
-    console.log('未同期のデータの同期が完了しました');
+
   } catch (error) {
-    console.error('データの同期中にエラーが発生しました:', error);
+
     throw error;
   }
 };
@@ -1066,7 +1016,7 @@ const getUnsyncedSets = async (userId) => {
 /**
  * 同期されていない学習履歴を取得する
  * @param {string} userId - ユーザーID
- * @returns {Promise<Array>} 未同期の学習履歴の配列
+ * @returns {Promise<Array>} 未の学習履歴の配列
  */
 const getUnsyncedStudyHistory = async (userId) => {
   const lastSyncTime = await getLastSyncTime(userId, 'studyHistory');
@@ -1086,7 +1036,7 @@ const getUnsyncedSessionStates = async (userId) => {
   const statesRef = collection(db, `users/${userId}/${SESSION_STATES_COLLECTION}`);
   const q = query(statesRef, where('updatedAt', '>', lastSyncTime));
   const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => doc.data());
+  return querySnapshot.docs.map(doc => ({ setId: doc.id, state: doc.data() }));
 };
 
 /**

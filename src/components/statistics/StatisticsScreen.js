@@ -1,128 +1,220 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Button } from '@/components/ui/button';
+import React, { useState, useEffect } from 'react';
+import { getAuth } from 'firebase/auth';
+import { getFirestore, collection, getDocs } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/layout/card';
 import { Progress } from '@/components/ui/feedback/progress';
-import { ArrowLeft, BarChart2, Clock, Target, Activity, Award } from 'lucide-react';
-import { getStudyHistory, getCurrentProgress, calculateTodayStudyTime, getAllSets } from '@/utils/firebase/firestore';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/layout/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ArrowLeft, BarChart2 } from 'lucide-react';
 import styles from '@/styles/modules/StatisticsScreen.module.css';
+import useWeaknessAnalysis from './useWeaknessAnalysis';
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+// この関数を追加
+const getQuizTypeLabel = (type) => {
+  switch (type) {
+    case 'flashcard':
+      return 'フラッシュカード';
+    case 'qa':
+      return '一問一答';
+    case 'multiple-choice':
+      return '多肢選択';
+    case 'classification':
+      return '分類';
+    default:
+      return type;
+  }
+};
 
-const StatisticsScreen = ({ onBack, userId }) => {
-  const [stats, setStats] = useState({
-    overallProgress: 0,
-    todayStudyTime: 0,
-    streak: 0,
-    totalStudyTime: 0,
-    averageScore: 0,
-    weeklyStudyTime: [],
-    quizTypeDistribution: []
+const StatisticsScreen = ({ onBack }) => {
+  const [statistics, setStatistics] = useState({
+    flashcard: { total: 0, completed: 0, correct: 0, lastStudyDate: null },
+    qa: { total: 0, completed: 0, correct: 0, lastStudyDate: null },
+    'multiple-choice': { total: 0, completed: 0, correct: 0, lastStudyDate: null },
+    classification: { total: 0, completed: 0, correct: 0, lastStudyDate: null },
   });
-  const [isLoading, setIsLoading] = useState(true);
 
-  const loadData = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const [progress, today, history, sets] = await Promise.all([
-        getCurrentProgress(userId),
-        calculateTodayStudyTime(userId),
-        getStudyHistory(userId),
-        getAllSets(userId)
-      ]);
+  const auth = getAuth();
+  const userId = auth.currentUser?.uid;
 
-      const weeklyData = calculateWeeklyStudyTime(history);
-      const distribution = calculateQuizTypeDistribution(sets);
-      const streak = calculateStreak(history);
-      const totalStudyTime = history.reduce((total, entry) => total + (entry.studyDuration || 0), 0);
-      const averageScore = calculateAverageScore(history);
+  const { weaknesses, loading, error } = useWeaknessAnalysis(userId);
 
-      setStats({
-        overallProgress: progress,
-        todayStudyTime: today,
-        streak,
-        totalStudyTime,
-        averageScore,
-        weeklyStudyTime: weeklyData,
-        quizTypeDistribution: distribution
-      });
-    } catch (error) {
-      console.error("Error loading statistics:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [userId]);
+  const [selectedSet, setSelectedSet] = useState(null);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    const fetchStatistics = async () => {
+      const auth = getAuth();
+      const user = auth.currentUser;
+      if (!user) return;
 
-  const calculateWeeklyStudyTime = (history) => {
-    const now = new Date();
-    const weeklyData = Array(7).fill().map((_, i) => {
-      const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-      return {
-        date: date.toLocaleDateString('ja-JP', { weekday: 'short' }),
-        minutes: 0
-      };
-    }).reverse();
+      const db = getFirestore();
+      const sessionStatesRef = collection(db, `users/${user.uid}/sessionStates`);
+      const snapshot = await getDocs(sessionStatesRef);
 
-    history.forEach(entry => {
-      const entryDate = new Date(entry.date);
-      const dayIndex = weeklyData.findIndex(day => 
-        new Date(day.date).toDateString() === entryDate.toDateString()
-      );
-      if (dayIndex !== -1) {
-        weeklyData[dayIndex].minutes += Math.round(entry.studyDuration / 60);
-      }
-    });
+      const newStatistics = { ...statistics };
 
-    return weeklyData;
-  };
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        const quizType = data.quizType;
+        if (quizType && newStatistics[quizType]) {
+          newStatistics[quizType].total += data.shuffledItems?.length || 0;
+          newStatistics[quizType].completed += data.studiedItems?.length || 0;
+          newStatistics[quizType].correct += data.results?.filter(Boolean).length || 0;
+          if (data.lastStudyDate && (!newStatistics[quizType].lastStudyDate || data.lastStudyDate > newStatistics[quizType].lastStudyDate)) {
+            newStatistics[quizType].lastStudyDate = data.lastStudyDate.toDate();
+          }
+        }
+      });
 
-  const calculateQuizTypeDistribution = (sets) => {
-    const distribution = {
-      flashcard: 0,
-      qa: 0,
-      'multiple-choice': 0,
-      classification: 0
+      setStatistics(newStatistics);
     };
 
-    sets.forEach(set => {
-      distribution[set.type] += 1;
-    });
+    fetchStatistics();
+  }, []);
 
-    return Object.entries(distribution).map(([name, value]) => ({ name, value }));
+  const renderQuizTypeStatistics = (type, label) => {
+    const data = statistics[type];
+    const completionRate = data.total > 0 ? (data.completed / data.total) * 100 : 0;
+    const correctRate = data.completed > 0 ? (data.correct / data.completed) * 100 : 0;
+
+    return (
+      <Card className={styles.statisticsCard}>
+        <CardHeader>
+          <CardTitle>{label}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className={styles.statisticsRow}>
+            <span>完了率:</span>
+            <div className={styles.progressWrapper}>
+              <Progress value={completionRate} className={styles.progressBar} />
+              <span className={styles.statisticsValue}>{completionRate.toFixed(1)}%</span>
+            </div>
+          </div>
+          <div className={styles.statisticsRow}>
+            <span>正答率:</span>
+            <div className={styles.progressWrapper}>
+              <Progress value={correctRate} className={styles.progressBar} />
+              <span className={styles.statisticsValue}>{correctRate.toFixed(1)}%</span>
+            </div>
+          </div>
+          <div className={styles.statisticsDetails}>
+            <p>総問題数: <span>{data.total}</span></p>
+            <p>完了問題数: <span>{data.completed}</span></p>
+            <p>正解数: <span>{data.correct}</span></p>
+            <p>最終学習日: <span>{data.lastStudyDate ? data.lastStudyDate.toLocaleDateString() : '未学習'}</span></p>
+          </div>
+        </CardContent>
+      </Card>
+    );
   };
 
-  const calculateStreak = (history) => {
-    let currentStreak = 0;
-    let lastDate = new Date();
+  const renderOverallStatistics = () => {
+    const totalQuestions = Object.values(statistics).reduce((sum, stat) => sum + stat.total, 0);
+    const totalCompleted = Object.values(statistics).reduce((sum, stat) => sum + stat.completed, 0);
+    const totalCorrect = Object.values(statistics).reduce((sum, stat) => sum + stat.correct, 0);
+    const overallCompletionRate = totalQuestions > 0 ? (totalCompleted / totalQuestions) * 100 : 0;
+    const overallCorrectRate = totalCompleted > 0 ? (totalCorrect / totalCompleted) * 100 : 0;
 
-    for (let i = 0; i < history.length; i++) {
-      const entryDate = new Date(history[i].date);
-      const diffDays = Math.floor((lastDate - entryDate) / (1000 * 60 * 60 * 24));
+    return (
+      <Card className={styles.statisticsCard}>
+        <CardHeader>
+          <CardTitle>全体の統計</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className={styles.statisticsRow}>
+            <span>全体の完了率:</span>
+            <div className={styles.progressWrapper}>
+              <Progress value={overallCompletionRate} className={styles.progressBar} />
+              <span className={styles.statisticsValue}>{overallCompletionRate.toFixed(1)}%</span>
+            </div>
+          </div>
+          <div className={styles.statisticsRow}>
+            <span>全体の正答率:</span>
+            <div className={styles.progressWrapper}>
+              <Progress value={overallCorrectRate} className={styles.progressBar} />
+              <span className={styles.statisticsValue}>{overallCorrectRate.toFixed(1)}%</span>
+            </div>
+          </div>
+          <div className={styles.statisticsDetails}>
+            <p>総問題数: <span>{totalQuestions}</span></p>
+            <p>完了問題数: <span>{totalCompleted}</span></p>
+            <p>正解数: <span>{totalCorrect}</span></p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
-      if (diffDays <= 1) {
-        currentStreak++;
-        lastDate = entryDate;
-      } else {
-        break;
-      }
+  const renderWeakPoints = (quizType) => {
+    let filteredWeaknesses;
+    
+    if (quizType === 'overall') {
+      // 全体の弱点分析の場合、全てのクイズタイプの弱点を含める
+      filteredWeaknesses = weaknesses
+        .filter(w => w.type === 'qa' || w.type === 'multiple-choice' || w.type === 'classification')
+        .sort((a, b) => a.correctRate - b.correctRate)
+        .slice(0, 5);
+    } else {
+      // 特定のクイズタイプの弱点分析の場合
+      filteredWeaknesses = weaknesses
+        .filter(w => w.type === quizType)
+        .sort((a, b) => a.correctRate - b.correctRate)
+        .slice(0, 5);
     }
 
-    return currentStreak;
+    return (
+      <Card className={styles.statisticsCard}>
+        <CardHeader>
+          <CardTitle>弱点分析 - {getQuizTypeLabel(quizType)}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading && <p>弱点を分析中...</p>}
+          {error && <p>エラー: {error}</p>}
+          {!loading && !error && filteredWeaknesses.length === 0 && (
+            <p className={styles.emptyMessage}>弱点が見つかりませんでした。まだ十分な学習データがない可能性があります。</p>
+          )}
+          {!loading && !error && filteredWeaknesses.length > 0 && (
+            <div className={styles.weakPointsList}>
+              {filteredWeaknesses.map((set, index) => (
+                <Dialog key={`${set.title}_${index}`}>
+                  <DialogTrigger asChild>
+                    <div className={styles.weakPointItem}>
+                      <div className={styles.weakPointInfo}>
+                        <h4 className={styles.weakPointTitle}>
+                          {quizType === 'overall' ? `${getQuizTypeLabel(set.type)}: ` : ''}
+                          {set.title}
+                        </h4>
+                        <p className={styles.weakPointRate}>正解率: {set.correctRate.toFixed(2)}%</p>
+                      </div>
+                      <Progress value={set.correctRate * 100} className={styles.weakPointProgress} />
+                    </div>
+                  </DialogTrigger>
+                  <DialogContent className={styles.weakPointDialogContent}>
+                    <DialogHeader>
+                      <DialogTitle className={styles.weakPointDialogTitle}>
+                        {quizType === 'overall' ? `${getQuizTypeLabel(set.type)}: ` : ''}
+                        {set.title} の弱点詳細
+                      </DialogTitle>
+                    </DialogHeader>
+                    <div className={styles.weakPointDialogContent}>
+                      {set.items.map((item, itemIndex) => (
+                        <div key={`${item.key}_${itemIndex}`} className={styles.weakPointDialogItem}>
+                          <p className={styles.weakPointItemQuestion}>{item.key} ({item.count}回間違え)</p>
+                          <Progress value={(1 - item.count / set.items[0].count) * 100} className={styles.weakPointItemProgress} />
+                          <p className={styles.weakPointItemAnswer}>正解: {item.correctAnswer}</p>
+                          <p className={styles.weakPointItemUserAnswer}>ユーザーの回答: {item.userAnswers}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
   };
-
-  const calculateAverageScore = (history) => {
-    const scores = history.filter(entry => entry.score !== undefined);
-    if (scores.length === 0) return 0;
-    return scores.reduce((sum, entry) => sum + entry.score, 0) / scores.length;
-  };
-
-  if (isLoading) {
-    return <div className={styles.loading}>Loading...</div>;
-  }
 
   return (
     <div className={styles.container}>
@@ -130,95 +222,39 @@ const StatisticsScreen = ({ onBack, userId }) => {
         <Button variant="ghost" size="icon" onClick={onBack}>
           <ArrowLeft />
         </Button>
-        <h1 className={styles.title}>統計情報</h1>
+        <h2 className={styles.title}>学習統計</h2>
+        <BarChart2 className={styles.chartIcon} />
       </div>
-
-      <div className={styles.statsGrid}>
-        <Card className={styles.statsCard}>
-          <CardContent>
-            <BarChart2 className={styles.statsIcon} />
-            <h2>全体の進捗</h2>
-            <Progress value={stats.overallProgress} className="w-full" />
-            <p>{stats.overallProgress.toFixed(1)}%</p>
-          </CardContent>
-        </Card>
-
-        <Card className={styles.statsCard}>
-          <CardContent>
-            <Clock className={styles.statsIcon} />
-            <h2>今日の学習時間</h2>
-            <p>{Math.round(stats.todayStudyTime / 60)} 分</p>
-          </CardContent>
-        </Card>
-
-        <Card className={styles.statsCard}>
-          <CardContent>
-            <Target className={styles.statsIcon} />
-            <h2>連続学習日数</h2>
-            <p>{stats.streak} 日</p>
-          </CardContent>
-        </Card>
-
-        <Card className={styles.statsCard}>
-          <CardContent>
-            <Activity className={styles.statsIcon} />
-            <h2>総学習時間</h2>
-            <p>{Math.round(stats.totalStudyTime / 3600)} 時間</p>
-          </CardContent>
-        </Card>
-
-        <Card className={styles.statsCard}>
-          <CardContent>
-            <Award className={styles.statsIcon} />
-            <h2>平均スコア</h2>
-            <p>{stats.averageScore.toFixed(1)}%</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className={styles.chartsContainer}>
-        <Card className={styles.chartCard}>
-          <CardHeader>
-            <CardTitle>週間学習時間</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={150}>
-              <LineChart data={stats.weeklyStudyTime}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="minutes" stroke="#8884d8" />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card className={styles.chartCard}>
-          <CardHeader>
-            <CardTitle>クイズタイプ分布</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={150}>
-              <PieChart>
-                <Pie
-                  data={stats.quizTypeDistribution}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={60}
-                  fill="#8884d8"
-                  dataKey="value"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                >
-                  {stats.quizTypeDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+      <div className={styles.content}>
+        <Tabs defaultValue="overall" className={styles.tabs}>
+          <TabsList className={styles.tabsList}>
+            <TabsTrigger value="overall">全体</TabsTrigger>
+            <TabsTrigger value="flashcard">暗記</TabsTrigger>
+            <TabsTrigger value="qa">一問一答</TabsTrigger>
+            <TabsTrigger value="multiple-choice">多肢選択</TabsTrigger>
+            <TabsTrigger value="classification">分類</TabsTrigger>
+          </TabsList>
+          <TabsContent value="overall" className={styles.tabContent}>
+            {renderOverallStatistics()}
+            {renderWeakPoints('overall')}
+          </TabsContent>
+          <TabsContent value="flashcard" className={styles.tabContent}>
+            {renderQuizTypeStatistics('flashcard', 'フラッシュカード')}
+            {/* 暗記タブでは弱点分析を表示しない */}
+          </TabsContent>
+          <TabsContent value="qa" className={styles.tabContent}>
+            {renderQuizTypeStatistics('qa', '一問一答')}
+            {renderWeakPoints('qa')}
+          </TabsContent>
+          <TabsContent value="multiple-choice" className={styles.tabContent}>
+            {renderQuizTypeStatistics('multiple-choice', '多肢選択')}
+            {renderWeakPoints('multiple-choice')}
+          </TabsContent>
+          <TabsContent value="classification" className={styles.tabContent}>
+            {renderQuizTypeStatistics('classification', '分類')}
+            {renderWeakPoints('classification')}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

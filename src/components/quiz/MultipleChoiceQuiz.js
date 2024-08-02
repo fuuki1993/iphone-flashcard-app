@@ -6,7 +6,7 @@ import { useMultipleChoiceQuiz } from './hooks/useMultipleChoiceQuiz';
 import QuizResult from './QuizResult';
 import styles from '@/styles/modules/quiz/MultipleChoiceQuiz.module.css';
 
-const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTodayStudyTime, updateProgress }) => {
+const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, sessionState, setTodayStudyTime, updateProgress }) => {
   const {
     shuffledQuestions,
     currentQuestionIndex,
@@ -22,7 +22,7 @@ const MultipleChoiceQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
     handleSelect,
     handleSubmit,
     correctAnswersCount,
-  } = useMultipleChoiceQuiz(setId, title, quizType, sessionState, setTodayStudyTime, onFinish, updateProgress);
+  } = useMultipleChoiceQuiz(setId, title, sessionState, setTodayStudyTime, onFinish, updateProgress);
 
   if (isLoading) {
     return <div className={styles.loadingMessage}>読み込み中...</div>;

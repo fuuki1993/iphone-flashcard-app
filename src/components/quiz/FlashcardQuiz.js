@@ -6,7 +6,7 @@ import styles from '@/styles/modules/quiz/FlashcardQuiz.module.css';
 import { useFlashcardQuiz } from './hooks/useFlashcardQuiz';
 
 // フラッシュカードクイズコンポーネント
-const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTodayStudyTime, updateOverallProgress }) => {
+const FlashcardQuiz = ({ onFinish, onBack, setId, title, sessionState, setTodayStudyTime, updateProgress }) => {
   // カスタムフックを使用してクイズの状態と関数を取得
   const {
     shuffledCards,
@@ -20,7 +20,7 @@ const FlashcardQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState,
     handlePrevious,
     handleMarkCompleted,
     handleFinish
-  } = useFlashcardQuiz(setId, sessionState, onFinish, setTodayStudyTime, updateOverallProgress);
+  } = useFlashcardQuiz(setId, sessionState, onFinish, setTodayStudyTime, updateProgress);
 
   // 現在のカードをメモ化
   const currentCard = useMemo(() => shuffledCards[currentCardIndex], [shuffledCards, currentCardIndex]);

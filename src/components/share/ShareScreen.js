@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Globe, Lock, Search, Filter, Eye } from 'lucide-react';
-import { getSets, publishSet, unpublishSet, getPublishedSets, copyPublishedSet, debugPublicSets, getUserDisplayName, getPublicSetDetails } from '@/utils/firebase/firestore';
+import { getSets, publishSet, unpublishSet, getPublishedSets, copyPublishedSet, getUserDisplayName, getPublicSetDetails } from '@/utils/firebase/firestore';
 import PublicSetDetailsModal from './PublicSetDetailsModal';
 import {
   Dialog,
@@ -68,9 +68,6 @@ const ShareScreen = ({ onBack, user }) => {
         
         setPublishedSets(publishedWithDisplayNames);
 
-        // デバッグ関数を呼び出す
-        await debugPublicSets();
-  
       } catch (err) {
         console.error("セットの取得中にエラーが発生しました:", err);
         setError("セットの読み込み中にエラーが発生しました。");

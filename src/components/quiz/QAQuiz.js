@@ -7,7 +7,7 @@ import { useQAQuiz } from './hooks/useQAQuiz';
 import QuizResult from './QuizResult';
 import styles from '@/styles/modules/quiz/QAQuiz.module.css';
 
-const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTodayStudyTime }) => {
+const QAQuiz = ({ onFinish, onBack, setId, title, sessionState, setTodayStudyTime, updateProgress }) => {
   const {
     shuffledQuestions,
     currentQuestionIndex,
@@ -18,12 +18,12 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTod
     isLoading,
     error,
     isLastQuestion,
-    calculateScore,
+    //calculateScore,
     handleShuffle,
     handleSubmit,
     handleFinish,
     handleKeyPress,
-  } = useQAQuiz(setId, title, quizType, sessionState, setTodayStudyTime, onFinish);
+  } = useQAQuiz(setId, title, sessionState, setTodayStudyTime, onFinish, updateProgress);
 
   const inputRef = useRef(null);
 
@@ -40,7 +40,7 @@ const QAQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTod
   const currentQuestion = shuffledQuestions[currentQuestionIndex];
 
   if (isLastQuestion) {
-    const finalScore = calculateScore();
+    //const finalScore = calculateScore();
     return (
       <QuizResult
         score={results.filter(Boolean).length}

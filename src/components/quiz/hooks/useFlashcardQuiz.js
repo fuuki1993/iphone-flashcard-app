@@ -57,9 +57,9 @@ export const useFlashcardQuiz = (setId, sessionState, onFinish, setTodayStudyTim
           const cards = convertToFlashcards(parsedSet);
           setCards(cards);
           if (sessionState) {
-            setShuffledCards(sessionState.shuffledCards);
-            setCurrentCardIndex(sessionState.currentCardIndex);
-            setCompleted(sessionState.completed);
+            setShuffledCards(sessionState.shuffledItems || []);
+            setCurrentCardIndex(sessionState.currentIndex || 0);
+            setCompleted(sessionState.additionalData?.completed || []);
           } else {
             setShuffledCards(shuffleArray([...cards]));
             setCompleted(new Array(cards.length).fill(false));
@@ -86,8 +86,8 @@ export const useFlashcardQuiz = (setId, sessionState, onFinish, setTodayStudyTim
 
   // セッション状態の復元
   useEffect(() => {
-    if (sessionState && sessionState.studiedCards) {
-      setStudiedCards(new Set(sessionState.studiedCards));
+    if (sessionState && sessionState.studiedItems) {
+      setStudiedCards(new Set(sessionState.studiedItems));
     }
   }, [sessionState]);
 
@@ -95,16 +95,23 @@ export const useFlashcardQuiz = (setId, sessionState, onFinish, setTodayStudyTim
   useEffect(() => {
     const saveState = async () => {
       if (setId && user) {
-        await saveSessionState(user.uid, setId, 'flashcard', {
-          shuffledCards,
-          currentCardIndex,
-          completed,
-          studiedCards: Array.from(studiedCards)
-        });
+        const stateToSave = {
+          quizType: 'flashcard',
+          currentIndex: currentCardIndex,
+          results: completed,
+          shuffledItems: shuffledCards,
+          studiedItems: Array.from(studiedCards),
+          lastStudyDate: new Date(),
+          additionalData: {
+            completed,
+            isFlipped,
+          }
+        };
+        await saveSessionState(user.uid, setId, 'flashcard', stateToSave);
       }
     };
     saveState();
-  }, [setId, shuffledCards, currentCardIndex, completed, studiedCards, user]);
+  }, [setId, shuffledCards, currentCardIndex, completed, studiedCards, user, isFlipped]);
 
   /**
    * =============================================
@@ -201,22 +208,43 @@ export const useFlashcardQuiz = (setId, sessionState, onFinish, setTodayStudyTim
     if (!user) return;
     const endTime = new Date();
     const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
-    const newCardsStudied = studiedCards.size - (sessionState?.studiedCards?.length || 0);
+    const newCardsStudied = studiedCards.size - (sessionState?.studiedItems?.length || 0);
     
-    const correctCards = results.filter(Boolean).length;
-    const incorrectCards = results.filter(result => result === false).length;
-    const score = Math.round((correctCards / shuffledCards.length) * 100);
+    const correctItems = Array.from(studiedCards).reduce((acc, index) => {
+      if (completed[index]) {
+        acc.push({
+          cardIndex: index,
+          front: shuffledCards[index].front,
+          back: shuffledCards[index].back
+        });
+      }
+      return acc;
+    }, []);
+
+    const incorrectItems = Array.from(studiedCards).reduce((acc, index) => {
+      if (!completed[index]) {
+        acc.push({
+          cardIndex: index,
+          front: shuffledCards[index].front,
+          back: shuffledCards[index].back
+        });
+      }
+      return acc;
+    }, []);
+
+    const score = Math.round((correctItems.length / studiedCards.size) * 100);
 
     const studyHistoryEntry = {
       setId,
+      title: 'Flashcard Quiz',
       type: 'flashcard',
       score,
       date: endTime.toISOString(),
       studyDuration,
-      cardsStudied: newCardsStudied,
-      correctCards,
-      incorrectCards,
-      totalCards: shuffledCards.length
+      itemsStudied: newCardsStudied,
+      correctItems,
+      incorrectItems,
+      totalItems: studiedCards.size
     };
 
     try {
@@ -230,9 +258,15 @@ export const useFlashcardQuiz = (setId, sessionState, onFinish, setTodayStudyTim
       // セッション状態の更新
       const sessionStateRef = doc(db, `users/${user.uid}/sessionStates`, `${setId}_flashcard`);
       batch.set(sessionStateRef, {
-        results,
-        studiedCards: Array.from(studiedCards),
-        lastStudyDate: endTime
+        currentIndex: currentCardIndex,
+        results: completed,
+        shuffledItems: shuffledCards,
+        studiedItems: Array.from(studiedCards),
+        lastStudyDate: endTime,
+        additionalData: {
+          completed,
+          isFlipped,
+        }
       }, { merge: true });
 
       // バッチ処理を実行
@@ -244,14 +278,14 @@ export const useFlashcardQuiz = (setId, sessionState, onFinish, setTodayStudyTim
         updateOverallProgress(setId, {
           totalItems: shuffledCards.length,
           completedItems: studiedCards.size,
-          correctItems: correctCards,
-          incorrectItems: incorrectCards,
+          correctItems: correctItems.length,
+          incorrectItems: incorrectItems.length,
         });
       }
     } catch (error) {
       console.error("Error saving study history:", error);
     }
-  }, [setId, onFinish, setTodayStudyTime, studiedCards, user, sessionState, startTimeRef, shuffledCards, updateOverallProgress, results]);
+  }, [setId, onFinish, setTodayStudyTime, studiedCards, user, sessionState, startTimeRef, shuffledCards, updateOverallProgress, completed, currentCardIndex, isFlipped]);
 
   // Helper function to convert set data to flashcards
   const convertToFlashcards = (set) => {

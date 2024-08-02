@@ -9,7 +9,7 @@ import { SortableItem, DroppableCategory } from './ClassificationQuizComponents'
 import styles from '@/styles/modules/quiz/ClassificationQuiz.module.css';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 
-const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionState, setTodayStudyTime, updateProgress }) => {
+const ClassificationQuiz = ({ onFinish, onBack, setId, title, sessionState, setTodayStudyTime, updateProgress }) => {
   const {
     quizData,
     isLoading,
@@ -28,7 +28,7 @@ const ClassificationQuiz = ({ onFinish, onBack, setId, title, quizType, sessionS
     handleDragEnd,
     handleRestart,
     handleFinish,
-  } = useClassificationQuiz(setId, sessionState, onFinish, setTodayStudyTime, updateProgress);
+  } = useClassificationQuiz(setId, title, sessionState, setTodayStudyTime, onFinish, updateProgress);
 
   const isWideScreen = useMediaQuery('(min-width: 601px)');
 

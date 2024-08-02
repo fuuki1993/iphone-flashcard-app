@@ -1,62 +1,369 @@
 .container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
   padding: 1rem;
-  max-width: 1200px;
-  margin: 0 auto;
+  background-color: var(--background);
+  color: var(--text);
 }
 
 .header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   margin-bottom: 1rem;
 }
 
 .title {
   font-size: 1.5rem;
   font-weight: bold;
-  margin-left: 1rem;
 }
 
-.statsGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 1rem;
+.chartIcon {
+  color: var(--accent);
+}
+
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.tabs {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.tabsList {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.tabContent {
+  flex: 1;
+}
+
+.statisticsCard {
+  background-color: var(--card-background);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease-in-out;
   margin-bottom: 1rem;
 }
 
-.statsCard {
-  text-align: center;
+.statisticsCard:hover {
+  transform: translateY(-5px);
 }
 
-.statsIcon {
-  width: 2rem;
-  height: 2rem;
+.statisticsRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 0.5rem;
 }
 
-.chartsContainer {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+.progressWrapper {
+  display: flex;
+  align-items: center;
+  width: 70%;
 }
 
-.chartCard {
-  height: 100%;
+.progressBar {
+  flex: 1;
+  margin-right: 0.5rem;
+}
+
+.statisticsValue {
+  min-width: 50px;
+  text-align: right;
+  font-weight: bold;
+  color: var(--accent);
+  font-size: 0.875rem; /* デフォルトのフォントサイズ */
+}
+
+.statisticsDetails {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}
+
+.statisticsDetails p {
+  margin: 0.25rem 0;
+  display: flex;
+  justify-content: space-between;
+}
+
+.statisticsDetails p span {
+  font-weight: bold;
+}
+
+.weakPointsSection {
+  margin-bottom: 2rem;
+}
+
+.weakPointsSection h4 {
+  font-weight: bold;
+  margin-bottom: 1rem;
+}
+
+.weakPointsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.weakPointItem {
+  background-color: var(--card-background);
+  border-radius: 8px;
+  padding: 0.75rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out;
+}
+
+.weakPointItem:hover {
+  transform: translateY(-2px);
+}
+
+.weakPointInfo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.weakPointTitle {
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: var(--text);
+}
+
+.weakPointRate {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.weakPointProgress {
+  height: 4px;
+}
+
+.weakPointDialog {
+  max-width: 500px;
+  width: 90%;
+}
+
+.weakPointDialogContent {
+  background-color: var(--dialog-background);
+  color: var(--dialog-text);
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.weakPointDialogTitle {
+  font-size: 1.125rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  color: var(--dialog-text);
+}
+
+.weakPointDialogItem {
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.weakPointDialogItem:last-child {
+  border-bottom: none;
+}
+
+.weakPointItemQuestion {
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.weakPointItemProgress {
+  margin-bottom: 0.5rem;
+}
+
+.weakPointItemAnswer,
+.weakPointItemUserAnswer {
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+}
+
+.emptyMessage {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
 }
 
 @media (max-width: 768px) {
-  .statsGrid {
-    grid-template-columns: repeat(2, 1fr);
+  .tabsList {
+    flex-wrap: wrap;
   }
 
-  .chartsContainer {
-    grid-template-columns: 1fr;
+  .tabsList [data-state="active"] {
+    border-bottom: 2px solid var(--accent);
   }
 }
 
-.loading {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  font-size: 1.2rem;
+/* レスポンシブデザイン */
+@media (max-width: 600px) {
+  .container {
+    padding: 0.5rem;
+  }
+
+  .title {
+    font-size: 1rem;
+  }
+
+  .statisticsCard,
+  .weakPointItem {
+    padding: 0.75rem;
+  }
+
+  .statisticsValue,
+  .weakPointDialogTitle {
+    font-size: 0.875rem;
+  }
+
+  .statisticsDetails,
+  .weakPointDialogDescription {
+    font-size: 0.75rem;
+  }
+
+  .statisticsRow span,
+  .statisticsValue {
+    font-size: 0.75rem;
+  }
+
+  .weakPointTitle,
+  .weakPointRate {
+    font-size: 0.75rem;
+  }
+
+  .weakPointDialogTitle {
+    font-size: 1rem;
+  }
+
+  .weakPointItemQuestion,
+  .weakPointItemAnswer,
+  .weakPointItemUserAnswer {
+    font-size: 0.75rem;
+  }
+}
+
+@media (min-width: 601px) and (max-width: 1023px) {
+  .container {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .statisticsRow span,
+  .statisticsValue {
+    font-size: 0.875rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .title {
+    font-size: 1.75rem;
+  }
+
+  .statisticsCard,
+  .weakPointItem {
+    padding: 1.25rem;
+  }
+
+  .statisticsRow span,
+  .statisticsValue {
+    font-size: 1rem;
+  }
+}
+
+/* ダークモード対応 */
+:global(.dark) .container {
+  background-color: #111827;
+  color: #f3f4f6;
+}
+
+:global(.dark) .statisticsCard,
+:global(.dark) .weakPointItem {
+  background-color: #1f2937;
+}
+
+:global(.dark) .statisticsValue {
+  color: #60a5fa;
+}
+
+:global(.dark) .weakPointDialogContent {
+  background-color: #1f2937;
+  color: #f3f4f6;
+}
+
+:global(.dark) .weakPointDialogTitle,
+:global(.dark) .weakPointDialogDescription {
+  color: #f3f4f6;
+}
+
+:global(.dark) .weakPointDialogItem {
+  border-bottom-color: #4b5563;
+}
+
+:global(.dark) .weakPointTitle {
+  color: var(--dark-text);
+}
+
+:global(.dark) .weakPointRate {
+  color: var(--dark-text-secondary);
+}
+
+:global(.dark) .emptyMessage {
+  color: var(--dark-text-secondary);
+}
+
+/* アニメーション */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fadeIn {
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes slideIn {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.slideIn {
+  animation: slideIn 0.5s ease-out;
+}
+
+/* タッチデバイス用のスタイル */
+@media (hover: none) and (pointer: coarse) {
+  .container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+  }
+
+  .content {
+    -webkit-overflow-scrolling: touch;
+    overflow-y: auto;
+    height: calc(100% - 60px); /* ヘッダーの高さを引く */
+  }
 }

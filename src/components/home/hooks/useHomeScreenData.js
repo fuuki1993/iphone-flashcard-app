@@ -14,6 +14,7 @@ import {
   calculateCurrentProgress,
   calculateTodayStudyTime,
 } from '../../../utils/firebase/firestore';
+import { getFirestore, collection, getDocs } from 'firebase/firestore';
 
 /**
  * @hook useHomeScreenData
@@ -34,6 +35,7 @@ const useHomeScreenData = (userId, externalDailyGoal, recentActivities, calculat
   const [isLoading, setIsLoading] = useState(true);
   const prevTodayStudyTimeRef = useRef(0);
   const [lastUpdateTime, setLastUpdateTime] = useState(0);
+  const [allSets, setAllSets] = useState([]);
 
   // メモ化されたユーティリティ関数
   const convertSecondsToMinutes = useMemo(() => (seconds) => {
@@ -154,11 +156,20 @@ const useHomeScreenData = (userId, externalDailyGoal, recentActivities, calculat
         throw new Error('ユーザーが認証されていません');
       }
       
-      const allSets = await getAllSets(userId);
-      const totalItems = calculateTotalItems(allSets);
-      const completedItems = calculateCompletedItems();
-      
-      const newCurrentProgress = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
+      const db = getFirestore();
+      const sessionStatesRef = collection(db, `users/${userId}/sessionStates`);
+      const snapshot = await getDocs(sessionStatesRef);
+
+      let totalQuestions = 0;
+      let totalCompleted = 0;
+
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        totalQuestions += data.shuffledItems?.length || 0;
+        totalCompleted += data.studiedItems?.length || 0;
+      });
+
+      const newCurrentProgress = totalQuestions > 0 ? (totalCompleted / totalQuestions) * 100 : 0;
       
       await updateCurrentProgress(userId, newCurrentProgress);
       setCurrentProgress(newCurrentProgress);
@@ -195,9 +206,17 @@ const useHomeScreenData = (userId, externalDailyGoal, recentActivities, calculat
     } finally {
       setIsLoading(false);
     }
-  }, [userId, calculateStreak, dailyGoal, convertSecondsToMinutes, lastUpdateTime]);
+  }, [userId, calculateStreak, dailyGoal, convertSecondsToMinutes, lastUpdateTime, allSets]);
 
   // 副作用
+  useEffect(() => {
+    const fetchAllSets = async () => {
+      const fetchedSets = await getAllSets(userId);
+      setAllSets(fetchedSets);
+    };
+    fetchAllSets();
+  }, [userId]);
+
   useEffect(() => {
     loadData();
   }, [loadData, recentActivities]);

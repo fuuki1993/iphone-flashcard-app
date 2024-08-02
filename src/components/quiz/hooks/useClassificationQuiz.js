@@ -13,18 +13,27 @@ import { getFirestore, writeBatch, doc } from "firebase/firestore";
  * @hook useClassificationQuiz
  * @description 分類クイズの状態と機能を管理するカスタムフック
  * @param {string} setId - クイズセットのID
+ * @param {string} title - クイズセットのタイトル
  * @param {Object} sessionState - 現在のセッション状態
  * @param {Function} onFinish - クイズ終了時のコールバック関数
  * @param {Function} setTodayStudyTime - 今日の学習時間を設定する関数
  * @param {Function} updateProgress - 進捗を更新する関数
  */
-export const useClassificationQuiz = (setId, sessionState, onFinish, setTodayStudyTime, updateProgress) => {
+export const useClassificationQuiz = (setId, title, sessionState, setTodayStudyTime, onFinish, updateProgress) => {
   const { user, shuffleArray } = useBaseQuiz();
 
   // 状態変数の定義
   const [quizData, setQuizData] = useState(() => {
-    if (sessionState && sessionState.quizData) {
-      return sessionState.quizData;
+    if (sessionState && sessionState.additionalData) {
+      return {
+        question: sessionState.additionalData.question || null,
+        categories: sessionState.additionalData.categories || [],
+        items: sessionState.shuffledItems || [],
+        correctClassification: sessionState.additionalData.correctClassification || {},
+        isFinished: sessionState.additionalData.isFinished || false,
+        showResults: sessionState.additionalData.showResults || false,
+        score: sessionState.additionalData.score || 0,
+      };
     }
     return {
       question: null,
@@ -99,18 +108,27 @@ export const useClassificationQuiz = (setId, sessionState, onFinish, setTodayStu
    * @param {Object} set - クイズセットデータ
    */  
   const initializeQuizData = useCallback((set) => {
-    if (sessionState && sessionState.quizData) {
-      setQuizData(sessionState.quizData);
+    if (sessionState && sessionState.additionalData) {
+      setQuizData(prevData => ({
+        ...prevData,
+        question: sessionState.additionalData.question || null,
+        categories: sessionState.additionalData.categories || [],
+        items: sessionState.shuffledItems || [],
+        correctClassification: sessionState.additionalData.correctClassification || {},
+        isFinished: sessionState.additionalData.isFinished || false,
+        showResults: sessionState.additionalData.showResults || false,
+        score: sessionState.additionalData.score || 0,
+      }));
       setShuffledItems(sessionState.shuffledItems || []);
-      setShuffledCategories(sessionState.shuffledCategories || []);
-      setClassifiedItems(sessionState.classifiedItems || {});
-      setCurrentItemIndex(sessionState.currentItemIndex || 0);
-      setUnclassifiedItems(sessionState.unclassifiedItems || []);
+      setShuffledCategories(sessionState.additionalData.shuffledCategories || []);
+      setClassifiedItems(sessionState.additionalData.classifiedItems || {});
+      setCurrentItemIndex(sessionState.currentIndex || 0);
+      setUnclassifiedItems(sessionState.additionalData.unclassifiedItems || []);
       setStudiedItems(new Set(sessionState.studiedItems || []));
-      setCorrectAnswers(sessionState.correctAnswers || {});
-      setIncorrectAnswers(sessionState.incorrectAnswers || {});
-      setCategoryImages(sessionState.categoryImages || {});
-      startTimeRef.current = new Date(sessionState.startTime || new Date());
+      setCorrectAnswers(sessionState.additionalData.correctAnswers || {});
+      setIncorrectAnswers(sessionState.additionalData.incorrectAnswers || {});
+      setCategoryImages(sessionState.additionalData.categoryImages || {});
+      startTimeRef.current = new Date(sessionState.additionalData.startTime || new Date());
       setResults(sessionState.results || new Array(set.categories.flatMap(c => c.items).length).fill(null));
     } else if (set && set.categories) {
       const newItems = set.categories.flatMap(c => 
@@ -164,23 +182,28 @@ export const useClassificationQuiz = (setId, sessionState, onFinish, setTodayStu
   // セッション状態の保存
   useEffect(() => {
     const saveState = async () => {
-      if (user && quizData.items.length > 0) {
+      if (setId && user && quizData.items.length > 0) {
         try {
           const stateToSave = {
-            quizData,
-            shuffledItems,
-            shuffledCategories,
-            classifiedItems,
-            currentItemIndex,
-            unclassifiedItems,
+            currentIndex: currentItemIndex,
+            shuffledItems: quizData.items,
+            results: results,
             studiedItems: Array.from(studiedItems),
-            correctAnswers,
-            incorrectAnswers,
-            categoryImages,
-            startTime: startTimeRef.current.toISOString(),
-            results,
+            additionalData: {
+              question: quizData.question,
+              categories: quizData.categories,
+              correctClassification: quizData.correctClassification,
+              isFinished: quizData.isFinished,
+              showResults: quizData.showResults,
+              score: quizData.score,
+              shuffledCategories,
+              classifiedItems,
+              unclassifiedItems,
+              correctAnswers,
+              incorrectAnswers,
+              categoryImages,
+            }
           };
-
           await saveSessionState(user.uid, setId, 'classification', stateToSave);
         } catch (error) {
           console.error("セッション状態の保存中にエラーが発生しました:", error);
@@ -387,12 +410,31 @@ export const useClassificationQuiz = (setId, sessionState, onFinish, setTodayStu
     const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
     const newItemsStudied = studiedItems.size - (sessionState?.studiedItems?.length || 0);
     
-    const correctItems = results.filter(Boolean).length;
-    const incorrectItems = results.filter(result => result === false).length;
-    const score = Math.round((correctItems / results.length) * 100);
+    const classifiedItemsArray = quizData.items.filter(item => item.isClassified);
+    const totalClassified = classifiedItemsArray.length;
+
+    const correctItems = classifiedItemsArray.filter(item => 
+      quizData.correctClassification[item.category]?.includes(item.content)
+    ).map(item => ({
+      itemId: item.id,
+      content: item.content,
+      category: item.category
+    }));
+
+    const incorrectItems = classifiedItemsArray.filter(item => 
+      !quizData.correctClassification[item.category]?.includes(item.content)
+    ).map(item => ({
+      itemId: item.id,
+      content: item.content,
+      category: item.category,
+      correctCategory: Object.entries(quizData.correctClassification).find(([_, items]) => items.includes(item.content))?.[0]
+    }));
+
+    const score = totalClassified > 0 ? Math.round((correctItems.length / totalClassified) * 100) : 0;
 
     const studyHistoryEntry = {
       setId,
+      title, // ここで title を使用
       type: 'classification',
       score,
       date: endTime.toISOString(),
@@ -400,43 +442,49 @@ export const useClassificationQuiz = (setId, sessionState, onFinish, setTodayStu
       itemsStudied: newItemsStudied,
       correctItems,
       incorrectItems,
-      totalItems: results.length
+      totalItems: totalClassified
     };
 
     try {
-      const db = getFirestore();
-      const batch = writeBatch(db);
-
-      // 学習履歴の保存
-      const studyHistoryRef = doc(db, `users/${user.uid}/studyHistory`, `${setId}_${Date.now()}`);
-      batch.set(studyHistoryRef, studyHistoryEntry);
-
+      await saveStudyHistory(user.uid, studyHistoryEntry);
+      
       // セッション状態の更新
-      const sessionStateRef = doc(db, `users/${user.uid}/sessionStates`, `${setId}_classification`);
-      batch.set(sessionStateRef, {
-        results,
+      await saveSessionState(user.uid, setId, 'classification', {
+        currentIndex: currentItemIndex,
+        shuffledItems: quizData.items,
+        results: results,
         studiedItems: Array.from(studiedItems),
-        lastStudyDate: endTime
-      }, { merge: true });
-
-      // バッチ処理を実行
-      await batch.commit();
+        lastStudyDate: endTime,
+        additionalData: {
+          question: quizData.question,
+          categories: quizData.categories,
+          correctClassification: quizData.correctClassification,
+          isFinished: quizData.isFinished,
+          showResults: quizData.showResults,
+          score: quizData.score,
+          shuffledCategories,
+          classifiedItems,
+          unclassifiedItems,
+          correctAnswers,
+          incorrectItems,
+          categoryImages,
+        }
+      });
 
       setTodayStudyTime(prevTime => prevTime + studyDuration);
       onFinish(score, studyDuration, newItemsStudied);
       if (typeof updateProgress === 'function') {
         updateProgress(setId, {
-          totalItems: results.length,
-          completedItems: studiedItems.size,
-          correctItems,
-          incorrectItems,
+          totalItems: totalClassified,
+          completedItems: totalClassified,
+          correctItems: correctItems.length,
+          incorrectItems: incorrectItems.length,
         });
       }
     } catch (error) {
-      console.error("学習履歴の保存中にエラーが発生しました:", error);
-      setError("学習履歴の保存中にエラーが発生しました。後でもう一度お試しください。");
+      console.error("Error saving study history:", error);
     }
-  }, [user, setId, onFinish, setTodayStudyTime, studiedItems, sessionState, startTimeRef, updateProgress, results]);
+  }, [setId, title, quizData, onFinish, setTodayStudyTime, studiedItems, user, sessionState, startTimeRef, updateProgress, currentItemIndex, results, shuffledCategories, classifiedItems, unclassifiedItems, correctAnswers, incorrectAnswers, categoryImages]);
   
   /**
    * =============================================
@@ -490,5 +538,6 @@ export const useClassificationQuiz = (setId, sessionState, onFinish, setTodayStu
     results,
     completedItems: studiedItems.size,
     totalItems: results.length,
+    title, // title を返り値に追加
   };
 };

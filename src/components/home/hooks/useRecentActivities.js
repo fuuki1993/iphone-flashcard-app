@@ -114,30 +114,11 @@ const useRecentActivities = (userId, onStartLearning) => {
     let totalItems = 0;
 
     // セッションステートから総問題数と学習済み問題数を計算
-    if (type === 'flashcard') {
-      totalItems = sessionState.shuffledCards ? sessionState.shuffledCards.length : 0;
-      totalItemsStudied = sessionState.studiedCards ? sessionState.studiedCards.length : 0;
-    } else if (type === 'qa' || type === 'multiple-choice') {
-      totalItems = sessionState.shuffledQuestions ? sessionState.shuffledQuestions.length : 0;
-      totalItemsStudied = sessionState.studiedQuestions ? sessionState.studiedQuestions.length : 0;
-    } else if (type === 'classification') {
-      totalItems = sessionState.quizData ? sessionState.quizData.items.length : 0;
+    if (sessionState) {
+      totalItems = sessionState.shuffledItems ? sessionState.shuffledItems.length : 0;
       totalItemsStudied = sessionState.studiedItems ? sessionState.studiedItems.length : 0;
     }
 
-    // セッションステートに情報がない場合のフォールバック
-    if (totalItems === 0) {
-      if (type === 'flashcard') {
-        totalItems = set.cards ? set.cards.length : 0;
-      } else if (type === 'qa') {
-        totalItems = set.qaItems ? set.qaItems.length : 0;
-      } else if (type === 'multiple-choice') {
-        totalItems = set.questions ? set.questions.length : 0;
-      } else if (type === 'classification') {
-        totalItems = set.categories ? set.categories.reduce((sum, category) => sum + category.items.length, 0) : 0;
-      }
-    }
-  
     let lastStudyDate;
     if (sessionState.lastStudyDate) {
       lastStudyDate = sessionState.lastStudyDate instanceof Timestamp
@@ -158,7 +139,7 @@ const useRecentActivities = (userId, onStartLearning) => {
       ...set, 
       sessionState: sessionState, 
       timestamp: lastStudyDate,
-      type: type,
+      type: sessionState ? sessionState.quizType : type,
       isCompleted,
       itemsStudied: totalItemsStudied,
       totalItems: totalItems,
@@ -219,18 +200,8 @@ const useRecentActivities = (userId, onStartLearning) => {
   const onFinishQuiz = useCallback((setId, type, score, newSessionState, isNewSession) => {
     setRecentActivities(prevActivities => 
       prevActivities.map(activity => {
-        if (activity.id === setId && activity.type === type) {
-          let newItemsStudied = 0;
-          if (type === 'classification') {
-            newItemsStudied = newSessionState.studiedItems ? newSessionState.studiedItems.length : 0;
-          } else if (type === 'qa' || type === 'multiple-choice') {
-            newItemsStudied = newSessionState.studiedQuestions ? newSessionState.studiedQuestions.length : 0;
-            if (newSessionState.results) {
-              newItemsStudied = Math.max(newItemsStudied, newSessionState.results.length);
-            }
-          } else {
-            newItemsStudied = newSessionState.studiedItems || 0;
-          }
+        if (activity.id === setId && activity.type === newSessionState.quizType) {
+          const newItemsStudied = newSessionState.studiedItems ? newSessionState.studiedItems.length : 0;
           return {
             ...activity,
             sessionState: newSessionState,

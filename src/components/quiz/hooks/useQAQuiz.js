@@ -17,7 +17,7 @@ import { getFirestore, writeBatch, doc } from "firebase/firestore";
  * @param {string} quizType - クイズのタイプ
  * @param {Object} sessionState - セッションの状態
  * @param {Function} setTodayStudyTime - 今日の学習時間を設定する関数
- * @param {Function} onFinish - クイズ終了時のコールバック関数
+ * @param {Function} onFinish - クズ終了時のコールバック関数
  * @param {Function} updateProgress - プログレスを更新する関数
  */
 
@@ -39,6 +39,7 @@ export const useQAQuiz = (setId, title, quizType, sessionState, setTodayStudyTim
   const [completedItems, setCompletedItems] = useState(0);
   const [reviewMode, setReviewMode] = useState(false);
   const [incorrectQuestions, setIncorrectQuestions] = useState([]);
+  const [userAnswers, setUserAnswers] = useState([]);
 
   // 質問の読み込みと初期化
   useEffect(() => {
@@ -64,11 +65,12 @@ export const useQAQuiz = (setId, title, quizType, sessionState, setTodayStudyTim
 
         if (sessionState) {
           // セッション状態がある場合は、その状態を復元
-          setShuffledQuestions(sessionState.shuffledQuestions || shuffleArray([...qaItems]));
-          setCurrentQuestionIndex(sessionState.currentQuestionIndex || 0);
+          setShuffledQuestions(sessionState.shuffledItems || shuffleArray([...qaItems]));
+          setCurrentQuestionIndex(sessionState.currentIndex || 0);
           setResults(sessionState.results || new Array(qaItems.length).fill(null));
-          setStudiedQuestions(new Set(sessionState.studiedQuestions || []));
-          setCompletedItems(sessionState.completedItems || 0);
+          setStudiedQuestions(new Set(sessionState.studiedItems || []));
+          setCompletedItems(sessionState.additionalData?.completedItems || 0);
+          setUserAnswers(sessionState.additionalData?.userAnswers || []);
         } else {
           // 新しいセッションの場合は、初期状態を設定
           setShuffledQuestions(shuffleArray([...qaItems]));
@@ -94,18 +96,19 @@ export const useQAQuiz = (setId, title, quizType, sessionState, setTodayStudyTim
     const saveState = async () => {
       if (setId && user) {
         const stateToSave = {
-          shuffledQuestions,
-          currentQuestionIndex,
+          currentIndex: currentQuestionIndex,
+          shuffledItems: shuffledQuestions,
           results,
-          studiedQuestions: Array.from(studiedQuestions),
-          completedItems,
-          lastStudyDate: new Date().toISOString()
+          studiedItems: Array.from(studiedQuestions),
+          additionalData: {
+            userAnswers
+          }
         };
         await saveSessionState(user.uid, setId, 'qa', stateToSave);
       }
     };
     saveState();
-  }, [setId, shuffledQuestions, currentQuestionIndex, results, user, studiedQuestions, completedItems]);
+  }, [setId, user, currentQuestionIndex, shuffledQuestions, results, studiedQuestions, userAnswers]);
 
   /**
    * =============================================
@@ -150,6 +153,12 @@ export const useQAQuiz = (setId, title, quizType, sessionState, setTodayStudyTim
     });
     setCompletedItems(prevCompleted => prevCompleted + 1);
 
+    setUserAnswers(prevAnswers => {
+      const newAnswers = [...prevAnswers];
+      newAnswers[currentQuestionIndex] = userAnswer;
+      return newAnswers;
+    });
+
     if (currentQuestionIndex < shuffledQuestions.length - 1) {
       setTimeout(() => {
         setCurrentQuestionIndex(prevIndex => prevIndex + 1);
@@ -176,11 +185,33 @@ export const useQAQuiz = (setId, title, quizType, sessionState, setTodayStudyTim
     if (!user) return;
     const endTime = new Date();
     const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
-    const newQuestionsStudied = studiedQuestions.size - (sessionState?.studiedQuestions?.length || 0);
+    const itemsStudied = studiedQuestions.size - (sessionState?.studiedItems?.length || 0);
     
-    const correctQuestions = results.filter(Boolean).length;
-    const incorrectQuestions = results.filter(result => result === false).length;
-    const score = Math.round((correctQuestions / shuffledQuestions.length) * 100);
+    const correctItems = results.reduce((acc, result, index) => {
+      if (result === true) {
+        acc.push({
+          questionIndex: index,
+          question: shuffledQuestions[index].question,
+          answer: shuffledQuestions[index].answer,
+          userAnswer: userAnswers[index] || ''
+        });
+      }
+      return acc;
+    }, []);
+
+    const incorrectItems = results.reduce((acc, result, index) => {
+      if (result === false) {
+        acc.push({
+          questionIndex: index,
+          question: shuffledQuestions[index].question,
+          correctAnswer: shuffledQuestions[index].answer,
+          userAnswer: userAnswers[index] || ''
+        });
+      }
+      return acc;
+    }, []);
+
+    const score = Math.round((correctItems.length / shuffledQuestions.length) * 100);
 
     const studyHistoryEntry = {
       setId,
@@ -189,10 +220,10 @@ export const useQAQuiz = (setId, title, quizType, sessionState, setTodayStudyTim
       score,
       date: endTime.toISOString(),
       studyDuration,
-      questionsStudied: newQuestionsStudied,
-      correctQuestions,
-      incorrectQuestions,
-      totalQuestions: shuffledQuestions.length
+      itemsStudied,
+      correctItems,
+      incorrectItems,
+      totalItems: shuffledQuestions.length
     };
 
     try {
@@ -207,7 +238,7 @@ export const useQAQuiz = (setId, title, quizType, sessionState, setTodayStudyTim
       const sessionStateRef = doc(db, `users/${user.uid}/sessionStates`, `${setId}_qa`);
       batch.set(sessionStateRef, {
         results,
-        studiedQuestions: Array.from(studiedQuestions),
+        studiedItems: Array.from(studiedQuestions),
         lastStudyDate: endTime
       }, { merge: true });
 
@@ -215,13 +246,17 @@ export const useQAQuiz = (setId, title, quizType, sessionState, setTodayStudyTim
       await batch.commit();
       
       setTodayStudyTime(prevTime => prevTime + studyDuration);
-      onFinish(score, studyDuration, newQuestionsStudied);
+      
+      // onFinish が関数である場合のみ呼び出す
+      const finishCallback = typeof onFinish === 'function' ? onFinish : () => {};
+      finishCallback(score, studyDuration, itemsStudied);
+
       if (typeof updateProgress === 'function') {
         updateProgress(setId, {
           totalItems: shuffledQuestions.length,
           completedItems: studiedQuestions.size,
-          correctItems: correctQuestions,
-          incorrectItems: incorrectQuestions,
+          correctItems: correctItems.length,
+          incorrectItems: incorrectItems.length,
         });
       }
 
@@ -235,7 +270,7 @@ export const useQAQuiz = (setId, title, quizType, sessionState, setTodayStudyTim
     } catch (error) {
       console.error("Error saving study history:", error);
     }
-  }, [setId, title, onFinish, setTodayStudyTime, studiedQuestions, user, sessionState, startTimeRef, shuffledQuestions, updateProgress, results, setIncorrectQuestions]);
+  }, [setId, title, onFinish, setTodayStudyTime, studiedQuestions, user, sessionState, startTimeRef, shuffledQuestions, updateProgress, results, userAnswers]);
 
   const startReview = useCallback(() => {
     setReviewMode(true);

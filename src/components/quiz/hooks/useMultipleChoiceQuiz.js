@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getSetById, getSets, updateSessionState } from '@/utils/firebase/firestore';
+import { getSetById, getSets, saveSessionState } from '@/utils/firebase/firestore';
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { useBaseQuiz } from './useBaseQuiz';
 import { getFirestore, writeBatch, doc } from "firebase/firestore";
@@ -15,35 +15,34 @@ import { getFirestore, writeBatch, doc } from "firebase/firestore";
  * @description 多肢選択クイズの状態管理と機能を提供するカスタムフック
  * @param {string} setId - クイズセットのID
  * @param {string} title - クイズセットのタイトル
- * @param {string} quizType - クイズのタイプ
  * @param {Object} sessionState - 保存されたセッション状態
- * @param {Function} setTodayStudyTime - 今日の学習時間を設定する��数
+ * @param {Function} setTodayStudyTime - 今日の学習時間を設定する数
  * @param {Function} onFinish - クイズ終了時のコールバック関数
  * @param {Function} updateProgress - 進捗を更新する関数
  */
-export const useMultipleChoiceQuiz = (setId, title, quizType, sessionState, setTodayStudyTime, onFinish, updateProgress) => {
+export const useMultipleChoiceQuiz = (setId, title, sessionState, setTodayStudyTime, onFinish, updateProgress) => {
   const { user, shuffleArray } = useBaseQuiz();
 
   // =============================================
   // 状態変数の定義
   // =============================================
   const [questions, setQuestions] = useState([]);
-  const [shuffledQuestions, setShuffledQuestions] = useState([]);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [shuffledQuestions, setShuffledQuestions] = useState(sessionState?.shuffledItems || []);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(sessionState?.currentIndex || 0);
   const [selectedAnswers, setSelectedAnswers] = useState([]);
   const [showResult, setShowResult] = useState(false);
-  const [results, setResults] = useState([]);
+  const [results, setResults] = useState(sessionState?.results || []);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isLastQuestion, setIsLastQuestion] = useState(false);
   const startTimeRef = useRef(new Date());
-  const [studiedQuestions, setStudiedQuestions] = useState(new Set());
+  const [studiedQuestions, setStudiedQuestions] = useState(new Set(sessionState?.studiedItems || []));
   const [correctAnswersCount, setCorrectAnswersCount] = useState([]);
 
   /**
    * QAまたはフラッシュカードの項目を統一された形式に変換する
    * @param {Object} set - クイズセット
-   * @returns {Array} 統一された形式の問��配列
+   * @returns {Array} 統一された形式の問配列
    */
   const convertToUnifiedFormat = useCallback((set) => {
     if (set.type === 'qa' && Array.isArray(set.qaItems)) {
@@ -133,8 +132,8 @@ export const useMultipleChoiceQuiz = (setId, title, quizType, sessionState, setT
           const convertedQuestions = convertToMultipleChoice(unifiedItems);
           setQuestions(convertedQuestions);
           if (sessionState) {
-            setShuffledQuestions(sessionState.shuffledQuestions);
-            setCurrentQuestionIndex(sessionState.currentQuestionIndex);
+            setShuffledQuestions(sessionState.shuffledItems);
+            setCurrentQuestionIndex(sessionState.currentIndex);
             setResults(sessionState.results);
           } else {
             const shuffledWithChoices = convertedQuestions.map(question => 
@@ -190,18 +189,18 @@ export const useMultipleChoiceQuiz = (setId, title, quizType, sessionState, setT
       if (sessionState.results) {
         setResults(sessionState.results);
       }
-      if (sessionState.studiedQuestions) {
-        setStudiedQuestions(new Set(sessionState.studiedQuestions));
+      if (sessionState.studiedItems) {
+        setStudiedQuestions(new Set(sessionState.studiedItems));
       }
-      if (sessionState.state) {
-        setCurrentQuestionIndex(sessionState.state.currentQuestionIndex || 0);
-        setShuffledQuestions(sessionState.state.shuffledQuestions || []);
-        setSelectedAnswers(sessionState.state.selectedAnswers || []);
-        setShowResult(sessionState.state.showResult || false);
-        setIsLastQuestion(sessionState.state.isLastQuestion || false);
+      if (sessionState.additionalData) {
+        setCurrentQuestionIndex(sessionState.currentIndex || 0);
+        setShuffledQuestions(sessionState.shuffledItems || []);
+        setSelectedAnswers(sessionState.additionalData.selectedAnswers || []);
+        setShowResult(sessionState.additionalData.showResult || false);
+        setIsLastQuestion(sessionState.additionalData.isLastQuestion || false);
         // stateの中のstudiedQuestionsも設定（必要に応じて）
-        if (sessionState.state.studiedQuestions) {
-          setStudiedQuestions(new Set(sessionState.state.studiedQuestions));
+        if (sessionState.additionalData.studiedItems) {
+          setStudiedQuestions(new Set(sessionState.additionalData.studiedItems));
         }
       }
     }
@@ -212,26 +211,24 @@ export const useMultipleChoiceQuiz = (setId, title, quizType, sessionState, setT
     const saveState = async () => {
       if (setId && user) {
         const stateToSave = {
-          lastStudyDate: new Date().toISOString(),
-          results,
-          setId,
-          setType: 'multiple-choice',
-          studiedQuestions: Array.from(studiedQuestions),
-          state: {
-            completedItems: studiedQuestions.size,
-            currentQuestionIndex,
-            lastStudyDate: new Date().toISOString(),
-            results,
-            shuffledQuestions,
-            studiedQuestions: Array.from(studiedQuestions)
-          },
-          updatedAt: new Date()
+          currentIndex: currentQuestionIndex,
+          shuffledItems: shuffledQuestions,
+          results: results,
+          studiedItems: Array.from(studiedQuestions),
+          additionalData: {
+            selectedAnswers,
+            showResult,
+          }
         };
-        await updateSessionState(user.uid, setId, 'multiple-choice', stateToSave);
+        try {
+          await saveSessionState(user.uid, setId, 'multiple-choice', stateToSave);
+        } catch (error) {
+          console.error("Error saving session state:", error);
+        }
       }
     };
     saveState();
-  }, [setId, results, user, studiedQuestions, currentQuestionIndex, shuffledQuestions]);
+  }, [setId, user, currentQuestionIndex, shuffledQuestions, results, studiedQuestions, selectedAnswers, showResult]);
 
   // =============================================
   // クイズ操作関数
@@ -239,7 +236,7 @@ export const useMultipleChoiceQuiz = (setId, title, quizType, sessionState, setT
 
   /**
    * スコアを計算する
-   * @returns {number} 計算されたスコア（0-100）
+   * @returns {number} 計算��れたスコア（0-100）
    */
   const calculateScore = useCallback(() => {
     const totalQuestions = shuffledQuestions.length;
@@ -267,17 +264,18 @@ export const useMultipleChoiceQuiz = (setId, title, quizType, sessionState, setT
    */
   const handleSelect = useCallback((index) => {
     const currentCorrectCount = correctAnswersCount[currentQuestionIndex];
-    if (currentCorrectCount === 1) {
-      // 単一回答の場合、新しい選択に切り替える
-      setSelectedAnswers([index]);
-    } else {
-      // 複数回答の場合は既存の動作を維持
-      setSelectedAnswers(prev => 
-        prev.includes(index)
-          ? prev.filter(i => i !== index)
-          : [...prev, index]
-      );
-    }
+    setSelectedAnswers(prev => {
+      if (currentCorrectCount === 1) {
+        // 単一回答の場合、新しい選択に切り替える
+        return index;
+      } else {
+        // 複数回答の場合
+        const prevAnswers = Array.isArray(prev) ? prev : [];
+        return prevAnswers.includes(index)
+          ? prevAnswers.filter(i => i !== index)
+          : [...prevAnswers, index];
+      }
+    });
   }, [correctAnswersCount, currentQuestionIndex]);
 
   /**
@@ -287,7 +285,9 @@ export const useMultipleChoiceQuiz = (setId, title, quizType, sessionState, setT
     if (selectedAnswers.length > 0 && currentQuestionIndex < shuffledQuestions.length) {
       const currentQuestion = shuffledQuestions[currentQuestionIndex];
       const isCorrect = currentQuestion.choices.every((choice, index) => 
-        (selectedAnswers.includes(index) === choice.isCorrect)
+        (Array.isArray(selectedAnswers[currentQuestionIndex]) 
+          ? selectedAnswers[currentQuestionIndex].includes(index)
+          : selectedAnswers[currentQuestionIndex] === index) === choice.isCorrect
       );
       const newResults = [...results];
       newResults[currentQuestionIndex] = isCorrect;
@@ -316,11 +316,41 @@ export const useMultipleChoiceQuiz = (setId, title, quizType, sessionState, setT
     if (!user) return;
     const endTime = new Date();
     const studyDuration = Math.round((endTime - startTimeRef.current) / 1000);
-    const newQuestionsStudied = studiedQuestions.size - (sessionState?.studiedQuestions?.length || 0);
+    const newQuestionsStudied = studiedQuestions.size - (sessionState?.studiedItems?.length || 0);
     
-    const correctQuestions = results.filter(Boolean).length;
-    const incorrectQuestions = results.filter(result => result === false).length;
-    const score = Math.round((correctQuestions / shuffledQuestions.length) * 100);
+    const correctItems = results.reduce((acc, result, index) => {
+      if (result === true) {
+        acc.push({
+          questionIndex: index,
+          question: shuffledQuestions[index].question,
+          correctAnswer: shuffledQuestions[index].choices.filter(c => c.isCorrect).map(c => c.text),
+          userAnswer: shuffledQuestions[index].choices
+            .filter((_, i) => Array.isArray(selectedAnswers[index]) 
+              ? selectedAnswers[index].includes(i)
+              : selectedAnswers[index] === i)
+            .map(c => c.text)
+        });
+      }
+      return acc;
+    }, []);
+
+    const incorrectItems = results.reduce((acc, result, index) => {
+      if (result === false) {
+        acc.push({
+          questionIndex: index,
+          question: shuffledQuestions[index].question,
+          correctAnswer: shuffledQuestions[index].choices.filter(c => c.isCorrect).map(c => c.text),
+          userAnswer: shuffledQuestions[index].choices
+            .filter((_, i) => Array.isArray(selectedAnswers[index]) 
+              ? selectedAnswers[index].includes(i)
+              : selectedAnswers[index] === i)
+            .map(c => c.text)
+        });
+      }
+      return acc;
+    }, []);
+
+    const score = Math.round((correctItems.length / shuffledQuestions.length) * 100);
 
     const studyHistoryEntry = {
       setId,
@@ -329,10 +359,10 @@ export const useMultipleChoiceQuiz = (setId, title, quizType, sessionState, setT
       score,
       date: endTime.toISOString(),
       studyDuration,
-      questionsStudied: newQuestionsStudied,
-      correctQuestions,
-      incorrectQuestions,
-      totalQuestions: shuffledQuestions.length
+      itemsStudied: newQuestionsStudied,
+      correctItems,
+      incorrectItems,
+      totalItems: shuffledQuestions.length
     };
 
     try {
@@ -346,20 +376,9 @@ export const useMultipleChoiceQuiz = (setId, title, quizType, sessionState, setT
       // セッション状態の更新
       const sessionStateRef = doc(db, `users/${user.uid}/sessionStates`, `${setId}_multiple-choice`);
       batch.set(sessionStateRef, {
-        lastStudyDate: endTime.toISOString(),
         results,
-        setId,
-        setType: 'multiple-choice',
-        studiedQuestions: Array.from(studiedQuestions),
-        state: {
-          completedItems: studiedQuestions.size,
-          currentQuestionIndex,
-          lastStudyDate: endTime.toISOString(),
-          results,
-          shuffledQuestions,
-          studiedQuestions: Array.from(studiedQuestions)
-        },
-        updatedAt: endTime
+        studiedItems: Array.from(studiedQuestions),
+        lastStudyDate: endTime
       }, { merge: true });
 
       // バッチ処理を実行
@@ -371,14 +390,14 @@ export const useMultipleChoiceQuiz = (setId, title, quizType, sessionState, setT
         updateProgress(setId, {
           totalItems: shuffledQuestions.length,
           completedItems: studiedQuestions.size,
-          correctItems: correctQuestions,
-          incorrectItems: incorrectQuestions,
+          correctItems: correctItems.length,
+          incorrectItems: incorrectItems.length,
         });
       }
     } catch (error) {
       console.error("Error saving study history:", error);
     }
-  }, [user, setId, title, onFinish, setTodayStudyTime, sessionState, startTimeRef, shuffledQuestions, studiedQuestions, results, updateProgress]);
+  }, [setId, title, onFinish, setTodayStudyTime, studiedQuestions, user, sessionState, startTimeRef, shuffledQuestions, updateProgress, results, selectedAnswers]);
 
   // =============================================
   // フックの戻り値
